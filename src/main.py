@@ -12,7 +12,8 @@ Placeholder.
 # Python
 
 # Internal
-from blank.Classy import summy
+from src.blank import Classy
+#from src import blank.Classy.summy
 
 # External
 
@@ -28,9 +29,9 @@ from blank.Classy import summy
 
 def main():
 
-  c = Class()
+  c = Classy()
 
-  print(summy(4,5))
+  print(c.summy(4,5))
 
 
 

@@ -4,8 +4,8 @@ Installs Biokit.
 
 Authors: Eduardo G. Gusmao.
 
-Install Command: pip install --user .
-                 pip install --user . --upgrade
+Install Command: pip3 install --user .
+                 pip3 install --user . --upgrade
 """
 
 # Python
@@ -95,7 +95,7 @@ license_type = "GPL"
 readme_file_name = join(dirname(abspath(__file__)), "README.md")
 
 # Fetching long description
-readme_file = open(readme_file_name, "rU")
+readme_file = open(readme_file_name, "rU", encoding="utf-8")
 long_description = readme_file.read()
 readme_file.close()
 
