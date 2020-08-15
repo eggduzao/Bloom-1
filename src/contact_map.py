@@ -1,7 +1,9 @@
 """
-XXX
+Contact Map Module
 ===================
 Placeholder.
+
+Authors: Eduardo G. Gusmao.
 
 """
 
@@ -17,16 +19,49 @@ import sys
 
 # External
 
+
 ###################################################################################################
 # Basic Objects
 ###################################################################################################
 
 class ContactMap():
-  """Class description.
-  """
-  def __init__(self): pass
+  """This class represents TODO.
+
+  *Keyword arguments:*
+
+    - argument1 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+
+    - argument2 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+    """
+
+  def __init__(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    self.matrix = dict() # TODO from here
 
   def create_bin_file_from_text_file(text_file_name, bin_file_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Write bin file line by line
     text_file = open(text_file_name, "r")
@@ -36,6 +71,16 @@ class ContactMap():
     bin_file.close()
 
   def create_dictionary_from_bin_file(bin_file_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Dictionary
     res_dict = dict()

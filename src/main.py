@@ -1,7 +1,9 @@
 """
-XXX
+Main Module
 ===================
 Placeholder.
+
+Authors: Eduardo G. Gusmao.
 
 """
 
@@ -11,15 +13,19 @@ Placeholder.
 
 # Python
 
+
 # Internal
-from src.blank import Classy
-#from src import blank.Classy.summy
+from src.__version__ import __version__
+from src.util import ErrorHandler
+from src.arguments import ArgumentParser
+
+
 
 # External
 
-###################################################################################################
-# Parameter Handling
-###################################################################################################
+
+
+
 
 
 
@@ -28,10 +34,35 @@ from src.blank import Classy
 ###################################################################################################
 
 def main():
+  """Entry point to the execution of Bloom.
+    
+  *Keyword arguments:*
+    
+    - None.
+    
+  *Return:*
+    
+    - None.
+  """
 
-  c = Classy()
+  ###############################################################################
+  # Initialization
+  ###############################################################################
 
-  print(c.summy(4,5))
+  # Initializing ErrorHandler
+  error_handler = ErrorHandler()
 
+  ###############################################################################
+  # Parameter Handling
+  ###############################################################################
+
+  # Initializing argument parser
+  argument_parser = ArgumentParser()
+  args = argument_parser.arguments
+  opts = argument_parser.options
+
+  print(opts.parameter1)
+
+  print("The analysis finished successfully.")
 
 
