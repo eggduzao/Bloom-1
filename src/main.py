@@ -61,8 +61,14 @@ def main():
   args = argument_parser.arguments
   opts = argument_parser.options
 
-  print(opts.parameter1)
 
+
+
+
+
+
+  # Test
+  print(opts.parameter1)
   print("The analysis finished successfully.")
 
 

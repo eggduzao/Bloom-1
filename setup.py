@@ -1,6 +1,8 @@
 from __future__ import print_function
 """
-Installs Biokit.
+Setup Module
+===================
+Placeholder.
 
 Authors: Eduardo G. Gusmao.
 

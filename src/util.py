@@ -9,10 +9,11 @@ The Util classes contains many utilities needed by other classes such as the pat
 ###################################################################################################
 
 # Python
-import os
-import sys
 import codecs
-import traceback
+from os import getcwd, getenv, access, environ, pathsep, X_OK
+from os.path import isfile, isdir, abspath, expanduser, join, split, splitext, basename
+from sys import stderr, argv, exit
+from traceback import print_exc
 from optparse import OptionParser, BadOptionError, AmbiguousOptionError
 from configparser import ConfigParser
 
@@ -21,229 +22,120 @@ from configparser import ConfigParser
 # External
 
 
+"""
+
+os.path.isfile - file exists
+os.path.isdir - directory exists
+os.path.abspath - absolute path
+os.path.expanduser - expand user (~)
+os.path.join - join paths
+os.path.splitext - removes extension of file
+os.path.basename - return the last thing after a "/"
+
+---
+
+import subprocess
+
+list_files = subprocess.run(["ls", "-l"])
+print("The exit code was: %d" % list_files.returncode)
+
+
+----
+
+list_files = subprocess.run(["ls", "-l"], stdout=subprocess.DEVNULL, stderr=None)
+
+
+"""
+
+# TODO
+# 1 - Create static function to open files
+# 2 - Create class to run system tools
+# 3 - Update error and warning management. Make it simple.
+
 ###################################################################################################
 # Data Path Handling
 ###################################################################################################
 
-# TODO ALLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
-
-def get_rgtdata_path():
-  return os.path.expanduser(os.getenv("RGTDATA", os.path.join(os.getenv("HOME"), "rgtdata")))
-
 class ConfigurationFile:
-  """
-  Represent the data path configuration file (data.config). It serves as a superclass to classes that will contain
-  default variables (such as paths, parameters to tools, etc.) for a certain purpose (genomic data, motif data, etc.).
-  *Variables:*
-    - self.config -- Represents the configuration file.
-    - self.data_dir -- Represents the root path to data files.
+  """This class represents TODO.
+
+  *Keyword arguments:*
+
+    - argument1 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+
+    - argument2 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
   """
 
   def __init__(self):
-    # Reading config file directory
-    data_config_file_name = os.path.join(get_rgtdata_path(), "data.config")
-
-    # Parsing config file
-    self.config = ConfigParser()
-    # self.config.read(data_config_file_name)
-    self.config.read_file(codecs.open(data_config_file_name, "r", "utf8"))
-
-    # Overwriting config using user options
-    # self.config.read(data_config_file_name + ".user")
-    self.config.read_file(codecs.open(data_config_file_name + ".user", "r", "utf8"))
-
-    # Reading data directory
-    self.data_dir = os.path.split(data_config_file_name)[0]
-
-class GenomeData(ConfigurationFile):
-  """Represent genomic data. Inherits ConfigurationFile."""
-
-  def __init__(self, organism):
-    """Initializes GenomeData.
-    *Keyword arguments:*
-      - organism -- Organism alias.
-    """
-    ConfigurationFile.__init__(self)
-    self.organism = organism
-    self.genome = os.path.join(self.data_dir, self.config.get(organism, 'genome'))
-    self.chromosome_sizes = os.path.join(self.data_dir, self.config.get(organism, 'chromosome_sizes'))
-    self.genes_gencode = os.path.join(self.data_dir, self.config.get(organism, 'genes_Gencode'))
-    self.genes_refseq = os.path.join(self.data_dir, self.config.get(organism, 'genes_RefSeq'))
-    self.annotation = os.path.join(self.data_dir, self.config.get(organism, 'annotation'))
-    self.annotation_dump_dir = os.path.dirname(os.path.join(self.data_dir, self.annotation))
-    self.gene_alias = os.path.join(self.data_dir, self.config.get(organism, 'gene_alias'))
-    if organism in ["hg19", "hg38", "mm9"]:
-      self.repeat_maskers = os.path.join(self.data_dir, self.config.get(organism, 'repeat_maskers'))
-    else:
-      self.repeat_maskers = None
-
-  def get_organism(self):
-    """Returns the current organism."""
-    return self.organism
-
-  def get_genome(self):
-    """Returns the current path to the genome fasta file."""
-    return self.genome
-
-  def get_chromosome_sizes(self):
-    """Returns the current path to the chromosome sizes text file."""
-    return self.chromosome_sizes
-
-  def get_gene_regions(self):
-    """Returns the current path to the gene_regions BED file."""
-    return self.genes_gencode
-
-  def get_genes_gencode(self):
-    """Returns the current path to the gene_regions BED file."""
-    return self.genes_gencode
-
-  def get_genes_refseq(self):
-    """Returns the current path to the gene_regions BED file."""
-    return self.genes_refseq
-
-  def get_annotation(self):
-    """
-    Returns the current path to the gencode annotation gtf file.
-    """
-    return self.annotation
-
-  def get_annotation_dump_dir(self):
-    """Returns the current path to the gencode annotation gtf file."""
-    return self.annotation_dump_dir
-
-  def get_gene_alias(self):
-    """Returns the current path to the gene alias txt file."""
-    return self.gene_alias
-
-  def get_repeat_maskers(self):
-    """Returns the current path to directory for repeat maskers."""
-    if self.repeat_maskers:
-      return self.repeat_maskers
-    else:
-      print("*** There is no repeat masker data for " + self.organism)
-
-class HmmData(ConfigurationFile):
-  """Represent HMM data. Inherits ConfigurationFile."""
-
-  def __init__(self):
-    """Error handling.
+    """Returns TODO.
     
     *Keyword arguments:*
     
-      - msg -- String containing the error message.
+      - argument -- An argument.
     
     *Return:*
     
-      - return -- An error message to the user.
+      - return -- A return.
+    """
+
+    # Fetching bloom_data_path
+    self.bloom_data_path = expanduser(getenv("RGTDATA", default = join(getenv("HOME"), "bloom_data")))
+
+    # Reading config file directory
+    self.bloom_config_file_name = join(self.bloom_data_path, "data.config")
+
+    # Parsing config file
+    self.config = ConfigParser()
+    self.config.read_file(codecs.open(self.bloom_config_file_name, "rU", "utf8"))
+
+
+class ChromosomeSizes(ConfigurationFile):
+  """This class represents TODO.
+
+  *Keyword arguments:*
+
+    - argument1 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+
+    - argument2 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+  """
+
+  def __init__(self, organism):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
     """
 
     ConfigurationFile.__init__(self)
-    self.default_hmm_dnase = os.path.join(self.data_dir, self.config.get('HmmData', 'default_hmm_dnase'))
-    self.default_hmm_dnase_bc = os.path.join(self.data_dir, self.config.get('HmmData', 'default_hmm_dnase_bc'))
-    self.default_hmm_atac_paired = os.path.join(self.data_dir,
-                                                    self.config.get('HmmData', 'default_hmm_atac_paired'))
-    self.default_hmm_atac_single = os.path.join(self.data_dir,
-                                                   self.config.get('HmmData', 'default_hmm_atac_single'))
-    self.default_hmm_histone = os.path.join(self.data_dir, self.config.get('HmmData', 'default_hmm_histone'))
-    self.default_hmm_dnase_histone = os.path.join(self.data_dir,
-                                                      self.config.get('HmmData', 'default_hmm_dnase_histone'))
-    self.default_hmm_dnase_histone_bc = os.path.join(self.data_dir,
-                                                         self.config.get('HmmData', 'default_hmm_dnase_histone_bc'))
-    self.default_hmm_atac_histone = os.path.join(self.data_dir,
-                                                     self.config.get('HmmData', 'default_hmm_atac_histone'))
-    self.default_hmm_atac_histone_bc = os.path.join(self.data_dir,
-                                                        self.config.get('HmmData', 'default_hmm_atac_histone_bc'))
-    self.default_bias_table_F_SH = os.path.join(self.data_dir,
-                                                    self.config.get('HmmData', 'default_bias_table_F_SH'))
-    self.default_bias_table_R_SH = os.path.join(self.data_dir,
-                                                    self.config.get('HmmData', 'default_bias_table_R_SH'))
-    self.default_bias_table_F_DH = os.path.join(self.data_dir,
-                                                    self.config.get('HmmData', 'default_bias_table_F_DH'))
-    self.default_bias_table_R_DH = os.path.join(self.data_dir,
-                                                    self.config.get('HmmData', 'default_bias_table_R_DH'))
-    self.default_bias_table_F_ATAC = os.path.join(self.data_dir,
-                                                      self.config.get('HmmData', 'default_bias_table_F_ATAC'))
-    self.default_bias_table_R_ATAC = os.path.join(self.data_dir,
-                                                      self.config.get('HmmData', 'default_bias_table_R_ATAC'))
-    self.dependency_model = os.path.join(self.data_dir, self.config.get('HmmData', 'dependency_model'))
-    self.slim_dimont_predictor = os.path.join(self.data_dir, self.config.get('HmmData', 'slim_dimont_predictor'))
-    self.default_test_fa = os.path.join(self.data_dir, self.config.get('HmmData', 'default_test_fa'))
+    self.organism = organism
+    self.chromosome_sizes_file_name = join(self.bloom_data_path, self.config.get("ChromosomeSizes", organism))
 
-  def get_default_hmm_dnase(self):
-    """Returns the current default DNase only hmm."""
-    return self.default_hmm_dnase
-
-  def get_default_hmm_dnase_bc(self):
-    """Returns the current default DNase only hmm."""
-    return self.default_hmm_dnase_bc
-
-  def get_default_hmm_atac_paired(self):
-    """Returns the current default atac only hmm."""
-    return self.default_hmm_atac_paired
-
-  def get_default_hmm_atac_single(self):
-    """Returns the current default atac only hmm."""
-    return self.default_hmm_atac_single
-
-  def get_default_hmm_histone(self):
-    """Returns the current default Histone only hmm."""
-    return self.default_hmm_histone
-
-  def get_default_hmm_dnase_histone(self):
-    """Returns the current default DNase+histone hmm."""
-    return self.default_hmm_dnase_histone
-
-  def get_default_hmm_dnase_histone_bc(self):
-    """Returns the current default DNase+histone hmm."""
-    return self.default_hmm_dnase_histone_bc
-
-  def get_default_hmm_atac_histone(self):
-    """Returns the current default atac+histone hmm."""
-    return self.default_hmm_atac_histone
-
-  def get_default_hmm_atac_histone_bc(self):
-    """Returns the current default atac+histone hmm."""
-    return self.default_hmm_atac_histone_bc
-
-  def get_default_bias_table_F_SH(self):
-    """Returns the DNase-seq single hit default bias table for the forward strand."""
-    return self.default_bias_table_F_SH
-
-  def get_default_bias_table_R_SH(self):
-    """Returns the DNase-seq single hit default bias table for the reverse strand."""
-    return self.default_bias_table_R_SH
-
-  def get_default_bias_table_F_DH(self):
-    """Returns the DNase-seq double hit default bias table for the forward strand."""
-    return self.default_bias_table_F_DH
-
-  def get_default_bias_table_R_DH(self):
-    """Returns the DNase-seq double hit default bias table for the reverse strand."""
-    return self.default_bias_table_R_DH
-
-  def get_default_bias_table_F_ATAC(self):
-    """Returns the ATAC-seq default bias table for the forward strand."""
-    return self.default_bias_table_F_ATAC
-
-  def get_default_bias_table_R_ATAC(self):
-    """Returns the ATAC-seq default bias table for the reverse strand."""
-    return self.default_bias_table_R_ATAC
-
-  def get_dependency_model(self):
-    return self.dependency_model
-
-  def get_slim_dimont_predictor(self):
-    return self.slim_dimont_predictor
-
-  def get_default_test_fa(self):
-    return self.default_test_fa
+    # Creating chromosome sizes dictionary and chromosome list
+    self.chromosome_sizes_dictionary = dict()
+    chrom_sizes_file = codecs.open(self.chromosome_sizes_file_name, "rU", "utf8")
+    for line in chrom_sizes_file:
+      ll = line.strip().split("\t")
+      self.chromosome_sizes_dictionary[ll[0]] = int(ll[1])
+    chrom_sizes_file.close()
+    self.chromosome_sizes_list = sorted(self.chromosome_sizes_dictionary.keys())
 
 
 ###################################################################################################
 # Argument Parsing
 ###################################################################################################
-
-# From here.
 
 class HelpfulOptionParser(OptionParser):
   """This class represents an OptionParser that prints full help on errors. Inherits OptionParser.
@@ -264,7 +156,7 @@ class HelpfulOptionParser(OptionParser):
     
       - return -- An error message to the user.
     """
-    self.print_help(sys.stderr)
+    self.print_help(stderr)
     self.exit(2, "\n%s: error: %s\n" % (self.get_prog_name(), msg))
 
 
@@ -315,13 +207,13 @@ class ErrorHandler:
       - X -- The key representing the internal warning name.
       - Y -- Warning number.
       - Z -- Warning message to be print.
-    """
+  """
 
   def __init__(self):
     """Initializes required objects for warning and error handling.
     """
 
-    self.program_name = os.path.basename(sys.argv[0])
+    self.program_name = basename(argv[0])
 
     self.error_dictionary = {
       "DEFAULT_ERROR": [0, 0, "Undefined error. Program terminated with exit status 0."],
@@ -373,9 +265,9 @@ class ErrorHandler:
                               "Report: " + error_message + " " + add_msg + "\n"
                               "Behaviour: The program will quit with exit status " + str(exit_status) + ".\n"
                               "--------------------------------------------------")
-    print(complete_error_message, file=sys.stderr)
-    traceback.print_exc()
-    sys.exit(exit_status)
+    print(complete_error_message, file=stderr)
+    print_exc()
+    exit(exit_status)
 
   def throw_warning(self, warning_type, add_msg=""):
     """Throws the specified warning type. If the warning type does not exist, throws a default warning message and exits.
@@ -400,7 +292,7 @@ class ErrorHandler:
                                 "Program: " + self.program_name + ".\n"
                                 "Report: " + warning_message + " " + add_msg + "\n"
                                 "--------------------------------------------------")
-    print(complete_warning_message, file=sys.stderr)
+    print(complete_warning_message, file=stderr)
 
 
 ###################################################################################################
@@ -461,16 +353,16 @@ class AuxiliaryFunctions:
     """
 
     def is_exe(fpath):
-      return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+      return isfile(fpath) and access(fpath, X_OK)
 
-    fpath, fname = os.path.split(program)
+    fpath, fname = split(program)
     if fpath:
       if is_exe(program):
         return program
     else:
-      for path in os.environ["PATH"].split(os.pathsep):
+      for path in environ["PATH"].split(pathsep):
         path = path.strip('"')
-        exe_file = os.path.join(path, program)
+        exe_file = join(path, program)
         if is_exe(exe_file):
           return exe_file
     return None
