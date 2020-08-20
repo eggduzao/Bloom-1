@@ -11,8 +11,8 @@ Install Command: pip3 install --user .
 """
 
 # Python
-from os.path import join, dirname, abspath
-from setuptools import setup, find_packages
+import os
+import setuptools
 
 ###################################################################################################
 # Unsupported Platforms
@@ -46,7 +46,7 @@ common_deps = ["cython>=0.29.0",
 tools_dictionary = {
   "bloom": (
     "bloom",
-    "src.main:main",
+    "bloom.main:main",
     [],
     []
   )
@@ -94,7 +94,7 @@ corresponding_mail = "eduardo.gusmao@rwth-aachen.de"
 license_type = "GPL"
 
 # Fetching additional structural files
-readme_file_name = join(dirname(abspath(__file__)), "README.md")
+readme_file_name = os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md")
 
 # Fetching long description
 readme_file = open(readme_file_name, "rU", encoding="utf-8")
@@ -102,18 +102,18 @@ long_description = readme_file.read()
 readme_file.close()
 
 # Setup Function
-setup(name=package_name,
-      version=package_version,
-      description=short_description,
-      long_description=long_description,
-      classifiers=classifiers_list,
-      keywords=", ".join(keywords_list),
-      author=", ".join(author_list),
-      author_email=corresponding_mail,
-      license=license_type,
-      packages=find_packages(),
-      entry_points=current_entry_points,
-      install_requires=current_install_requires
+setuptools.setup(name = package_name,
+                 version = package_version,
+                 description = short_description,
+                 long_description = long_description,
+                 classifiers = classifiers_list,
+                 keywords = ", ".join(keywords_list),
+                 author = ", ".join(author_list),
+                 author_email = corresponding_mail,
+                 license = license_type,
+                 packages = setuptools.find_packages(),
+                 entry_points = current_entry_points,
+                 install_requires = current_install_requires
 )
 
 ###################################################################################################

@@ -3,6 +3,8 @@ find . -name "*.DS_Store*" -type f -delete
 find . -name "*.Rout" -type f -delete
 find . -name "*.RData" -type f -delete
 find . -name "*.pyc" -type f -delete
+find . -name "*._setup.py" -type f -delete
+find . -name "*._juicer_tools*" -type f -delete
 git config --global push.default simple
 git config --global user.name "eggduzao"
 git config --global user.email eggduzao@gmail.com
