@@ -196,8 +196,8 @@ class Juicer(ConfigurationFile):
 
     # Configuration file initialization
     ConfigurationFile.__init__(self)
-    self.juicer_command = os.path.join(self.bloom_data_path, self.config.get("Juicer", "command"))
-    self.juicer_options = os.path.join(self.bloom_data_path, self.config.get("Juicer", "options"))
+    self.juicer_command = self.config.get("Juicer", "command")
+    self.juicer_options = self.config.get("Juicer", "options")
     self.juicer_jar_location = os.path.join(self.bloom_data_path, self.config.get("Juicer", "jar"))
 
     # Auxiliary Parameters
@@ -210,10 +210,10 @@ class Juicer(ConfigurationFile):
   def dump(self, resolution, region1, region2, input_file_name, output_file_name):
   
     # Execution of Juicer's dump
-    full_command = " ".join([self.juicer_command, self.juicer_options, self.juicer_jar_location, "dump"])
-    command = [full_command, self.kind_of_matrix, self.kind_of_normalization, input_file_name,
+    command = [self.juicer_command] + self.juicer_options.split(" ") + [self.juicer_jar_location, "dump", 
+               self.kind_of_matrix, self.kind_of_normalization, input_file_name,
                region1, region2, self.unit_of_resolution, resolution, output_file_name]
-    dump_process = subprocess.run(command, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+    dump_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
     return dump_process
 
   def add_dump(self, resolution, region1, region2, input_file_name, output_file_name):
@@ -227,6 +227,7 @@ class Juicer(ConfigurationFile):
     pool.close()
     pool.join()
     pool = None
+    self.process_queue = None
     gc.collect()
 
 

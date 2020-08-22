@@ -12,13 +12,20 @@ Install Command: pip3 install --user .
 
 # Python
 import os
+import sys
+import shutil
 import setuptools
+
 
 ###################################################################################################
 # Unsupported Platforms
 ###################################################################################################
 
-# TODO
+supported_platforms = ["linux", "linux2", "darwin"]
+if sys.platform not in supported_platforms:
+    print("ERROR: This package currently supports only unix-based systems (Linux and MAC OS X).")
+    sys.exit(0)
+
 
 ###################################################################################################
 # Parameters
@@ -52,6 +59,7 @@ tools_dictionary = {
   )
 }
 
+
 ###################################################################################################
 # Auxiliary Functions/Classes
 ###################################################################################################
@@ -72,11 +80,18 @@ current_install_requires = common_deps
 for tool_option in tools_dictionary.keys():
   current_install_requires += tools_dictionary[tool_option][2]
 
+
 ###################################################################################################
 # Creating Data Path
 ###################################################################################################
 
-# TODO
+# Default bloom_data_path
+current_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bloom_data")
+bloom_data_path = os.path.join(os.path.expanduser("~"), "bloom_data")
+if os.path.exists(bloom_data_path):
+  shutil.rmtree(bloom_data_path)
+shutil.copytree(current_path, bloom_data_path)
+
 
 ###################################################################################################
 # Setup Function
@@ -115,6 +130,7 @@ setuptools.setup(name = package_name,
                  entry_points = current_entry_points,
                  install_requires = current_install_requires
 )
+
 
 ###################################################################################################
 # Termination
