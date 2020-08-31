@@ -96,16 +96,10 @@ def main():
 
   # Test 3
   t1 = time()
-  juicer = Juicer(8)
+  juicer = Juicer(2)
   input_file_name = "/usr/users/egadegu/Projects/Papantonis_Bloom/Data/5_dn_isHiC_Human_CM/dnHiC/HEART.hic"
   juicer.add_dump("100000", "1:1000000:20000000", "1:1000000:20000000", input_file_name, "/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/a2.txt")
   juicer.add_dump("100000", "2:1000000:20000000", "2:1000000:20000000", input_file_name, "/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/b2.txt")
-  juicer.add_dump("100000", "3:1000000:20000000", "3:1000000:20000000", input_file_name, "/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/c2.txt")
-  juicer.add_dump("100000", "4:1000000:20000000", "4:1000000:20000000", input_file_name, "/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/d2.txt")
-  juicer.add_dump("100000", "5:1000000:20000000", "5:1000000:20000000", input_file_name, "/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/e2.txt")
-  juicer.add_dump("100000", "6:1000000:20000000", "6:1000000:20000000", input_file_name, "/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/f2.txt")
-  juicer.add_dump("100000", "7:1000000:20000000", "7:1000000:20000000", input_file_name, "/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/g2.txt")
-  juicer.add_dump("100000", "8:1000000:20000000", "8:1000000:20000000", input_file_name, "/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/h2.txt")
   juicer.run_dump()
   t2 = time()
   print(t2-t1)

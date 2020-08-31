@@ -83,11 +83,8 @@ if __name__ == "__main__":
 
 """
 
-# TODO
-# 1 - Update error and warning management. Make it simple.
-
 ###################################################################################################
-# Data Path Handling
+# Configuration File Handling
 ###################################################################################################
 
 class ConfigurationFile:
@@ -167,109 +164,6 @@ class ChromosomeSizes(ConfigurationFile):
     chrom_sizes_file.close()
     self.chromosome_sizes_list = sorted(self.chromosome_sizes_dictionary.keys())
 
-
-class Juicer(ConfigurationFile):
-  """This class represents TODO.
-
-  *Keyword arguments:*
-
-    - argument1 -- Short description. This argument represents a long description. It can be:
-      - Possibility 1: A possibility 1.
-      - Possibility 2: A possibility 2.
-
-    - argument2 -- Short description. This argument represents a long description. It can be:
-      - Possibility 1: A possibility 1.
-      - Possibility 2: A possibility 2.
-  """
-
-  def __init__(self, ncpu):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Configuration file initialization
-    ConfigurationFile.__init__(self)
-    self.juicer_command = self.config.get("Juicer", "command")
-    self.juicer_options = self.config.get("Juicer", "options")
-    self.juicer_jar_location = os.path.join(self.bloom_data_path, self.config.get("Juicer", "jar"))
-
-    # Auxiliary Parameters
-    self.ncpu = ncpu
-    self.process_queue = []
-    self.kind_of_matrix = "observed"
-    self.kind_of_normalization = "NONE"
-    self.unit_of_resolution = "BP"
-
-  def dump(self, resolution, region1, region2, input_file_name, output_file_name):
-  
-    # Execution of Juicer's dump
-    command = [self.juicer_command] + self.juicer_options.split(" ") + [self.juicer_jar_location, "dump", 
-               self.kind_of_matrix, self.kind_of_normalization, input_file_name,
-               region1, region2, self.unit_of_resolution, resolution, output_file_name]
-    dump_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
-    return dump_process
-
-  def add_dump(self, resolution, region1, region2, input_file_name, output_file_name):
-
-    self.process_queue.append((resolution, region1, region2, input_file_name, output_file_name))
-
-  def run_dump(self):
-    
-    pool = multiprocessing.Pool(self.ncpu)
-    pool.starmap(self.dump, [arguments for arguments in self.process_queue])
-    pool.close()
-    pool.join()
-    pool = None
-    self.process_queue = None
-    gc.collect()
-
-
-class Cooler(ConfigurationFile):
-  """This class represents TODO.
-
-  *Keyword arguments:*
-
-    - argument1 -- Short description. This argument represents a long description. It can be:
-      - Possibility 1: A possibility 1.
-      - Possibility 2: A possibility 2.
-
-    - argument2 -- Short description. This argument represents a long description. It can be:
-      - Possibility 1: A possibility 1.
-      - Possibility 2: A possibility 2.
-  """
-
-  def __init__(self, organism):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    ConfigurationFile.__init__(self)
-    self.organism = organism
-    self.chromosome_sizes_file_name = os.path.join(self.bloom_data_path, self.config.get("ChromosomeSizes", organism))
-
-    # Creating chromosome sizes dictionary and chromosome list
-    #TODO
-
-
-    """
-    subprocess.run(["ls", "-l"], stdout = XXX, stderr = XXX)
-
-    time cooler dump -t pixels --header --join -r chr1 -r2 chr1 /usr/users/egadegu/Projects/Papantonis_Bloom/Data/5_dn_isHiC_Human_CM/isHiC/H9.mcool::resolutions/1000 &> 5M.txt
-    """
 
 ###################################################################################################
 # Argument Parsing
@@ -355,12 +249,7 @@ class ErrorHandler:
 
     self.error_dictionary = {
       "DEFAULT_ERROR": [0, 0, "Undefined error. Program terminated with exit status 0."],
-      "MOTIF_ANALYSIS_OPTION_ERROR": [1, 0,
-                                      "You must define one specific analysis. Run '" + self.program_name + " -h' for help."],
-
-      "FP_WRONG_ARGUMENT": [2, 0,
-                            "You must provide at least one and no more than one experimental matrix as input argument."],
-      "XXXXXXX": [26, 0, "Xxxxxx"]
+      "PLACEHOLDER": [1, 0, "You must define one specific analysis. Run '" + self.program_name + " -h' for help."]
     }
     self.error_number = 0
     self.exit_status = 1
@@ -368,11 +257,7 @@ class ErrorHandler:
 
     self.warning_dictionary = {
       "DEFAULT_WARNING": [0, "Undefined warning."],
-      "FP_ONE_REGION": [1,
-                        "There are more than one 'regions' file in the experiment matrix. Only the first will be used."],
-      "FP_MANY_DNASE": [2,
-                        "There are more than one DNASE or ATAC 'reads' file. Only the first one will be used."],
-      "XXXXXXX": [12, "Xxxxxx"]
+      "PLACEHOLDER": [1, "Placeholder."]
     }
     self.warning_number = 0
     self.warning_message = 1
@@ -478,7 +363,7 @@ class AuxiliaryFunctions:
       return False
 
   @staticmethod
-  def overlap(): # TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+  def overlap_count(interval1, interval2):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -489,7 +374,7 @@ class AuxiliaryFunctions:
     
       - return -- A return.
     """
-    pass # TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+    return max(0, min(interval1[1], interval2[1]) - max(interval1[0], interval2[0]))
 
   @staticmethod
   def revcomp(s):
@@ -507,3 +392,32 @@ class AuxiliaryFunctions:
     return "".join([revDict[e] for e in s[::-1]])
     # TODO - Add error to unknown alphabet.
 
+  @staticmethod
+  def ceil_multiple(num, divisor):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    return num + (divisor - (num%divisor))   
+
+
+  @staticmethod
+  def floor_multiple(num, divisor):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    return num - (num%divisor)
+    
