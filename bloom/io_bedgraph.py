@@ -22,7 +22,7 @@ import configparser
 import multiprocessing
 
 # Internal
-from bloom.util import ConfigurationFile, ChromosomeSizes, ErrorHandler
+from bloom.util import ConfigurationFile, ChromosomeSizes, ErrorHandler, AuxiliaryFunctions
 
 # External
 
@@ -238,34 +238,61 @@ class Bedgraph(ConfigurationFile):
 
     return successful_execution
 
-  def identify_minimal_resolution(self):
+  def identify_minimal_resolution(self, input_file_name):
 
     # Current result resolution
     resolution = None
 
-    # TODO
+    # Open bedgraph input file [chrom1, pos11, pos12, chrom2, po21, pos22, count]
+    input_file = codecs.open(input_file_name, "rU", "utf8")
+   
+    # Check resolution
+    ll = input_file.readline().strip().split("\t")
+    pos11 = int(ll[1])
+    pos12 = int(ll[2])
+    raw_resolution = 
+    if(raw_resolution % 10 == 0):
+      pass
+    elif(raw_resolution % 10 in [1, 2, 3, 4]): 
+      resolution = AuxiliaryFunctions.floor_multiple(raw_resolution, 10)
+    else:
+      resolution = AuxiliaryFunctions.ceil_multiple(raw_resolution, 10)
+
+    # Close bedgraph
+    input_file.close()
 
     # Return
     return resolution
 
-  def filetype_is_bedgraph(self):
+  def filetype_is_bedgraph(self, input_file_name):
 
     # Current result resolution
-    is_bedgraph = False
+    is_bedgraph = True
 
-    # TODO
+    # Open bedgraph input file [chrom1, pos11, pos12, chrom2, po21, pos22, count]
+    try:
+      input_file = codecs.open(input_file_name, "rU", "utf8")
+    except Exception:
+      is_bedgraph = False
+
+    # Iterate through bedgraph file
+    if(is_bedgraph):
+      for line in input_file:
+
+        # Get file columns
+        try:
+          ll = line.strip().split("\t")
+          if(len(ll) != 7):
+            is_bedgraph = False
+            break
+        except Exception:
+          is_bedgraph = False
+          break
+
+    # Close bedgraph
+    if(is_bedgraph):
+      input_file.close()
 
     # Return
     return is_bedgraph 
-
-
-
-
-
-
-
-
-
-
-
 

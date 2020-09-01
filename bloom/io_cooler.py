@@ -151,12 +151,17 @@ class Cooler(ConfigurationFile):
 
     # Sparse matrix to bedgraph
     bedgraph_file_name = temporary_location + "bedgraph_file_name.bg2"
-    self.bed_graph_handler.dump(resolution, sparse_matrix_dictionary, bedgraph_file_name)
+    self.bed_graph_handler.load(resolution, sparse_matrix_dictionary, bedgraph_file_name)
   
     # Execution of Cooler's dump
     command = [self.cooler_command, "load", "-f", "bg2", "--assembly", genome_id, "--count-as-float",
                ":".join(self.chromosome_sizes_file_name, str(resolution)), bedgraph_file_name, output_file_name]
     load_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+
+    # Remove the temporary bedgraph file
+    remove_command = ["rm", "-rf", bedgraph_file_name]
+    remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+
     return dump_process
 
   def add_load(self, genome_id, resolution, sparse_matrix_dictionary, temporary_location, output_file_name):

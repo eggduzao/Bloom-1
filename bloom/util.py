@@ -406,7 +406,6 @@ class AuxiliaryFunctions:
     """
     return num + (divisor - (num%divisor))   
 
-
   @staticmethod
   def floor_multiple(num, divisor):
     """Returns TODO.
