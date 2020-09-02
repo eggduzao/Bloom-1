@@ -70,7 +70,7 @@ class ContactMap():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, input_contact_matrix_file_name, temporary_location, input_resolution = None, input_file_type = InputFileType.UNKNOWN):
+  def __init__(self, input_contact_matrix_file_name, temporary_location, organism, ncpu, input_resolution = None, input_file_type = InputFileType.UNKNOWN):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -85,6 +85,8 @@ class ContactMap():
     # Main objects
     self.input_file_name = input_contact_matrix_file_name
     self.temporary_location = temporary_location
+    self.organism = organism
+    self.ncpu = ncpu
     self.input_resolution = input_resolution
     self.input_file_type = input_file_type
     self.matrix = dict()
@@ -99,10 +101,10 @@ class ContactMap():
 
     # Utilitary objects
     self.error_handler = ErrorHandler()
-    self.chromosome_sizes = ChromosomeSizes()
-    self.bedgraph_handler = Bedgraph()
-    self.juicer_handler = Juicer()
-    self.cooler_handler = Cooler()
+    self.chromosome_sizes = ChromosomeSizes(self.organism)
+    self.bedgraph_handler = Bedgraph(self.organism, self.ncpu)
+    self.juicer_handler = Juicer(self.ncpu)
+    self.cooler_handler = Cooler(self.organism, self.ncpu)
 
     # Load file
     self.load_matrix()
@@ -112,6 +114,16 @@ class ContactMap():
   #############################################################################
 
   def load_matrix(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Verify if input file exists
     self.verify_input_file()
@@ -140,12 +152,32 @@ class ContactMap():
         self.load_matrix_from_sparse()
 
   def verify_input_file(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Verify if input file exists
     if(not os.path.isfile(self.input_file_name)):
       self.error_handler.throw_error("TODO") # TODO
 
   def detect_file_type(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Detect file type if file is unknown
     if(self.input_file_type == InputFileType.UNKNOWN):
@@ -171,6 +203,16 @@ class ContactMap():
         self.error_handler.throw_error("TODO") # TODO
 
   def detect_input_resolutions(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Detect file type if file is unknown
     if(self.input_resolution == None):
@@ -200,52 +242,164 @@ class ContactMap():
       self.error_handler.throw_error("TODO") # TODO
 
   def load_matrix_from_hic(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # List of temporary files to remove
+    list_files_to_remove = []
 
     # Iterating on chromosomes
-    for chrom in self.chromosome_sizes.chromosome_sizes_list: # TODO
+    for chrom in self.chromosome_sizes.chromosome_sizes_list:
 
-self.juicer_handler.add_dump(resolution, region1, region2, input_file_name, output_file_name)
+      # Regions
+      chrom_wo_chr = chrom.split("chr")[0]
+      start = "1"
+      end = str(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
+      region = ":".join([chrom_wo_chr, start, end])
 
-    # Running all jobs
+      # Temporary bedgraph file
+      bedgraph_file_name = os.path.join(self.temporary_location, "bedgraph_file_name_" + chrom + ".bg2")
+      list_files_to_remove.append(bedgraph_file_name)
+
+      # Adding juicer dump job
+      self.juicer_handler.add_dump(self.resolution, region, region, self.input_file_name, bedgraph_file_name)
+
+      # Adding bedgraph dump job
+      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self.matrix)
+
+    # Running juicer jobs
     dump_process_output = self.juicer_handler.run_dump(return_type = "process_out")
 
-    # Verification of dumping processes
+    # Verification of juicer dumping processes
     self.load_process_verification(dump_process_output)
 
-    # Bedgraph
+    # Running bedgraph jobs
+    dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
+
+    # Verification of bedgraph loading processes
+    self.load_process_verification(dump_process_output)
+
+    # Removing temporary files
+    remove_command = ["rm", "-rf"] + list_files_to_remove
+    remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
   def load_matrix_from_cool(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # List of temporary files to remove
+    list_files_to_remove = []
 
     # Iterating on chromosomes
     for chrom in self.chromosome_sizes.chromosome_sizes_list:
 
-self.cooler_handler.add_dump_single(resolution, region1, region2, input_file_name, output_file_name)
+      # Regions
+      start = "1"
+      end = '{:,}'.format(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
+      region = chrom + ":" + start + "-" + end
 
-    # Running all jobs
+      # Temporary bedgraph file
+      bedgraph_file_name = os.path.join(self.temporary_location, "bedgraph_file_name_" + chrom + ".bg2")
+      list_files_to_remove.append(bedgraph_file_name)
+
+      # Adding chromosome dump job
+      self.cooler_handler.add_dump_single(self.resolution, region, region, self.input_file_name, bedgraph_file_name)
+
+      # Adding bedgraph dump job
+      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self.matrix)
+
+    # Running cooler jobs
     dump_process_output = self.cooler_handler.run_dump_single(return_type = "process_out")
 
-    # Verification of dumping processes
+    # Verification of cooler dumping processes
     self.load_process_verification(dump_process_output)
 
-    # Bedgraph
+    # Running bedgraph jobs
+    dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
+
+    # Verification of bedgraph loading processes
+    self.load_process_verification(dump_process_output)
+
+    # Removing temporary files
+    remove_command = ["rm", "-rf"] + list_files_to_remove
+    remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
   def load_matrix_from_mcool(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # List of temporary files to remove
+    list_files_to_remove = []
 
     # Iterating on chromosomes
     for chrom in self.chromosome_sizes.chromosome_sizes_list:
 
-self.cooler_handler.add_dump_multiple(resolution, region1, region2, input_file_name, output_file_name)
+      # Regions
+      start = "1"
+      end = '{:,}'.format(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
+      region = chrom + ":" + start + "-" + end
 
+      # Temporary bedgraph file
+      bedgraph_file_name = os.path.join(self.temporary_location, "bedgraph_file_name_" + chrom + ".bg2")
+      list_files_to_remove.append(bedgraph_file_name)
 
-    # Running all jobs
+      # Adding chromosome dump job
+      self.cooler_handler.add_dump_multiple(self.resolution, region, region, self.input_file_name, bedgraph_file_name)
+
+      # Adding bedgraph dump job
+      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self.matrix)
+
+    # Running cooler jobs
     dump_process_output = self.cooler_handler.run_dump_multiple(return_type = "process_out")
 
-    # Verification of dumping processes
+    # Verification of cooler dumping processes
     self.load_process_verification(dump_process_output)
 
-    # Bedgraph
+    # Running bedgraph jobs
+    dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
 
-  def load_matrix_from_sparse(self):
+    # Verification of bedgraph loading processes
+    self.load_process_verification(dump_process_output)
+
+    # Removing temporary files
+    remove_command = ["rm", "-rf"] + list_files_to_remove
+    remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+
+  def load_matrix_from_sparse(self, input_file_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Iterating on chromosomes
     for chrom in self.chromosome_sizes.chromosome_sizes_list:
@@ -260,6 +414,16 @@ self.cooler_handler.add_dump_multiple(resolution, region1, region2, input_file_n
     self.load_process_verification(dump_process_output)
 
   def load_process_verification(self, dump_process_output):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Check if all chromosomes executed successfully
     for k in range(0, len(dump_process_output)):
@@ -278,21 +442,64 @@ self.cooler_handler.add_dump_multiple(resolution, region1, region2, input_file_n
       except subprocess.CalledProcessError:
         self.error_handler.throw_error("TODO", chrom) # TODO
 
+
   #############################################################################
   # Output File Writing
   #############################################################################
 
-  def write_matrix_as_sparse(self):
-    pass
+  def write_matrix_as_hic(self, output_file_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
-  def write_matrix_as_hic(self):
-    pass
+    # Adding load job
+    self.juicer_handler.add_load(self.organism, self.resolution, self.matrix, self.temporary_location, output_file_name)
 
-  def write_matrix_as_mcool(self):
-    pass
+    # Running load job
+    self.juicer_handler.run_load(return_type = "success")
 
-  def write_matrix_as_cool(self):
-    pass
+  def write_matrix_as_cool(self, output_file_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Adding load job
+    self.cooler_handler.add_load(self.organism, self.resolution, self.matrix, self.temporary_location, output_file_name)
+
+    # Running load job
+    self.cooler_handler.run_load(return_type = "success")
+
+  def write_matrix_as_sparse(self, output_file_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Adding load job
+    self.bedgraph_handler.add_load(self.resolution, self.matrix, output_file_name, start_index = 0)
+
+    # Running load job
+    self.bedgraph_handler.run_load(return_type = "success")
 
   #############################################################################
   # Binary Operations

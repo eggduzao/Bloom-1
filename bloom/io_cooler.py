@@ -62,7 +62,6 @@ class Cooler(ConfigurationFile):
     ConfigurationFile.__init__(self)
     self.cooler_command = self.config.get("Cooler", "command")
     self.chromosome_sizes_file_name = os.path.join(self.bloom_data_path, self.config.get("ChromosomeSizes", organism))
-    self.bed_graph_handler = Bedgraph(organism, ncpu)
 
     # Auxiliary Parameters
     self.ncpu = ncpu
@@ -72,6 +71,9 @@ class Cooler(ConfigurationFile):
 
     # Error handler
     self.error_handler = ErrorHandler()
+
+    # Bedgraph handler
+    self.bed_graph_handler = Bedgraph(self.organism, self.ncpu)
 
   def dump_single(self, resolution, region1, region2, input_file_name, output_file_name):
     """Returns TODO.

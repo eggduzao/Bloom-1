@@ -66,7 +66,7 @@ class Bedgraph(ConfigurationFile):
     self.process_queue = []
 
     # Chromosome sizes
-    self.chromosome_sizes = ChromosomeSizes()
+    self.chromosome_sizes = ChromosomeSizes(self.organism)
 
     # Error handler
     self.error_handler = ErrorHandler()
