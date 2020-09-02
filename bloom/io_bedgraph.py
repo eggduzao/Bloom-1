@@ -124,7 +124,7 @@ class Bedgraph(ConfigurationFile):
 
     self.process_queue.append((chromosome, input_file_name, sparse_matrix_dictionary))
 
-  def run_dump(self):
+  def run_dump(self, return_type = "success"):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -147,9 +147,14 @@ class Bedgraph(ConfigurationFile):
     for cp in dump_process_output:
       if(not cp):
         successful_execution = False
-        self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
+        self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly. Or warning showing the parameters.
 
-    return successful_execution
+    if(return_type == "success"):
+      return successful_execution
+    elif(return_type == "process_out"):
+      return dump_process_output
+    else:
+      return None
 
   # UPPER MATRIX DICTIONARY -> BEDGRAPH
   def load(self, resolution, sparse_matrix_dictionary, output_file_name, start_index = 0):
@@ -211,7 +216,7 @@ class Bedgraph(ConfigurationFile):
 
     self.process_queue.append((resolution, sparse_matrix_dictionary, output_file_name, start_index))
 
-  def run_load(self):
+  def run_load(self, return_type = "success"):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -231,14 +236,29 @@ class Bedgraph(ConfigurationFile):
     self.process_queue = None
     gc.collect()
     successful_execution = True
-    for cp in dump_process_output:
+    for cp in load_process_output:
       if(not cp):
         successful_execution = False
         self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
 
-    return successful_execution
+    if(return_type == "success"):
+      return successful_execution
+    elif(return_type == "process_out"):
+      return load_process_output
+    else:
+      return None
 
   def identify_minimal_resolution(self, input_file_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Current result resolution
     resolution = None
@@ -265,6 +285,16 @@ class Bedgraph(ConfigurationFile):
     return resolution
 
   def filetype_is_bedgraph(self, input_file_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Current result resolution
     is_bedgraph = True

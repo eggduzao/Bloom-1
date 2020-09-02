@@ -13,10 +13,20 @@ Authors: Eduardo G. Gusmao.
 
 # Python
 import os
+import gc
+import sys
+import codecs
+import optparse
+import traceback
 import subprocess
+import configparser
+import multiprocessing
 
 # Internal
-from bloom.util import ErrorHandler, ChromosomeSizes
+from bloom.util import ErrorHandler, ChromosomeSizes, AuxiliaryFunctions
+from bloom.io_bedgraph import Bedgraph
+from bloom.io_juicer import Juicer
+from bloom.io_cooler import Cooler
 
 # External
 import numpy
@@ -40,10 +50,11 @@ class InputFileType():
       - Possibility 2: A possibility 2.
   """
 
-  SPARSE = 0
-  HIC = 1
-  COOL = 2
-  MCOOL = 3
+  UNKNOWN = 0
+  SPARSE = 1
+  HIC = 2
+  COOL = 3
+  MCOOL = 4
 
 class ContactMap():
   """This class represents TODO.
@@ -59,7 +70,7 @@ class ContactMap():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, input_contact_matrix_file_name, temporary_directory = os.getcwd(), input_resolution = None, input_file_type = None):
+  def __init__(self, input_contact_matrix_file_name, temporary_location, input_resolution = None, input_file_type = InputFileType.UNKNOWN):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -73,7 +84,7 @@ class ContactMap():
 
     # Main objects
     self.input_file_name = input_contact_matrix_file_name
-    self.temporary_directory = temporary_directory
+    self.temporary_location = temporary_location
     self.input_resolution = input_resolution
     self.input_file_type = input_file_type
     self.matrix = dict()
@@ -89,65 +100,183 @@ class ContactMap():
     # Utilitary objects
     self.error_handler = ErrorHandler()
     self.chromosome_sizes = ChromosomeSizes()
+    self.bedgraph_handler = Bedgraph()
+    self.juicer_handler = Juicer()
+    self.cooler_handler = Cooler()
 
     # Load file
+    self.load_matrix()
 
   #############################################################################
   # Input File Loading
   #############################################################################
 
+  def load_matrix(self):
+
+    # Verify if input file exists
+    self.verify_input_file()
+
+    # Verify input file type
+    self.detect_file_type()
+
+    # Verify input resolution(s)
+    self.detect_input_resolutions()
+  
+    # Load matrix based on file type and resolution
+      # Check if file is Juicer (.hic)
+      if(self.input_file_type == InputFileType.HIC):
+        self.load_matrix_from_hic()
+
+      # Check if file is singular cooler (.cool)
+      elif(self.input_file_type == InputFileType.COOL):
+        self.load_matrix_from_cool()
+
+      # Check if file is multiple cooler (.mcool)
+      elif(self.input_file_type == InputFileType.MCOOL):
+        self.load_matrix_from_mcool()
+
+      # Check if file is sparse text bedgraph (.bg2, .bed, .txt)
+      elif(self.input_file_type == InputFileType.SPARSE):
+        self.load_matrix_from_sparse()
+
   def verify_input_file(self):
 
     # Verify if input file exists
-    if(not os.path.isfile(self.input_file_name)): pass # TODO error - input file does not exist
-
-  def create_temporary_directory(self):
-
-    # Creating temorary directory as: temporary folder / input file name
-    if(os.path.isdir(self.temporary_directory)):
-      input_contact_matrix_name = os.path.splitext(os.path.basename(self.input_file_name))[0]
-      try:
-        self.temporary_directory = os.path.join(self.temporary_directory, input_contact_matrix_name)
-        temporary_creation_output = subprocess.run(["mkdir", "-p", self.temporary_directory], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
-      except Exception: pass # TODO error - temporary path could not be created
-    else: pass # TODO error - temporary_directory must be a path
-
-
-  def load_matrix(self):
-
-    # Verify input file type
-
-
-    # Verify input resolution(s)
-
-  
-    # Load matrix based on file type and resolution
-    pass
-
+    if(not os.path.isfile(self.input_file_name)):
+      self.error_handler.throw_error("TODO") # TODO
 
   def detect_file_type(self):
-    pass
+
+    # Detect file type if file is unknown
+    if(self.input_file_type == InputFileType.UNKNOWN):
+
+      # Check if file is Juicer (.hic)
+      if(self.juicer_handler.filetype_is_juicer(self.input_file_name, self.temporary_location)):
+        self.input_file_type = InputFileType.HIC
+
+      # Check if file is singular cooler (.cool)
+      elif(self.cooler_handler.filetype_is_cooler(self.input_file_name, self.temporary_location, check_type = "cool")):
+        self.input_file_type = InputFileType.COOL
+
+      # Check if file is multiple cooler (.mcool)
+      elif(self.cooler_handler.filetype_is_cooler(self.input_file_name, self.temporary_location, check_type = "mcool")):
+        self.input_file_type = InputFileType.MCOOL
+
+      # Check if file is sparse text bedgraph (.bg2, .bed, .txt)
+      elif(self.bedgraph_handler.filetype_is_bedgraph(self.input_file_name)):
+        self.input_file_type = InputFileType.SPARSE
+
+      # No recognizable file type
+      else:
+        self.error_handler.throw_error("TODO") # TODO
 
   def detect_input_resolutions(self):
-    pass
 
-  def load_matrix_from_sparse(self):
-    pass
+    # Detect file type if file is unknown
+    if(self.input_resolution == None):
+
+      # Check if file is Juicer (.hic)
+      if(self.input_file_type == InputFileType.HIC):
+        self.input_resolution = self.juicer_handler.identify_minimal_resolution(self.input_file_name, self.temporary_location)
+
+      # Check if file is singular cooler (.cool)
+      elif(self.input_file_type == InputFileType.COOL):
+        self.input_resolution = self.cooler_handler.identify_minimal_resolution(self.input_file_name, self.temporary_location, check_type = "cool")
+
+      # Check if file is multiple cooler (.mcool)
+      elif(self.input_file_type == InputFileType.MCOOL):
+        self.input_resolution = self.cooler_handler.identify_minimal_resolution(self.input_file_name, self.temporary_location, check_type = "mcool")
+
+      # Check if file is sparse text bedgraph (.bg2, .bed, .txt)
+      elif(self.input_file_type == InputFileType.SPARSE):
+        self.input_resolution = self.bedgraph_handler.identify_minimal_resolution(self.input_file_name)
+
+      # No recognizable file type
+      else:
+        self.error_handler.throw_error("TODO") # TODO
+
+    # If resolution continues to be unknown it was not detectable
+    if(self.input_resolution == None):
+      self.error_handler.throw_error("TODO") # TODO
 
   def load_matrix_from_hic(self):
-    pass
+
+    # Iterating on chromosomes
+    for chrom in self.chromosome_sizes.chromosome_sizes_list: # TODO
+
+self.juicer_handler.add_dump(resolution, region1, region2, input_file_name, output_file_name)
+
+    # Running all jobs
+    dump_process_output = self.juicer_handler.run_dump(return_type = "process_out")
+
+    # Verification of dumping processes
+    self.load_process_verification(dump_process_output)
+
+    # Bedgraph
+
+  def load_matrix_from_cool(self):
+
+    # Iterating on chromosomes
+    for chrom in self.chromosome_sizes.chromosome_sizes_list:
+
+self.cooler_handler.add_dump_single(resolution, region1, region2, input_file_name, output_file_name)
+
+    # Running all jobs
+    dump_process_output = self.cooler_handler.run_dump_single(return_type = "process_out")
+
+    # Verification of dumping processes
+    self.load_process_verification(dump_process_output)
+
+    # Bedgraph
 
   def load_matrix_from_mcool(self):
 
+    # Iterating on chromosomes
+    for chrom in self.chromosome_sizes.chromosome_sizes_list:
 
-    # Create file for each chromosome
-    pass
+self.cooler_handler.add_dump_multiple(resolution, region1, region2, input_file_name, output_file_name)
 
 
+    # Running all jobs
+    dump_process_output = self.cooler_handler.run_dump_multiple(return_type = "process_out")
 
-  def load_matrix_from_cool(self):
-    pass
+    # Verification of dumping processes
+    self.load_process_verification(dump_process_output)
 
+    # Bedgraph
+
+  def load_matrix_from_sparse(self):
+
+    # Iterating on chromosomes
+    for chrom in self.chromosome_sizes.chromosome_sizes_list:
+
+      # Adding chromosome dump job
+      self.bedgraph_handler.add_dump(chrom, self.input_file_name, self.matrix)
+
+    # Running all jobs
+    dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
+
+    # Verification of loading processes
+    self.load_process_verification(dump_process_output)
+
+  def load_process_verification(self, dump_process_output):
+
+    # Check if all chromosomes executed successfully
+    for k in range(0, len(dump_process_output)):
+
+      # Get specific process and chromosome
+      cp = dump_process_output[k]
+      chrom = self.chromosome_sizes.chromosome_sizes_list[k]
+
+      # Verify if chromosome executed correctly
+      try:
+        returncode = cp.check_returncode()
+        if(returncode > 0): 
+          self.error_handler.throw_warning("TODO", chrom) # TODO - the process had an error, and exited with that code
+        elif(returncode < 0): 
+          self.error_handler.throw_warning("TODO", chrom) # TODO - the process was killed with a signal of -1 * exitcode
+      except subprocess.CalledProcessError:
+        self.error_handler.throw_error("TODO", chrom) # TODO
 
   #############################################################################
   # Output File Writing

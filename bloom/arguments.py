@@ -230,3 +230,17 @@ class ArgumentParser():
         exit(1)
     # if(not arguments or len(arguments) > 1): error_handler.throw_error("FP_WRONG_ARGUMENT") # TODO
 
+
+  # TODO -----
+  def create_temporary_directory(self):
+
+    # Creating temorary directory as: temporary folder / input file name
+    if(os.path.isdir(self.temporary_directory)):
+      input_contact_matrix_name = os.path.splitext(os.path.basename(self.input_file_name))[0]
+      try:
+        self.temporary_directory = os.path.join(self.temporary_directory, input_contact_matrix_name)
+        temporary_creation_output = subprocess.run(["mkdir", "-p", self.temporary_directory], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+      except Exception: pass # TODO error - temporary path could not be created
+    else: pass # TODO error - temporary_directory must be a path
+
+

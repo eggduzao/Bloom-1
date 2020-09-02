@@ -74,6 +74,9 @@ class Juicer(ConfigurationFile):
     # Error handler
     self.error_handler = ErrorHandler()
 
+  def dumpfile_to_bedgraph(self, input_file_name, output_file_name):
+    pass # TODO
+
   def dump(self, resolution, region1, region2, input_file_name, output_file_name):
     """Returns TODO.
     
@@ -107,7 +110,7 @@ class Juicer(ConfigurationFile):
 
     self.process_queue.append((resolution, region1, region2, input_file_name, output_file_name))
 
-  def run_dump(self):
+  def run_dump(self, return_type = "success"):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -133,7 +136,12 @@ class Juicer(ConfigurationFile):
       except subprocess.CalledProcessError:
         successful_execution = False # TODO - Error: One or more processes didnt execute correctly.
 
-    return successful_execution
+    if(return_type == "success"):
+      return successful_execution
+    elif(return_type == "process_out"):
+      return dump_process_output
+    else:
+      return None
 
   def sort_pre_file(self, pre_file_name, temporary_location, pre_file_name_sorted):
     """Returns TODO.
@@ -236,7 +244,7 @@ class Juicer(ConfigurationFile):
 
     self.process_queue.append((genome_id, resolution, sparse_matrix_dictionary, temporary_location, output_file_name))
 
-  def run_load(self):
+  def run_load(self, return_type = "success"):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -262,9 +270,24 @@ class Juicer(ConfigurationFile):
       except subprocess.CalledProcessError:
         successful_execution = False # TODO - Error: One or more processes didnt execute correctly.
 
-    return successful_execution
+    if(return_type == "success"):
+      return successful_execution
+    elif(return_type == "process_out"):
+      return load_process_output
+    else:
+      return None
 
   def identify_minimal_resolution(self, input_file_name, temporary_location, region = "1:1000000:5000000"):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Current result resolution
     resolution = None
@@ -292,6 +315,16 @@ class Juicer(ConfigurationFile):
     return resolution
 
   def filetype_is_juicer(self, input_file_name, temporary_location, region = "1:1000000:5000000"):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Current result resolution
     is_juicer = False
