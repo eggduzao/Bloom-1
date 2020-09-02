@@ -270,7 +270,7 @@ class ContactMap():
       list_files_to_remove.append(bedgraph_file_name)
 
       # Adding juicer dump job
-      self.juicer_handler.add_dump(self.resolution, region, region, self.input_file_name, bedgraph_file_name)
+      self.juicer_handler.add_dump(self.resolution, region, region, self.input_file_name, self.temporary_location, bedgraph_file_name, output_type = "bedgraph")
 
       # Adding bedgraph dump job
       self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self.matrix)
@@ -319,7 +319,7 @@ class ContactMap():
       list_files_to_remove.append(bedgraph_file_name)
 
       # Adding chromosome dump job
-      self.cooler_handler.add_dump_single(self.resolution, region, region, self.input_file_name, bedgraph_file_name)
+      self.cooler_handler.add_dump_single(region, region, self.input_file_name, bedgraph_file_name)
 
       # Adding bedgraph dump job
       self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self.matrix)
@@ -500,6 +500,21 @@ class ContactMap():
 
     # Running load job
     self.bedgraph_handler.run_load(return_type = "success")
+
+
+  #############################################################################
+  # Sparsity Operations
+  #############################################################################
+
+  def update_sparsity(self):
+
+    # TODO
+
+
+  def get_sparsity(self):
+
+    # TODO
+
 
   #############################################################################
   # Binary Operations

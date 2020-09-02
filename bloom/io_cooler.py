@@ -75,7 +75,7 @@ class Cooler(ConfigurationFile):
     # Bedgraph handler
     self.bed_graph_handler = Bedgraph(self.organism, self.ncpu)
 
-  def dump_single(self, resolution, region1, region2, input_file_name, output_file_name):
+  def dump_single(self, region1, region2, input_file_name, output_file_name):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -88,16 +88,14 @@ class Cooler(ConfigurationFile):
     """
   
     # Execution of Cooler's dump
-    if(resolution):
-      command = [self.cooler_command, "dump", "-t", "pixels", "--join", "-r", region1, "-r2", region2,
-                 "::".join(input_file_name, "resolutions/" + str(resolution)), ">", output_file_name]
-    else:
-      command = [self.cooler_command, "dump", "-t", "pixels", "--join", "-r", region1, "-r2", region2,
-                 input_file_name, ">", output_file_name]
+    command = [self.cooler_command, "dump", "-t", "pixels", "--join", "-r", region1, "-r2", region2,
+               input_file_name, ">", output_file_name]
     dump_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+
+    # Return dump process
     return dump_process
 
-  def add_dump_single(self, resolution, region1, region2, input_file_name, output_file_name):
+  def add_dump_single(self, region1, region2, input_file_name, output_file_name):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -109,7 +107,8 @@ class Cooler(ConfigurationFile):
       - return -- A return.
     """
 
-    self.process_queue.append((resolution, region1, region2, input_file_name, output_file_name))
+    # Append job to queue
+    self.process_queue.append((region1, region2, input_file_name, output_file_name))
 
   def run_dump_single(self, return_type = "success"):
     """Returns TODO.
@@ -123,13 +122,18 @@ class Cooler(ConfigurationFile):
       - return -- A return.
     """
     
+    # Execute job queue
     pool = multiprocessing.Pool(self.ncpu)
-    dump_process_output = pool.starmap(self.dump, [arguments for arguments in self.process_queue])
+    dump_process_output = pool.starmap(self.dump_single, [arguments for arguments in self.process_queue])
     pool.close()
     pool.join()
+
+    # Clean queue
     pool = None
     self.process_queue = None
     gc.collect()
+
+    # Check execution status
     successful_execution = True
     for cp in dump_process_output:
       try:
@@ -137,6 +141,7 @@ class Cooler(ConfigurationFile):
       except subprocess.CalledProcessError:
         successful_execution = False # TODO - Error: One or more processes didnt execute correctly.
 
+    # Return mode
     if(return_type == "success"):
       return successful_execution
     elif(return_type == "process_out"):
@@ -157,13 +162,11 @@ class Cooler(ConfigurationFile):
     """
   
     # Execution of Cooler's dump
-    if(resolution):
-      command = [self.cooler_command, "dump", "-t", "pixels", "--join", "-r", region1, "-r2", region2,
+    command = [self.cooler_command, "dump", "-t", "pixels", "--join", "-r", region1, "-r2", region2,
                  "::".join(input_file_name, "resolutions/" + str(resolution)), ">", output_file_name]
-    else:
-      command = [self.cooler_command, "dump", "-t", "pixels", "--join", "-r", region1, "-r2", region2,
-                 input_file_name, ">", output_file_name]
     dump_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+
+    # Return dump process
     return dump_process
 
   def add_dump_multiple(self, resolution, region1, region2, input_file_name, output_file_name):
@@ -178,6 +181,7 @@ class Cooler(ConfigurationFile):
       - return -- A return.
     """
 
+    # Append job to queue
     self.process_queue.append((resolution, region1, region2, input_file_name, output_file_name))
 
   def run_dump_multiple(self, return_type = "success"):
@@ -191,14 +195,19 @@ class Cooler(ConfigurationFile):
     
       - return -- A return.
     """
-    
+ 
+    # Execute job queue   
     pool = multiprocessing.Pool(self.ncpu)
-    dump_process_output = pool.starmap(self.dump, [arguments for arguments in self.process_queue])
+    dump_process_output = pool.starmap(self.dump_multiple, [arguments for arguments in self.process_queue])
     pool.close()
     pool.join()
+
+    # Clean queue
     pool = None
     self.process_queue = None
     gc.collect()
+
+    # Check execution status
     successful_execution = True
     for cp in dump_process_output:
       try:
@@ -206,6 +215,7 @@ class Cooler(ConfigurationFile):
       except subprocess.CalledProcessError:
         successful_execution = False # TODO - Error: One or more processes didnt execute correctly.
 
+    # Return mode
     if(return_type == "success"):
       return successful_execution
     elif(return_type == "process_out"):
@@ -238,6 +248,7 @@ class Cooler(ConfigurationFile):
     remove_command = ["rm", "-rf", bedgraph_file_name]
     remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
+    # Return load process
     return dump_process
 
   def add_load(self, genome_id, resolution, sparse_matrix_dictionary, temporary_location, output_file_name):
@@ -252,6 +263,7 @@ class Cooler(ConfigurationFile):
       - return -- A return.
     """
 
+    # Append job to queue
     self.process_queue.append((genome_id, resolution, sparse_matrix_dictionary, temporary_location, output_file_name))
 
   def run_load(self, return_type = "success"):
@@ -266,13 +278,18 @@ class Cooler(ConfigurationFile):
       - return -- A return.
     """
     
+    # Execute job queue
     pool = multiprocessing.Pool(self.ncpu)
     load_process_output = pool.starmap(self.load, [arguments for arguments in self.process_queue])
     pool.close()
     pool.join()
+
+    # Clean queue
     pool = None
     self.process_queue = None
     gc.collect()
+
+    # Check execution status
     successful_execution = True
     for cp in load_process_output:
       try:
@@ -280,6 +297,7 @@ class Cooler(ConfigurationFile):
       except subprocess.CalledProcessError:
         successful_execution = False # TODO - Error: One or more processes didnt execute correctly.
 
+    # Return mode
     if(return_type == "success"):
       return successful_execution
     elif(return_type == "process_out"):
@@ -309,7 +327,7 @@ class Cooler(ConfigurationFile):
       output_file_name = os.path.join(temporary_location, "res_test.txt")
 
       # Add single dump to queue
-      self.add_dump_single(res, region, region, input_file_name, output_file_name)
+      self.add_dump_single(region, region, input_file_name, output_file_name)
 
       # Run single dump job
       successful_execution = self.run_dump_single()
@@ -371,7 +389,7 @@ class Cooler(ConfigurationFile):
       output_file_name = os.path.join(temporary_location, "res_test.txt")
 
       # Add single dump to queue
-      self.add_dump_single(res, region, region, input_file_name, output_file_name)
+      self.add_dump_single(region, region, input_file_name, output_file_name)
 
       # Run single dump job
       successful_execution = self.run_dump_single()

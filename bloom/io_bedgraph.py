@@ -122,6 +122,7 @@ class Bedgraph(ConfigurationFile):
       - return -- A return.
     """
 
+    # Append job to queue
     self.process_queue.append((chromosome, input_file_name, sparse_matrix_dictionary))
 
   def run_dump(self, return_type = "success"):
@@ -136,19 +137,25 @@ class Bedgraph(ConfigurationFile):
       - return -- A return.
     """
     
+    # Execute job queue
     pool = multiprocessing.Pool(self.ncpu)
     dump_process_output = pool.starmap(self.dump, [arguments for arguments in self.process_queue])
     pool.close()
     pool.join()
+
+    # Clean queue
     pool = None
     self.process_queue = None
     gc.collect()
+
+    # Check execution status
     successful_execution = True
     for cp in dump_process_output:
       if(not cp):
         successful_execution = False
         self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly. Or warning showing the parameters.
 
+    # Return mode
     if(return_type == "success"):
       return successful_execution
     elif(return_type == "process_out"):
@@ -214,6 +221,7 @@ class Bedgraph(ConfigurationFile):
       - return -- A return.
     """
 
+    # Append job to queue
     self.process_queue.append((resolution, sparse_matrix_dictionary, output_file_name, start_index))
 
   def run_load(self, return_type = "success"):
@@ -227,20 +235,26 @@ class Bedgraph(ConfigurationFile):
     
       - return -- A return.
     """
-    
+
+    # Execute job queue
     pool = multiprocessing.Pool(self.ncpu)
     load_process_output = pool.starmap(self.load, [arguments for arguments in self.process_queue])
     pool.close()
     pool.join()
+
+    # Clean queue
     pool = None
     self.process_queue = None
     gc.collect()
+
+    # Check execution status
     successful_execution = True
     for cp in load_process_output:
       if(not cp):
         successful_execution = False
         self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
 
+    # Return mode
     if(return_type == "success"):
       return successful_execution
     elif(return_type == "process_out"):

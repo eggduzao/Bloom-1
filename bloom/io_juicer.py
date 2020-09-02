@@ -74,10 +74,7 @@ class Juicer(ConfigurationFile):
     # Error handler
     self.error_handler = ErrorHandler()
 
-  def dumpfile_to_bedgraph(self, input_file_name, output_file_name):
-    pass # TODO
-
-  def dump(self, resolution, region1, region2, input_file_name, output_file_name):
+  def dumpfile_to_bedgraph(self, resolution, input_file_name, output_file_name):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -88,15 +85,76 @@ class Juicer(ConfigurationFile):
     
       - return -- A return.
     """
+ 
+    # Open juicer's pre file [chrom1, pos11, pos21, count] and output bedgraph file
+    input_file = codecs.open(input_file_name, "rU", "utf8")
+    output_file = codecs.open(output_file_name, "w", "utf8")
+   
+    # Iterate through bedgraph file
+    for line in input_file:
+
+      # Get file columns
+      ll = line.strip().split("\t")
+      chrom = ll[0]
+      pos11 = int(ll[1])
+      pos12 = pos11 + resolution
+      pos21 = int(ll[2])
+      pos22 = pos21 + resolution
+      count = ll[3]
+      entry = [chrom, str(pos11), str(pos12), chrom, str(pos21), str(pos22), count]
+      output_file.write("\t".join(entry) + "\n")
+
+    # Close files
+    input_file.close()
+    output_file.close()
+
+    # Successful execution
+    return True
+
+  def dump(self, resolution, region1, region2, input_file_name, temporary_location, output_file_name, output_type = "juicer"):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Juicer output
+    if(output_type == "juicer"):
   
-    # Execution of Juicer's dump
-    command = [self.juicer_command] + self.juicer_options.split(" ") + [self.juicer_jar_location, "dump", 
-               self.kind_of_matrix, self.kind_of_normalization, input_file_name,
-               region1, region2, self.unit_of_resolution, resolution, output_file_name]
-    dump_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+      # Execution of Juicer's dump
+      command = [self.juicer_command] + self.juicer_options.split(" ") + [self.juicer_jar_location, "dump", 
+                 self.kind_of_matrix, self.kind_of_normalization, input_file_name,
+                 region1, region2, self.unit_of_resolution, resolution, output_file_name]
+      dump_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+
+    # Bedgraph output
+    if(output_type == "bedgraph"):
+
+      # Create temporary file
+      temp_output_file_name = os.path.join(temporary_location, "temp_output_file_name.pre")
+
+      # Execution of Juicer's dump
+      command = [self.juicer_command] + self.juicer_options.split(" ") + [self.juicer_jar_location, "dump", 
+                 self.kind_of_matrix, self.kind_of_normalization, input_file_name,
+                 region1, region2, self.unit_of_resolution, resolution, temp_output_file_name]
+      dump_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+
+      # Convert juicer dump file (pre) to bedgraph
+      self.dumpfile_to_bedgraph(resolution, temp_output_file_name, output_file_name)
+
+      # Remove temporary files
+      remove_command = ["rm", "-rf", temp_output_file_name]
+      remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+
+    # Return dump process
     return dump_process
 
-  def add_dump(self, resolution, region1, region2, input_file_name, output_file_name):
+  def add_dump(self, resolution, region1, region2, input_file_name, temporary_location, output_file_name, output_type = "juicer"):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -108,7 +166,8 @@ class Juicer(ConfigurationFile):
       - return -- A return.
     """
 
-    self.process_queue.append((resolution, region1, region2, input_file_name, output_file_name))
+    # Append job to queue
+    self.process_queue.append((resolution, region1, region2, input_file_name, temporary_location, output_file_name, output_type))
 
   def run_dump(self, return_type = "success"):
     """Returns TODO.
@@ -121,14 +180,19 @@ class Juicer(ConfigurationFile):
     
       - return -- A return.
     """
-    
+
+    # Execute job queue
     pool = multiprocessing.Pool(self.ncpu)
     dump_process_output = pool.starmap(self.dump, [arguments for arguments in self.process_queue])
     pool.close()
     pool.join()
+
+    # Clean queue
     pool = None
     self.process_queue = None
     gc.collect()
+
+    # Check execution status
     successful_execution = True
     for cp in dump_process_output:
       try:
@@ -136,6 +200,7 @@ class Juicer(ConfigurationFile):
       except subprocess.CalledProcessError:
         successful_execution = False # TODO - Error: One or more processes didnt execute correctly.
 
+    # Return mode
     if(return_type == "success"):
       return successful_execution
     elif(return_type == "process_out"):
@@ -228,6 +293,7 @@ class Juicer(ConfigurationFile):
     pre_temp_remove_command = ["rm", "-rf", pre_file_name, sorted_pre_file_name]
     pre_temp_remove_process = subprocess.run(pre_temp_remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
+    # Return load process
     return pre_process
 
   def add_load(self, genome_id, resolution, sparse_matrix_dictionary, temporary_location, output_file_name):
@@ -242,6 +308,7 @@ class Juicer(ConfigurationFile):
       - return -- A return.
     """
 
+    # Append job to queue
     self.process_queue.append((genome_id, resolution, sparse_matrix_dictionary, temporary_location, output_file_name))
 
   def run_load(self, return_type = "success"):
@@ -256,13 +323,18 @@ class Juicer(ConfigurationFile):
       - return -- A return.
     """
     
+    # Execute job queue
     pool = multiprocessing.Pool(self.ncpu)
     load_process_output = pool.starmap(self.load, [arguments for arguments in self.process_queue])
     pool.close()
     pool.join()
+
+    # Clean queue
     pool = None
     self.process_queue = None
     gc.collect()
+
+    # Check execution status
     successful_execution = True
     for cp in load_process_output:
       try:
@@ -270,6 +342,7 @@ class Juicer(ConfigurationFile):
       except subprocess.CalledProcessError:
         successful_execution = False # TODO - Error: One or more processes didnt execute correctly.
 
+    # Return mode
     if(return_type == "success"):
       return successful_execution
     elif(return_type == "process_out"):
@@ -297,7 +370,7 @@ class Juicer(ConfigurationFile):
 
       # Add job
       output_file_name = os.path.join(temporary_location, "res_test_" + res + ".txt")
-      self.add_dump(res, region, region, input_file_name, output_file_name)
+      self.add_dump(res, region, region, input_file_name, temporary_location, output_file_name)
 
       # Run job
       successful_execution = self.run_dump()
@@ -334,7 +407,7 @@ class Juicer(ConfigurationFile):
 
       # Add job
       output_file_name = os.path.join(temporary_location, "file_test_" + res + ".txt")
-      self.add_dump(res, region, region, input_file_name, output_file_name)
+      self.add_dump(res, region, region, input_file_name, temporary_location, output_file_name)
 
       # Run job
       successful_execution = self.run_dump()

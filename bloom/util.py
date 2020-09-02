@@ -24,6 +24,16 @@ import multiprocessing
 # External
 
 
+
+# TODO:
+## 1. io_cooler: dump_single / dump_multiple OK
+## 2. io_juicer: dumpfile_to_bedgraph / put flag on dump to convert to bedgraph or not OK
+# 3. contact_map: update_sparsity / get_sparsity
+####
+# 4. Geclist
+#### 
+
+
 """
 
 =================================
