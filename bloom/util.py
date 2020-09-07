@@ -25,14 +25,6 @@ import multiprocessing
 
 
 
-# TODO:
-## 1. io_cooler: dump_single / dump_multiple OK
-## 2. io_juicer: dumpfile_to_bedgraph / put flag on dump to convert to bedgraph or not OK
-# 3. contact_map: update_sparsity / get_sparsity
-####
-# 4. Geclist
-#### 
-
 
 """
 
@@ -336,6 +328,9 @@ class AuxiliaryFunctions:
   """Class for small auxiliary functions.
   """
 
+
+# Add check int, float, string, path, file to Util
+
   @staticmethod
   def string_is_int(s):
     """Verifies whether a string is a representation of a numeric integer.
@@ -371,6 +366,63 @@ class AuxiliaryFunctions:
       return True
     except ValueError:
       return False
+
+  @staticmethod
+  def string_is_validfile(s):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    # Initialize validity flag
+    is_valid = False
+
+    # Check whether file exists and is accessible
+    if(os.path.isfile(s)):
+      try:
+        input_file = codecs.open(s, "rU", "utf8")
+        input_file.close()
+        is_valid = True
+      except Exception:
+        is_valid = False
+
+    # Return validity flag
+    return is_valid
+
+  @staticmethod
+  def string_is_validpath(s):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    # Initialize validity flag
+    is_valid = False
+
+    # Check whether path exists and is accessible
+    if(os.path.isdir(s)):
+      try:
+        temp_file_name = os.path.join(s, "temp_file_name.txt")
+        input_file = codecs.open(temp_file_name, "w", "utf8")
+        input_file.close()
+        remove_command = ["rm", "-rf", temp_file_name]
+        remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+        is_valid = True
+      except Exception:
+        is_valid = False
+
+    # Return validity flag
+    return is_valid
 
   @staticmethod
   def overlap_count(interval1, interval2):

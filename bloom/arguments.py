@@ -31,7 +31,8 @@ import optparse
 
 # Internal
 from bloom.__version__ import __version__
-from bloom.util import PassThroughOptionParser, ErrorHandler
+from bloom.contact_map import InputFileType
+from bloom.util import PassThroughOptionParser, ErrorHandler, AuxiliaryFunctions
 
 # External
 
@@ -79,6 +80,7 @@ class ArgumentParser():
     self.load_parser()
     self.load_options()
     self.load_options_and_arguments()
+    self.option_argument_validity_check()
 
   #############################################################################
   # Main Operations
@@ -183,7 +185,6 @@ class ArgumentParser():
     else:
       self.parser.add_option(option_alias, option_name, dest = option_variable, type = option_type,
                              metavar = meta_type, default=default_option, help=help_message)
-
 
   def load_options(self):
     """Returns TODO.
@@ -296,31 +297,50 @@ class ArgumentParser():
     resolution = self.options.resolution
     input_type = self.options.input_type
     cores = self.options.cores
-    temporary_location = self.options.temporary_location
+    temporary_location = os.path.abspath(os.path.expanduser(self.options.temporary_location))
 
     # Verify operational options
-    
-
-# TODO:
-# Add check int, float, string, path, file to TODO
-# finish above
-# add all functions in class constructor
-# finish create_temporary_directory
-
+    if(not AuxiliaryFunctions.string_is_int(resolution)):
+      self.error_handler.throw_error("TODO") # TODO
+    if(input_type == "hic"): input_type = InputFileType.HIC
+    elif(input_type == "cool"): input_type = InputFileType.COOL
+    elif(input_type == "mcool"): input_type = InputFileType.MCOOL
+    elif(input_type == "sparse"): input_type = InputFileType.SPARSE
+    else: input_type = InputFileType.UNKNOWN
+    if(not AuxiliaryFunctions.string_is_int(cores)):
+      self.error_handler.throw_error("TODO") # TODO
+    if(not AuxiliaryFunctions.string_is_validpath(temporary_location)):
+      self.error_handler.throw_error("TODO") # TODO
+    else:
+      temporary_location = self.create_temporary_directory(temporary_location)
 
   #############################################################################
   # Auxiliary Operations
   #############################################################################
 
-  # TODO -----
-  def create_temporary_directory(self):
+  def create_temporary_directory(self, temporary_location):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Creating temorary directory as: temporary folder / input file name
-    if(os.path.isdir(self.temporary_directory)):
-      input_contact_matrix_name = os.path.splitext(os.path.basename(self.input_file_name))[0]
-      try:
-        self.temporary_directory = os.path.join(self.temporary_directory, input_contact_matrix_name)
-        temporary_creation_output = subprocess.run(["mkdir", "-p", self.temporary_directory], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
-      except Exception: pass # TODO error - temporary path could not be created
-    else: pass # TODO error - temporary_directory must be a path
+    input_contact_matrix_name = os.path.splitext(os.path.basename(self.input_file_name))[0]
+    temporary_directory = None
+    try:
+      temporary_directory = os.path.join(temporary_location, input_contact_matrix_name)
+      temp_creation_command = ["mkdir", "-p", temporary_directory]
+      temp_creation_process = subprocess.run(temp_creation_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+    except Exception:
+      self.error_handler.throw_error("TODO") # TODO
+
+    # Returning the name of the temporary directory
+    return temporary_directory
+
 
