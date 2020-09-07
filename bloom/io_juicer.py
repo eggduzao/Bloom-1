@@ -74,7 +74,7 @@ class Juicer(ConfigurationFile):
     # Error handler
     self.error_handler = ErrorHandler()
 
-  def dumpfile_to_bedgraph(self, resolution, input_file_name, output_file_name):
+  def dumpfile_to_bedgraph(self, chromosome, resolution, input_file_name, output_file_name):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -95,12 +95,12 @@ class Juicer(ConfigurationFile):
 
       # Get file columns
       ll = line.strip().split("\t")
-      chrom = ll[0]
-      pos11 = int(ll[1])
+      chrom = chromosome
+      pos11 = int(ll[0])
       pos12 = pos11 + resolution
-      pos21 = int(ll[2])
+      pos21 = int(ll[1])
       pos22 = pos21 + resolution
-      count = ll[3]
+      count = ll[2]
       entry = [chrom, str(pos11), str(pos12), chrom, str(pos21), str(pos22), count]
       output_file.write("\t".join(entry) + "\n")
 
@@ -145,7 +145,8 @@ class Juicer(ConfigurationFile):
       dump_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
       # Convert juicer dump file (pre) to bedgraph
-      self.dumpfile_to_bedgraph(resolution, temp_output_file_name, output_file_name)
+      chromosome = "chr" + region1.split(":")[0]
+      self.dumpfile_to_bedgraph(chromosome, resolution, temp_output_file_name, output_file_name)
 
       # Remove temporary files
       remove_command = ["rm", "-rf", temp_output_file_name]

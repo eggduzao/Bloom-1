@@ -508,6 +508,16 @@ class ContactMap():
   #############################################################################
 
   def total_upper_matrix(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Total bins = Summation of the total number of bins of each chromosome map upper triangular matrix without the diagonal bins
     self.total_bins = 0
@@ -527,6 +537,16 @@ class ContactMap():
       self.total_bins += ((total_1d_bins * (total_1d_bins-1))/2) + total_1d_bins
 
   def update_sparsity(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Iterate over matrix
     for key, value in self.matrix.iteritems():
@@ -543,11 +563,31 @@ class ContactMap():
     self.total_zero_bins = self.total_bins - self.total_nonzero_bins
 
   def get_sparsity(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Return sparsity level
     return self.total_nonzero_bins / self.total_bins
 
   def get_sparseity_weighted_sum(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Return sparsity weighted sum
     return self.total_nonzero_value * (self.total_nonzero_bins / self.total_bins)
@@ -557,7 +597,7 @@ class ContactMap():
   # Binary Operations
   #############################################################################
 
-  def create_bin_file_from_text_file(self, text_file_name, bin_file_name):
+  def binfile_to_dumpfile(bin_file_name, dump_file_name):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -568,55 +608,28 @@ class ContactMap():
     
       - return -- A return.
     """
-
-    # Write bin file line by line
-    text_file = open(text_file_name, "r")
-    bin_file = open(bin_file_name, "wb")
-    for line in text_file: bin_file.write(bytearray(line, "utf-8"))
-    text_file.close()
-    bin_file.close()
-
-  def create_dictionary_from_bin_file(self, bin_file_name):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Dictionary
-    res_dict = dict()
 
     # Iterate on each byte of the file
     string_array = []
-    bin_file = open(bin_file_name, "rb")
+    bin_file = codecs.open(bin_file_name, "rb", "utf8")
+    dump_file = codecs.open(dump_file_name, "w", "utf8")
     byte = bin_file.read(1)
     while byte != b"":
       string = byte.decode("utf-8")
+      string_array.append(string)
       if(string == "\n"):
-        ss = "".os.path.join(string_array).split("\t")
-        res_dict[":".os.path.join(ss[:3])] = float(ss[3])
+        ss = "".join(string_array)
+        dump_file.write(ss)
         string_array = []
-      else: string_array.append(string)
       byte = bin_file.read(1)
 
-    # Returning objects
-    return res_dict
+    # Closing files
+    bin_file.close()
+    dump_file.close()
 
 
   #############################################################################
   # Auxiliary Operations
   #############################################################################
-
-
-
-
-
-
-
 
 
