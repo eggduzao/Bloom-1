@@ -66,8 +66,8 @@ def main():
   print("The analysis finished successfully.")
   """
 
-  # Test 2
   """
+  # Test 2
   t1 = time()
   juicer = Juicer(8)
   input_file_name = "/usr/users/egadegu/Projects/Papantonis_Bloom/Data/5_dn_isHiC_Human_CM/dnHiC/HEART.hic"

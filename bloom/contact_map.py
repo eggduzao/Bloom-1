@@ -93,11 +93,12 @@ class ContactMap():
     self.resolution = None
     
     # Auxiliary objects
-    self.total_zero = 0
-    self.total_nonzero = 0
-    self.total_sum_nonzero = 0.0
-    self.max = -numpy.inf
-    self.min = numpy.inf
+    self.total_bins = 0
+    self.total_zero_bins = 0
+    self.total_nonzero_bins = 0
+    self.total_nonzero_value = 0.0
+    self.max_value = -numpy.inf
+    self.min_value = numpy.inf
 
     # Utilitary objects
     self.error_handler = ErrorHandler()
@@ -506,14 +507,50 @@ class ContactMap():
   # Sparsity Operations
   #############################################################################
 
+  def total_upper_matrix(self):
+
+    # Total bins = Summation of the total number of bins of each chromosome map upper triangular matrix without the diagonal bins
+    self.total_bins = 0
+
+    # Get valid chromosome list
+    valid_chromosome_dict = dict()
+    for key, value in self.matrix.iteritems():
+      chrom = key.split(":")[0]
+      valid_chromosome_dict[chrom] = True
+    valid_chromosome_list = sorted(valid_chromosome_dict.keys())
+
+    # Iterate on valid chromosome list
+    for chrom in valid_chromosome_list:
+
+      chrom_size = self.chromosome_sizes.chromosome_sizes_dictionary[chrom]
+      total_1d_bins = AuxiliaryFunctions.ceil_multiple(chrom_size, self.resolution) / self.resolution
+      self.total_bins += ((total_1d_bins * (total_1d_bins-1))/2) + total_1d_bins
+
   def update_sparsity(self):
 
-    # TODO
-
+    # Iterate over matrix
+    for key, value in self.matrix.iteritems():
+      
+      # Update values
+      self.total_nonzero_bins += 1
+      self.total_nonzero_value += value
+      if(value > self.max_value):
+        self.max_value = value
+      if(value < self.min_value):
+        self.min_value = value
+   
+    # Update total bins = 0
+    self.total_zero_bins = self.total_bins - self.total_nonzero_bins
 
   def get_sparsity(self):
 
-    # TODO
+    # Return sparsity level
+    return self.total_nonzero_bins / self.total_bins
+
+  def get_sparseity_weighted_sum(self):
+
+    # Return sparsity weighted sum
+    return self.total_nonzero_value * (self.total_nonzero_bins / self.total_bins)
 
 
   #############################################################################
