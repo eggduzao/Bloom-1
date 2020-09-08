@@ -1,5 +1,5 @@
 """
-XXX
+Arguments Module
 ===================
 Placeholder.
 

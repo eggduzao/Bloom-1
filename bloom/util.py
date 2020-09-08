@@ -1,5 +1,5 @@
 """
-Util
+Util Module
 ===================
 The Util classes contains many utilities needed by other classes such as the paths to input files.
 """

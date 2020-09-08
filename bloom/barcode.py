@@ -1,5 +1,5 @@
 """
-XXX
+Barcode Module
 ===================
 Placeholder.
 
