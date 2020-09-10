@@ -1,5 +1,5 @@
 """
-XXX
+IFS Module
 ===================
 Placeholder.
 
@@ -21,7 +21,7 @@ Authors: Eduardo G. Gusmao.
 # Basic Objects
 ###################################################################################################
 
-class Classy():
+class Ifs():
   """This class represents TODO.
 
   *Keyword arguments:*
@@ -48,16 +48,11 @@ class Classy():
     """
     pass
 
-  def summy(self, a, b):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    return a + b
+  def peaks_given_range(self):
+
+    # TODO
+
+  def local_threshold(self):
+
+    # TODO
 

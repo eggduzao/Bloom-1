@@ -597,39 +597,28 @@ class ContactMap():
   # Binary Operations
   #############################################################################
 
-  def binfile_to_dumpfile(bin_file_name, dump_file_name):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
 
-    # Iterate on each byte of the file
-    string_array = []
-    bin_file = codecs.open(bin_file_name, "rb", "utf8")
-    dump_file = codecs.open(dump_file_name, "w", "utf8")
-    byte = bin_file.read(1)
-    while byte != b"":
-      string = byte.decode("utf-8")
-      string_array.append(string)
-      if(string == "\n"):
-        ss = "".join(string_array)
-        dump_file.write(ss)
-        string_array = []
-      byte = bin_file.read(1)
-
-    # Closing files
-    bin_file.close()
-    dump_file.close()
 
 
   #############################################################################
   # Auxiliary Operations
   #############################################################################
 
+  def compare_matrices(self, matrix):
+
+    # Get input keys and compare
+    mykeys = sorted(self.matrix.keys())
+    cpkeys = sorted(matrix)
+    if(mykeys != cpkeys):
+      return False
+
+    # Compare each element
+    for k in mykeys:
+      myvalue = self.matrix[k]
+      cpvalue = matrix[k]
+      if((myvalue > cpvalue + (0.1 * cpvalue)) or (myvalue < cpvalue - (0.1 * cpvalue))):
+        return False
+
+    # Return
+    return True
 

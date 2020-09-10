@@ -166,6 +166,45 @@ class ChromosomeSizes(ConfigurationFile):
     chrom_sizes_file.close()
     self.chromosome_sizes_list = sorted(self.chromosome_sizes_dictionary.keys())
 
+class BarcodeFiles(ConfigurationFile):
+  """This class represents TODO.
+
+  *Keyword arguments:*
+
+    - argument1 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+
+    - argument2 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+  """
+
+  def __init__(self, organism):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Configuration file initialization
+    ConfigurationFile.__init__(self)
+    self.organism = organism
+    self.barcode_name_list = self.config.get("Barcode", organism).split(",")
+
+    # Creating barcode dictionary
+    self.barcode_file_dictionary = dict()
+    for bname in self.barcode_list:
+      barcode_file = os.path.join(self.bloom_data_path, bname) + ".bin"
+      output_file = os.path.join(self.bloom_data_path, bname) + ".clang"
+      self.barcode_file_dictionary[barcode_file] = output_file
+    self.barcode_file_list = sorted(self.barcode_file_dictionary.keys())
+
 
 ###################################################################################################
 # Argument Parsing
