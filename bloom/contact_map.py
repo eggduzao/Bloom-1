@@ -29,7 +29,6 @@ from bloom.io_juicer import Juicer
 from bloom.io_cooler import Cooler
 
 # External
-import numpy
 
 
 ###################################################################################################
@@ -93,12 +92,13 @@ class ContactMap():
     self.resolution = None
     
     # Auxiliary objects
-    self.total_bins = 0
-    self.total_zero_bins = 0
-    self.total_nonzero_bins = 0
-    self.total_nonzero_value = 0.0
-    self.max_value = -numpy.inf
-    self.min_value = numpy.inf
+    self.total_bins = dict() # per chromosome
+    self.total_1d_bins = dict() # per chromosome
+    self.total_zero_bins = dict() # per chromosome
+    self.total_nonzero_bins = dict() # per chromosome
+    self.total_nonzero_value = dict() # per chromosome
+    self.max_value = dict() # per chromosome
+    self.min_value = dict() # per chromosome
 
     # Utilitary objects
     self.error_handler = ErrorHandler()
@@ -504,6 +504,35 @@ class ContactMap():
 
 
   #############################################################################
+  # Operational Operations
+  #############################################################################
+
+  def set(self, chrom i, j, value):
+
+    # Set matrix value
+    key = ":".join([chrom, str(i), str(j)])
+    self.matrix[key] = value
+
+  def add(self, chrom, i, j, value):
+
+    # Set matrix value
+    key = ":".join([chrom, str(i), str(j)])
+    try:
+      self.matrix[key] += value
+    except Exception:
+      self.matrix[key] = value
+
+  def get(self, chrom, i, j):
+
+    # Return value
+    key = ":".join([chrom, str(i), str(j)])
+    try:
+      return self.matrix[key]
+    except Exception:
+      return 0
+
+
+  #############################################################################
   # Sparsity Operations
   #############################################################################
 
@@ -532,9 +561,21 @@ class ContactMap():
     # Iterate on valid chromosome list
     for chrom in valid_chromosome_list:
 
+      if(not valid_chromosome_list[chrom]): continue
+
       chrom_size = self.chromosome_sizes.chromosome_sizes_dictionary[chrom]
-      total_1d_bins = AuxiliaryFunctions.ceil_multiple(chrom_size, self.resolution) / self.resolution
-      self.total_bins += ((total_1d_bins * (total_1d_bins-1))/2) + total_1d_bins
+      total_1d_bins = AuxiliaryFunctions.floor_multiple(chrom_size, self.resolution) / self.resolution
+      total_bins = ((total_1d_bins * (total_1d_bins-1))/2) + total_1d_bins
+
+      try:
+        self.total_1d_bins[chrom] = total_1d_bins
+      except Exception:
+        self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
+
+      try:
+        self.total_bins[chrom] = total_bins
+      except Exception:
+        self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
 
   def update_sparsity(self):
     """Returns TODO.
@@ -550,19 +591,37 @@ class ContactMap():
 
     # Iterate over matrix
     for key, value in self.matrix.iteritems():
+  
+      # Get chromosome
+      chrom = key.split(":")[0]
       
       # Update values
-      self.total_nonzero_bins += 1
-      self.total_nonzero_value += value
-      if(value > self.max_value):
-        self.max_value = value
-      if(value < self.min_value):
-        self.min_value = value
+      try:
+        self.total_nonzero_bins[chrom] += 1
+      except Exception:
+        self.total_nonzero_bins[chrom] = 1
+
+      try:
+        self.total_nonzero_value[chrom] += value
+      except Exception:
+        self.total_nonzero_value[chrom] = value
+
+      try:
+        if(value > self.max_value[chrom]):
+          self.max_value[chrom] = value
+      except Exception:
+        self.max_value[chrom] = value
+
+      try:
+        if(value < self.min_value[chrom]):
+          self.min_value[chrom] = value
+      except Exception:
+        self.min_value[chrom] = value
    
     # Update total bins = 0
     self.total_zero_bins = self.total_bins - self.total_nonzero_bins
 
-  def get_sparsity(self):
+  def get_sparsity(self, chromosome):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -575,9 +634,9 @@ class ContactMap():
     """
 
     # Return sparsity level
-    return self.total_nonzero_bins / self.total_bins
+    return self.total_nonzero_bins[chromosome] / self.total_bins[chromosome]
 
-  def get_sparseity_weighted_sum(self):
+  def get_sparseity_weighted_sum(self, chromosome):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -590,7 +649,7 @@ class ContactMap():
     """
 
     # Return sparsity weighted sum
-    return self.total_nonzero_value * (self.total_nonzero_bins / self.total_bins)
+    return self.total_nonzero_value[chromosome] * (self.total_nonzero_bins[chromosome] / self.total_bins[chromosome])
 
 
   #############################################################################
@@ -621,4 +680,28 @@ class ContactMap():
 
     # Return
     return True
+
+  def distance_from_diagonal(self, key):
+
+    # Fetching rows and columns
+    kk = key.split(":")
+    i_bin = float(int(kk[1]) / self.resolution)
+    j_bin = float(int(kk[2]) / self.resolution)
+    
+    # Calculating standardized distance from diagonal
+    std_distance = ((j_bin - i_bin) / 2. ) / (self.total_1d_bins[chrom] / 2)
+
+    # Returning distance
+    return std_distance
+
+
+
+
+
+
+
+
+
+
+
 

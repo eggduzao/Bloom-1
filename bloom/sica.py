@@ -35,7 +35,7 @@ class Sica():
       - Possibility 2: A possibility 2.
     """
 
-  def __init__(self):
+  def __init__(self, matrix):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -46,15 +46,35 @@ class Sica():
     
       - return -- A return.
     """
-    pass
+    
+    # Class objects
+    self.matrix = matrix
 
-  def star(self):
+  def star(self, diag_dist_scale, diag_dist_rand_range, neighbor_dist_scale, neighbor_dist_rand_range, max_neighbors):
 
-    # TODO
+    # diag_dist_scale = a number that is going to be divided by the distance to the diagonal. The closest to the diagonal, the higher the value to add in the star
+
+    # neighbor_dist_scale = a number to be divided by the distance to the neighbor. The farther the neighbor, the less signal to add.
+
+    # max_neighbors = maximum 1D neighbor distance to sum to have the value to add
 
   def pretad(self):
 
-    # TODO
+    # Create the pre-TADs with different intensities given a distance to the diagonal.
+    # The more distant, the less pre-TADs
+
+    # Also make the pre-TADs relying on the existing starred signal density.
+
+    # Pre-tad shape = circle?
+
+
+
+
+
+
+
+
+
 
 
 
