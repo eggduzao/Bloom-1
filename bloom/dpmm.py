@@ -50,9 +50,11 @@ class Dpmm():
 
   def increase_resolution(self):
 
-    # TODO
+    # Increase resolution
 
   def standardize_map(self):
 
-    # TODO
+    # Make the map stand between [0, 1]
+
+    # What to do with the diagonal?
 

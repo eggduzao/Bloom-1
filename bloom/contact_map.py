@@ -274,7 +274,7 @@ class ContactMap():
       self.juicer_handler.add_dump(self.resolution, region, region, self.input_file_name, self.temporary_location, bedgraph_file_name, output_type = "bedgraph")
 
       # Adding bedgraph dump job
-      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self.matrix)
+      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self)
 
     # Running juicer jobs
     dump_process_output = self.juicer_handler.run_dump(return_type = "process_out")
@@ -323,7 +323,7 @@ class ContactMap():
       self.cooler_handler.add_dump_single(region, region, self.input_file_name, bedgraph_file_name)
 
       # Adding bedgraph dump job
-      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self.matrix)
+      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self)
 
     # Running cooler jobs
     dump_process_output = self.cooler_handler.run_dump_single(return_type = "process_out")
@@ -372,7 +372,7 @@ class ContactMap():
       self.cooler_handler.add_dump_multiple(self.resolution, region, region, self.input_file_name, bedgraph_file_name)
 
       # Adding bedgraph dump job
-      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self.matrix)
+      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self)
 
     # Running cooler jobs
     dump_process_output = self.cooler_handler.run_dump_multiple(return_type = "process_out")
@@ -406,7 +406,7 @@ class ContactMap():
     for chrom in self.chromosome_sizes.chromosome_sizes_list:
 
       # Adding chromosome dump job
-      self.bedgraph_handler.add_dump(chrom, self.input_file_name, self.matrix)
+      self.bedgraph_handler.add_dump(chrom, self.input_file_name, self)
 
     # Running all jobs
     dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
@@ -567,17 +567,25 @@ class ContactMap():
       total_1d_bins = AuxiliaryFunctions.floor_multiple(chrom_size, self.resolution) / self.resolution
       total_bins = ((total_1d_bins * (total_1d_bins-1))/2) + total_1d_bins
 
+      # Update total number of 1D bins (numer of rows = number of columns)
       try:
         self.total_1d_bins[chrom] = total_1d_bins
       except Exception:
         self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
 
+      # Update total number of bins
       try:
         self.total_bins[chrom] = total_bins
       except Exception:
         self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
 
-  def update_sparsity(self):
+      # Update total bins = 0
+      try:
+        self.total_zero_bins[chrom] = self.total_bins[chrom] - self.total_nonzero_bins[chrom]
+      except Exception:
+        self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
+
+  def standardize(self):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -594,32 +602,13 @@ class ContactMap():
   
       # Get chromosome
       chrom = key.split(":")[0]
+      newvalue = (float(value) - float(self.min_value[chrom])) / (float(self.max_value[chrom]) - float(self.min_value[chrom]))
       
       # Update values
       try:
-        self.total_nonzero_bins[chrom] += 1
+        self.matrix[key] = newvalue
       except Exception:
-        self.total_nonzero_bins[chrom] = 1
-
-      try:
-        self.total_nonzero_value[chrom] += value
-      except Exception:
-        self.total_nonzero_value[chrom] = value
-
-      try:
-        if(value > self.max_value[chrom]):
-          self.max_value[chrom] = value
-      except Exception:
-        self.max_value[chrom] = value
-
-      try:
-        if(value < self.min_value[chrom]):
-          self.min_value[chrom] = value
-      except Exception:
-        self.min_value[chrom] = value
-   
-    # Update total bins = 0
-    self.total_zero_bins = self.total_bins - self.total_nonzero_bins
+        self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
 
   def get_sparsity(self, chromosome):
     """Returns TODO.
@@ -636,7 +625,7 @@ class ContactMap():
     # Return sparsity level
     return self.total_nonzero_bins[chromosome] / self.total_bins[chromosome]
 
-  def get_sparseity_weighted_sum(self, chromosome):
+  def get_sparsity_weighted_sum(self, chromosome):
     """Returns TODO.
     
     *Keyword arguments:*

@@ -48,13 +48,17 @@ class Goba():
     """
     pass
 
-  def randaddy(self):
+  def randadd(self):
 
-    # TODO
+    # Randomly add imputed signal. Add more random fragments arounnd intense signals
+
+    # Randadd shape = circle?
+
+    # Clean matrix of very low signals
 
   def posttad(self):
 
-    # TODO
+    # Re-create insulation at the TAD regions
 
 
 

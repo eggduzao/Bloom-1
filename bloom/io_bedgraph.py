@@ -25,6 +25,7 @@ import multiprocessing
 from bloom.util import ConfigurationFile, ChromosomeSizes, ErrorHandler, AuxiliaryFunctions
 
 # External
+import numpy
 
 
 ###################################################################################################
@@ -71,8 +72,7 @@ class Bedgraph(ConfigurationFile):
     # Error handler
     self.error_handler = ErrorHandler()
 
-  # BEDGRAPH -> UPPER MATRIX DICTIONARY
-  def dump(self, chromosome, input_file_name, sparse_matrix_dictionary):
+  def dump(self, chromosome, input_file_name, contact_map, logit = True, pseudocount = 1.0):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -95,14 +95,47 @@ class Bedgraph(ConfigurationFile):
       chrom1 = ll[0]
       chrom2 = ll[3]
       if(chrom1 != chromosome or chrom1 != chrom2): continue
-      pos11 = ll[1]
-      pos21 = ll[4]
-      count = ll[6]
-      region = ":".join([chrom1, str(min(int(pos11), int(pos21))), str(max(int(pos11), int(pos21)))])
+      pos11 = int(ll[1])
+      pos21 = int(ll[4])
+      count = float(ll[6])
+
+      # Value or log to write
+      if(logit): count = numpy.log10(count) + pseudocount
+
+      # Updating matrix
+      region = ":".join([chrom1, str(min(pos11, pos21)), str(max(pos11, pos21))])
       try:
-        sparse_matrix_dictionary[region] += float(count)
+        contact_map.matrix[region] += count
       except Exception:
-        sparse_matrix_dictionary[region] = float(count)
+        contact_map.matrix[region] = count
+
+      # Updating matrice's sparsity indicators
+
+      # Update total of bins with value > 0
+      try:
+        contact_map.total_nonzero_bins[chrom] += 1
+      except Exception:
+        contact_map.total_nonzero_bins[chrom] = 1
+
+      # Update total value
+      try:
+        contact_map.total_nonzero_value[chrom] += count
+      except Exception:
+        contact_map.total_nonzero_value[chrom] = count
+
+      # Update max value
+      try:
+        if(value > contact_map.max_value[chrom]):
+          contact_map.max_value[chrom] = count
+      except Exception:
+        contact_map.max_value[chrom] = count
+
+      # Update min value
+      try:
+        if(value < contact_map.min_value[chrom]):
+          contact_map.min_value[chrom] = count
+      except Exception:
+        contact_map.min_value[chrom] = count
 
     # Close bedgraph
     input_file.close()
@@ -110,7 +143,7 @@ class Bedgraph(ConfigurationFile):
     # Successful execution
     return True
 
-  def add_dump(self, chromosome, input_file_name, sparse_matrix_dictionary):
+  def add_dump(self, chromosome, input_file_name, contact_map, logit = True, pseudocount = 1.0):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -123,7 +156,7 @@ class Bedgraph(ConfigurationFile):
     """
 
     # Append job to queue
-    self.process_queue.append((chromosome, input_file_name, sparse_matrix_dictionary))
+    self.process_queue.append((chromosome, input_file_name, contact_map, logit, pseudocount))
 
   def run_dump(self, return_type = "success"):
     """Returns TODO.
