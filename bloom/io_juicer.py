@@ -22,13 +22,14 @@ import configparser
 import multiprocessing
 
 # Internal
+from bloom.contact_map import ContactMap
 from bloom.util import ConfigurationFile, ChromosomeSizes, ErrorHandler
 
 # External
 
 
 ###################################################################################################
-# Juicer Auxiliary Class
+# Juicer Class
 ###################################################################################################
 
 class Juicer(ConfigurationFile):
@@ -73,6 +74,10 @@ class Juicer(ConfigurationFile):
 
     # Error handler
     self.error_handler = ErrorHandler()
+
+  #############################################################################
+  # Read: Juicer (.hic) -> Bedgraph (.bg)
+  #############################################################################
 
   def dumpfile_to_bedgraph(self, chromosome, resolution, input_file_name, output_file_name):
     """Returns TODO.
@@ -190,7 +195,7 @@ class Juicer(ConfigurationFile):
 
     # Clean queue
     pool = None
-    self.process_queue = None
+    self.process_queue = []
     gc.collect()
 
     # Check execution status
@@ -208,6 +213,10 @@ class Juicer(ConfigurationFile):
       return dump_process_output
     else:
       return None
+
+  #############################################################################
+  # Write: Contact Map -> Juicer (.hic)
+  #############################################################################
 
   def sort_pre_file(self, pre_file_name, temporary_location, pre_file_name_sorted):
     """Returns TODO.
@@ -235,7 +244,7 @@ class Juicer(ConfigurationFile):
     pre_sort_3_command = ["rm", "-rf", temp_sorted_file_name]
     pre_sort_3_process = subprocess.run(pre_sort_3_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
-  def sparse_matrix_to_pre(self, sparse_matrix_dictionary, pre_file_name):
+  def sparse_matrix_to_pre(self, contact_map, pre_file_name):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -250,22 +259,25 @@ class Juicer(ConfigurationFile):
     # Opening pre_file_name
     pre_file = open(pre_file_name, "w")
 
-    # Writing matrix to pre_file_name
-    for key in sparse_matrix_dictionary.keys():
-      kk = key.split(":")
-      str1 = "0"; str2 = "1"
-      frag1 = "0"; frag2 = "1"
-      chr1 = kk[0]; chr2 = kk[0]
-      if(chr1 != chr2): continue
-      pos1 = kk[1]; pos2 = kk[2]
-      score = str(sparse_matrix_dictionary[key])
-      vector = [str1, chr1, pos1, frag1, str2, chr2, pos2, frag2, score]
-      pre_file.write(" ".join(vector)+"\n")
+    # Iterating on valid chromosomes
+    for chromosome in contact_map.valid_chromosome_list:
+
+      # Iterating on matrix
+      for key, value in contact_map.matrix[chromosome].items():
+
+        # Writing matrix to pre_file_name
+        str1 = "0"; str2 = "1"
+        frag1 = "0"; frag2 = "1"
+        chr1 = chromosome; chr2 = chromosome
+        pos1 = str(key[0]); pos2 = str(key[1])
+        score = str(value)
+        vector = [str1, chr1, pos1, frag1, str2, chr2, pos2, frag2, score]
+        pre_file.write(" ".join(vector) + "\n")
 
     # Termination
     pre_file.close()
 
-  def load(self, genome_id, resolution, sparse_matrix_dictionary, temporary_location, output_file_name):
+  def load(self, contact_map, temporary_location, output_file_name):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -279,7 +291,7 @@ class Juicer(ConfigurationFile):
   
     # Converting sparse matrix to pre file
     pre_file_name = temporary_location + "pre_file_name.pre"
-    self.sparse_matrix_to_pre(sparse_matrix_dictionary, pre_file_name)
+    self.sparse_matrix_to_pre(contact_map, pre_file_name)
 
     # Sorting pre file
     sorted_pre_file_name = temporary_location + "sorted_pre_file_name.pre"
@@ -287,7 +299,7 @@ class Juicer(ConfigurationFile):
 
     # Execution of Juicer's pre
     pre_command = [self.juicer_command] + self.juicer_options.split(" ") + [self.juicer_jar_location, "pre", 
-                   "-d", "-n", "-r", resolution, "-t", temporary_location, pre_file_name, output_file_name, genome_id]
+                   "-d", "-n", "-r", contact_map.resolution, "-t", temporary_location, pre_file_name, output_file_name, contact_map.organism]
     pre_process = subprocess.run(pre_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
     # Remove temporary files
@@ -297,7 +309,7 @@ class Juicer(ConfigurationFile):
     # Return load process
     return pre_process
 
-  def add_load(self, genome_id, resolution, sparse_matrix_dictionary, temporary_location, output_file_name):
+  def add_load(self, contact_map, temporary_location, output_file_name):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -310,7 +322,7 @@ class Juicer(ConfigurationFile):
     """
 
     # Append job to queue
-    self.process_queue.append((genome_id, resolution, sparse_matrix_dictionary, temporary_location, output_file_name))
+    self.process_queue.append((contact_map, temporary_location, output_file_name))
 
   def run_load(self, return_type = "success"):
     """Returns TODO.
@@ -332,7 +344,7 @@ class Juicer(ConfigurationFile):
 
     # Clean queue
     pool = None
-    self.process_queue = None
+    self.process_queue = []
     gc.collect()
 
     # Check execution status
@@ -350,6 +362,10 @@ class Juicer(ConfigurationFile):
       return load_process_output
     else:
       return None
+
+  #############################################################################
+  # Auxiliary IO identifying methods
+  #############################################################################
 
   def identify_minimal_resolution(self, input_file_name, temporary_location, region = "1:1000000:5000000"):
     """Returns TODO.
@@ -424,4 +440,5 @@ class Juicer(ConfigurationFile):
 
     # Return
     return is_juicer    
+
 

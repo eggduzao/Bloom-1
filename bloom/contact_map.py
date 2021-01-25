@@ -1,7 +1,8 @@
 """
 Contact Map Module
 ===================
-Placeholder.
+This module contains the contact map class and has all operations needed for a cohesive matrix
+functioning. From small operations such as binning coersions to large statistical flags.
 
 Authors: Eduardo G. Gusmao.
 
@@ -24,39 +25,21 @@ import multiprocessing
 
 # Internal
 from bloom.util import ErrorHandler, ChromosomeSizes, AuxiliaryFunctions
-from bloom.io_bedgraph import Bedgraph
-from bloom.io_juicer import Juicer
-from bloom.io_cooler import Cooler
 
 # External
-
+import numpy as np
 
 ###################################################################################################
-# Basic Objects
+# ContactMap Class
 ###################################################################################################
-
-class InputFileType():
-  """This class represents TODO.
-
-  *Keyword arguments:*
-
-    - argument1 -- Short description. This argument represents a long description. It can be:
-      - Possibility 1: A possibility 1.
-      - Possibility 2: A possibility 2.
-
-    - argument2 -- Short description. This argument represents a long description. It can be:
-      - Possibility 1: A possibility 1.
-      - Possibility 2: A possibility 2.
-  """
-
-  UNKNOWN = 0
-  SPARSE = 1
-  HIC = 2
-  COOL = 3
-  MCOOL = 4
 
 class ContactMap():
-  """This class represents TODO.
+  """This class represents a contact map.
+
+  EXAMPLE OF MATRIX:
+
+  chr1_matrix = matrix[chr1]
+  chr1_matrix[[pos1, pos2]] = 2.0
 
   *Keyword arguments:*
 
@@ -69,7 +52,7 @@ class ContactMap():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, input_contact_matrix_file_name, temporary_location, organism, ncpu, input_resolution = None, input_file_type = InputFileType.UNKNOWN):
+  def __init__(self, organism = None, resolution = None, matrix = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -82,39 +65,49 @@ class ContactMap():
     """
 
     # Main objects
-    self.input_file_name = input_contact_matrix_file_name
-    self.temporary_location = temporary_location
     self.organism = organism
-    self.ncpu = ncpu
-    self.input_resolution = input_resolution
-    self.input_file_type = input_file_type
-    self.matrix = dict()
-    self.resolution = None
-    
-    # Auxiliary objects
-    self.total_bins = dict() # per chromosome
-    self.total_1d_bins = dict() # per chromosome
-    self.total_zero_bins = dict() # per chromosome
-    self.total_nonzero_bins = dict() # per chromosome
-    self.total_nonzero_value = dict() # per chromosome
-    self.max_value = dict() # per chromosome
-    self.min_value = dict() # per chromosome
+    self.resolution = resolution
+    self.matrix = matrix # per chromosome.
+
+    # Auxiliary statistics value dictionaries
+    self.min_value_diagonal = dict() # per chromosome = Minimum value (> 0) of diagonal.
+    self.max_value_diagonal = dict() # per chromosome = Maximum value of diagonal.
+    self.total_value_diagonal = dict() # per chromosome = Total number of counts of diagonal.
+    self.min_value_no_diagonal = dict() # per chromosome = Minimum value (> 0) excluding diagonal (upper triangle).
+    self.max_value_no_diagonal = dict() # per chromosome = Maximum value excluding diagonal (upper triangle).
+    self.total_value_no_diagonal = dict() # per chromosome = Total number of counts excluding diagonal (upper triangle).
+
+    # Auxiliary statistics full matrix bin dictionaries
+    self.total_bins = dict() # per chromosome = Total number of bins.
+    self.total_nonzero_bins = dict() # per chromosome = Total number of bins with counts > 0.
+    self.total_zero_bins = dict() # per chromosome = Total number of bins with counts = 0.
+
+    # Auxiliary statistics 1D (row=col) bp/bin dictionaries
+    self.total_1d_bp = dict() # per chromosome = Total number of bp of each chromosome = maximum permitted value.
+    self.total_1d_bins = dict() # per chromosome = Total number of bins of each chromosome = maximum permitted value.
+
+    # Auxiliary upper triangular matrix dictionaries
+    self.total_bins_triangle = dict() # per chromosome = Total number of bins of each map upper triangular matrix without the diagonal bins.
+    self.total_nonzero_bins_triangle = dict() # per chromosome = Total number of bins of each map upper triangular matrix without the diagonal bins with counts > 0.
+    self.total_zero_bins_triangle = dict() # per chromosome = Total number of bins of each map upper triangular matrix without the diagonal bins with counts = 0.
+
+    # Auxiliary vectors
+    self.valid_chromosome_list = []
 
     # Utilitary objects
     self.error_handler = ErrorHandler()
     self.chromosome_sizes = ChromosomeSizes(self.organism)
-    self.bedgraph_handler = Bedgraph(self.organism, self.ncpu)
-    self.juicer_handler = Juicer(self.ncpu)
-    self.cooler_handler = Cooler(self.organism, self.ncpu)
 
-    # Load file
-    self.load_matrix()
+    # Loading blank matrix
+    if(self.matrix == None):
+      self.load_blank_matrix()
+
 
   #############################################################################
-  # Input File Loading
+  # Load Blank Matrix
   #############################################################################
 
-  def load_matrix(self):
+  def load_blank_matrix(self): # OK
     """Returns TODO.
     
     *Keyword arguments:*
@@ -126,329 +119,204 @@ class ContactMap():
       - return -- A return.
     """
 
-    # Verify if input file exists
-    self.verify_input_file()
+    # Initial matrix is a dictionary
+    self.matrix = dict()
 
-    # Verify input file type
-    self.detect_file_type()
+    # Create a value dictionary per chromosome
+    for chromosome in self.chromosome_sizes.chromosome_sizes_list:
+      self.matrix[chromosome] = dict()
 
-    # Verify input resolution(s)
-    self.detect_input_resolutions()
+      # Include valid chromosome
+      self.valid_chromosome_list.append(chromosome)
+
+    self.calculate_all_non_value_statistics(empty_matrix = True)
+
+
+  #############################################################################
+  # Matrix Operations
+  #############################################################################
+
+  def set(self, chrom, i, j, value): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    self.matrix[chrom][[i, j]] = value
+
+  def set_from_matrix(self, chromosome, matrix, matrix_type = "numpy_array", storage_type = "upper_triangle"): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Iterate through matrix's rows
+    for row in xrange(0, self.total_1d_bins[chromosome]):
+
+      # Iterate through matrix's columns
+      for col in xrange(row, self.total_1d_bins[chromosome]):
+
+        # Set value
+        row_bp, col_bp = self.bin_to_bp(row, col)
+        self.set(chromosome, row_bp, col_bp) = matrix[row, col]
+
+  def add(self, chrom, i, j, value): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    try:
+      self.matrix[chrom][[i, j]] += value
+    except Exception:
+      self.matrix[chrom][[i, j]] = value
+
+  def get(self, chrom, i, j): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    return self.matrix[chrom][[i, j]]
+
+  def get_full_matrix(self, chromosome, symmetric = True, return_type = "numpy_array"): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Creating empty matrix
+    max_bin = self.total_1d_bins[chromosome]
+    full_matrix = np.zeros((max_bin, max_bin))
+
+    # Iterating on internal matrix
+    for key, value in self.matrix[chromosome].items():
+    
+      # Binned locations
+      row_bin, col_bin = self.bp_to_bin(key[0], key[1])
+
+      # Writing value on cell
+      full_matrix[row_bin, col_bin] = value
+      if(symmetric):
+        full_matrix[col_bin, row_bin] = value
+
+    return full_matrix
+
+  #############################################################################
+  # Resolution & bin/bp Operations
+  #############################################################################
+
+  def bp_to_bin(self, i, j = None): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    new_i = int(np.floor(AuxiliaryFunctions.floor_multiple(i, self.resolution) / self.resolution))
+    if(j):
+      new_j = int(np.floor(AuxiliaryFunctions.floor_multiple(j, self.resolution) / self.resolution))
+      return new_i, new_j
+    else:
+      return new_i
+
+  def bin_to_bp(self, i, j = None):  # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    new_i = int(np.floor(i * self.resolution))
+    if(j):
+      new_j = int(np.floor(j * self.resolution))
+      return new_i, new_j
+    else:
+      return new_i
+
+    # TODO - given a bp pair, calculate it's bin pair
+
+  def ceil_bp(self, bp_obj):  # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    if(isinstance(bp_obj, int)):
+      return AuxiliaryFunctions.ceil_multiple(bp_obj, self.resolution)
+    elif(isinstance(bp_obj, list)):
+      return [AuxiliaryFunctions.ceil_multiple(bp_obj[0], self.resolution), AuxiliaryFunctions.ceil_multiple(bp_obj[1], self.resolution)]
+    elif(isinstance(bp_obj, float)):
+      return int(AuxiliaryFunctions.ceil_multiple(np.ceil(bp_obj), self.resolution))
+    else:
+      pass # Error TODO
+
+  def floor_bp(self, bp_obj):  # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    if(isinstance(bp_obj, int)):
+      return AuxiliaryFunctions.floor_multiple(bp_obj, self.resolution)
+    elif(isinstance(bp_obj, list)):
+      return [AuxiliaryFunctions.floor_multiple(bp_obj[0], self.resolution), AuxiliaryFunctions.floor_multiple(bp_obj[1], self.resolution)]
+    elif(isinstance(bp_obj, float)):
+      return int(AuxiliaryFunctions.floor_multiple(np.floor(bp_obj), self.resolution))
+    else:
+      pass # Error TODO
+
   
-    # Load matrix based on file type and resolution
-      # Check if file is Juicer (.hic)
-      if(self.input_file_type == InputFileType.HIC):
-        self.load_matrix_from_hic()
-
-      # Check if file is singular cooler (.cool)
-      elif(self.input_file_type == InputFileType.COOL):
-        self.load_matrix_from_cool()
-
-      # Check if file is multiple cooler (.mcool)
-      elif(self.input_file_type == InputFileType.MCOOL):
-        self.load_matrix_from_mcool()
-
-      # Check if file is sparse text bedgraph (.bg2, .bed, .txt)
-      elif(self.input_file_type == InputFileType.SPARSE):
-        self.load_matrix_from_sparse()
-
-  def verify_input_file(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Verify if input file exists
-    if(not os.path.isfile(self.input_file_name)):
-      self.error_handler.throw_error("TODO") # TODO
-
-  def detect_file_type(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Detect file type if file is unknown
-    if(self.input_file_type == InputFileType.UNKNOWN):
-
-      # Check if file is Juicer (.hic)
-      if(self.juicer_handler.filetype_is_juicer(self.input_file_name, self.temporary_location)):
-        self.input_file_type = InputFileType.HIC
-
-      # Check if file is singular cooler (.cool)
-      elif(self.cooler_handler.filetype_is_cooler(self.input_file_name, self.temporary_location, check_type = "cool")):
-        self.input_file_type = InputFileType.COOL
-
-      # Check if file is multiple cooler (.mcool)
-      elif(self.cooler_handler.filetype_is_cooler(self.input_file_name, self.temporary_location, check_type = "mcool")):
-        self.input_file_type = InputFileType.MCOOL
-
-      # Check if file is sparse text bedgraph (.bg2, .bed, .txt)
-      elif(self.bedgraph_handler.filetype_is_bedgraph(self.input_file_name)):
-        self.input_file_type = InputFileType.SPARSE
-
-      # No recognizable file type
-      else:
-        self.error_handler.throw_error("TODO") # TODO
-
-  def detect_input_resolutions(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Detect file type if file is unknown
-    if(self.input_resolution == None):
-
-      # Check if file is Juicer (.hic)
-      if(self.input_file_type == InputFileType.HIC):
-        self.input_resolution = self.juicer_handler.identify_minimal_resolution(self.input_file_name, self.temporary_location)
-
-      # Check if file is singular cooler (.cool)
-      elif(self.input_file_type == InputFileType.COOL):
-        self.input_resolution = self.cooler_handler.identify_minimal_resolution(self.input_file_name, self.temporary_location, check_type = "cool")
-
-      # Check if file is multiple cooler (.mcool)
-      elif(self.input_file_type == InputFileType.MCOOL):
-        self.input_resolution = self.cooler_handler.identify_minimal_resolution(self.input_file_name, self.temporary_location, check_type = "mcool")
-
-      # Check if file is sparse text bedgraph (.bg2, .bed, .txt)
-      elif(self.input_file_type == InputFileType.SPARSE):
-        self.input_resolution = self.bedgraph_handler.identify_minimal_resolution(self.input_file_name)
-
-      # No recognizable file type
-      else:
-        self.error_handler.throw_error("TODO") # TODO
-
-    # If resolution continues to be unknown it was not detectable
-    if(self.input_resolution == None):
-      self.error_handler.throw_error("TODO") # TODO
-
-  def load_matrix_from_hic(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # List of temporary files to remove
-    list_files_to_remove = []
-
-    # Iterating on chromosomes
-    for chrom in self.chromosome_sizes.chromosome_sizes_list:
-
-      # Regions
-      chrom_wo_chr = chrom.split("chr")[0]
-      start = "1"
-      end = str(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
-      region = ":".join([chrom_wo_chr, start, end])
-
-      # Temporary bedgraph file
-      bedgraph_file_name = os.path.join(self.temporary_location, "bedgraph_file_name_" + chrom + ".bg2")
-      list_files_to_remove.append(bedgraph_file_name)
-
-      # Adding juicer dump job
-      self.juicer_handler.add_dump(self.resolution, region, region, self.input_file_name, self.temporary_location, bedgraph_file_name, output_type = "bedgraph")
-
-      # Adding bedgraph dump job
-      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self)
-
-    # Running juicer jobs
-    dump_process_output = self.juicer_handler.run_dump(return_type = "process_out")
-
-    # Verification of juicer dumping processes
-    self.load_process_verification(dump_process_output)
-
-    # Running bedgraph jobs
-    dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
-
-    # Verification of bedgraph loading processes
-    self.load_process_verification(dump_process_output)
-
-    # Removing temporary files
-    remove_command = ["rm", "-rf"] + list_files_to_remove
-    remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
-
-  def load_matrix_from_cool(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # List of temporary files to remove
-    list_files_to_remove = []
-
-    # Iterating on chromosomes
-    for chrom in self.chromosome_sizes.chromosome_sizes_list:
-
-      # Regions
-      start = "1"
-      end = '{:,}'.format(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
-      region = chrom + ":" + start + "-" + end
-
-      # Temporary bedgraph file
-      bedgraph_file_name = os.path.join(self.temporary_location, "bedgraph_file_name_" + chrom + ".bg2")
-      list_files_to_remove.append(bedgraph_file_name)
-
-      # Adding chromosome dump job
-      self.cooler_handler.add_dump_single(region, region, self.input_file_name, bedgraph_file_name)
-
-      # Adding bedgraph dump job
-      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self)
-
-    # Running cooler jobs
-    dump_process_output = self.cooler_handler.run_dump_single(return_type = "process_out")
-
-    # Verification of cooler dumping processes
-    self.load_process_verification(dump_process_output)
-
-    # Running bedgraph jobs
-    dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
-
-    # Verification of bedgraph loading processes
-    self.load_process_verification(dump_process_output)
-
-    # Removing temporary files
-    remove_command = ["rm", "-rf"] + list_files_to_remove
-    remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
-
-  def load_matrix_from_mcool(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # List of temporary files to remove
-    list_files_to_remove = []
-
-    # Iterating on chromosomes
-    for chrom in self.chromosome_sizes.chromosome_sizes_list:
-
-      # Regions
-      start = "1"
-      end = '{:,}'.format(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
-      region = chrom + ":" + start + "-" + end
-
-      # Temporary bedgraph file
-      bedgraph_file_name = os.path.join(self.temporary_location, "bedgraph_file_name_" + chrom + ".bg2")
-      list_files_to_remove.append(bedgraph_file_name)
-
-      # Adding chromosome dump job
-      self.cooler_handler.add_dump_multiple(self.resolution, region, region, self.input_file_name, bedgraph_file_name)
-
-      # Adding bedgraph dump job
-      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, self)
-
-    # Running cooler jobs
-    dump_process_output = self.cooler_handler.run_dump_multiple(return_type = "process_out")
-
-    # Verification of cooler dumping processes
-    self.load_process_verification(dump_process_output)
-
-    # Running bedgraph jobs
-    dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
-
-    # Verification of bedgraph loading processes
-    self.load_process_verification(dump_process_output)
-
-    # Removing temporary files
-    remove_command = ["rm", "-rf"] + list_files_to_remove
-    remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
-
-  def load_matrix_from_sparse(self, input_file_name):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Iterating on chromosomes
-    for chrom in self.chromosome_sizes.chromosome_sizes_list:
-
-      # Adding chromosome dump job
-      self.bedgraph_handler.add_dump(chrom, self.input_file_name, self)
-
-    # Running all jobs
-    dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
-
-    # Verification of loading processes
-    self.load_process_verification(dump_process_output)
-
-  def load_process_verification(self, dump_process_output):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Check if all chromosomes executed successfully
-    for k in range(0, len(dump_process_output)):
-
-      # Get specific process and chromosome
-      cp = dump_process_output[k]
-      chrom = self.chromosome_sizes.chromosome_sizes_list[k]
-
-      # Verify if chromosome executed correctly
-      try:
-        returncode = cp.check_returncode()
-        if(returncode > 0): 
-          self.error_handler.throw_warning("TODO", chrom) # TODO - the process had an error, and exited with that code
-        elif(returncode < 0): 
-          self.error_handler.throw_warning("TODO", chrom) # TODO - the process was killed with a signal of -1 * exitcode
-      except subprocess.CalledProcessError:
-        self.error_handler.throw_error("TODO", chrom) # TODO
-
-
   #############################################################################
-  # Output File Writing
+  # Auxiliary Vectors and Dictionaries Operations
   #############################################################################
 
-  def write_matrix_as_hic(self, output_file_name):
+  def update_valid_chromosome_list(self): # OK
     """Returns TODO.
     
     *Keyword arguments:*
@@ -460,13 +328,26 @@ class ContactMap():
       - return -- A return.
     """
 
-    # Adding load job
-    self.juicer_handler.add_load(self.organism, self.resolution, self.matrix, self.temporary_location, output_file_name)
+    # New list of valid chromosomes
+    new_valid_chromosome_list = []
 
-    # Running load job
-    self.juicer_handler.run_load(return_type = "success")
+    # Iterating on each chromosome to check whether there are values for that chromosome
+    for chromosome in self.chromosome_sizes.chromosome_sizes_list:
 
-  def write_matrix_as_cool(self, output_file_name):
+       # Verify if chromosome's matrix exists
+       try:
+         chrom_matrix = self.matrix[chromosome]
+
+         # Verify if chromosome's matrix is not empty
+         if(chrom_matrix):
+           new_valid_chromosome_list.append(chromosome)
+       except Exception:
+         continue
+
+    # Update the list of valid chromosomes
+    self.valid_chromosome_list = new_valid_chromosome_list
+
+  def calculate_all_statistics(self): # OK
     """Returns TODO.
     
     *Keyword arguments:*
@@ -478,13 +359,126 @@ class ContactMap():
       - return -- A return.
     """
 
-    # Adding load job
-    self.cooler_handler.add_load(self.organism, self.resolution, self.matrix, self.temporary_location, output_file_name)
+    # New value dictionaries
+    new_min_value_diagonal = dict()
+    new_max_value_diagonal = dict()
+    new_total_value_diagonal = dict()
+    new_min_value_no_diagonal = dict()
+    new_max_value_no_diagonal = dict()
+    new_total_value_no_diagonal = dict()
 
-    # Running load job
-    self.cooler_handler.run_load(return_type = "success")
+    # New bin dictionaries
+    new_total_bins = dict()
+    new_total_nonzero_bins = dict()
+    new_total_zero_bins = dict()
+    new_total_1d_bp = dict()
+    new_total_1d_bins = dict()
+    new_total_bins_triangle = dict()
+    new_total_nonzero_bins_triangle = dict()
+    new_total_zero_bins_triangle = dict()
 
-  def write_matrix_as_sparse(self, output_file_name):
+    # Iterating on valid chromosomes
+    for chromosome in self.valid_chromosome_list:
+
+      # Updating new_total_1d_bp
+      new_total_1d_bp[chromosome] = self.floor_bp(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome])
+
+      # Updating new_total_1d_bins
+      new_total_1d_bins[chromosome] = self.bp_to_bin(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome])
+
+      # Updating new_total_bins
+      new_total_bins[chromosome] = int(new_total_1d_bins[chromosome] ** 2)
+
+      # Updating new_total_bins_triangle
+      new_total_bins_triangle[chromosome] = int((new_total_1d_bins[chromosome] * (new_total_1d_bins[chromosome]-1)) / 2)
+
+      # Iterating on matrix
+      for key, value in self.matrix[chromosome].items():
+
+        # Only upper triangle and no 0 values
+        if(key[0] > key[1] or value <= 0): continue
+
+        # Diagonal vs upper triangle w/o diagonal
+        if(key[0] == key[1]):
+
+          # Minimum and maximum diagonal value
+          try:
+            if(value < new_min_value_diagonal[chromosome]):
+              new_min_value_diagonal[chromosome] = value
+          except Exception:
+            new_min_value_diagonal[chromosome] = value
+          try:
+            if(value > new_max_value_diagonal[chromosome]):
+              new_max_value_diagonal[chromosome] = value
+          except Exception:
+            new_max_value_diagonal[chromosome] = value
+
+          # Total value of diagonal
+          try:
+            new_total_value_diagonal[chromosome] += value
+          except Exception:
+            new_total_value_diagonal[chromosome] = value
+
+        else:
+
+          # Minimum and maximum non-diagonal value
+          try:
+            if(value < new_min_value_no_diagonal[chromosome]):
+              new_min_value_no_diagonal[chromosome] = value
+          except Exception:
+            new_min_value_no_diagonal[chromosome] = value
+          try:
+            if(value > new_max_value_no_diagonal[chromosome]):
+              new_max_value_no_diagonal[chromosome] = value
+          except Exception:
+            new_max_value_no_diagonal[chromosome] = value
+
+          # Total non-diagonal value
+          try:
+            new_total_value_no_diagonal[chromosome] += value
+          except Exception:
+            new_total_value_no_diagonal[chromosome] = value
+
+          # Updating new_total_nonzero_bins
+          try:
+            new_total_nonzero_bins[chromosome] += 1
+          except Exception:
+            new_total_nonzero_bins[chromosome] = 1
+
+          # Updating new_total_nonzero_bins_triangle
+          try:
+            new_total_nonzero_bins_triangle[chromosome] += 1
+          except Exception:
+            new_total_nonzero_bins_triangle[chromosome] = 1
+
+      # Correcting new_total_nonzero_bins for full matrix
+      new_total_nonzero_bins[chromosome] = int(new_total_nonzero_bins[chromosome] * 2)
+
+      # Updating new_total_zero_bins
+      new_total_zero_bins[chromosome] = new_total_bins[chromosome] - new_total_nonzero_bins[chromosome]
+
+      # Updating new_total_zero_bins_triangle
+      new_total_zero_bins_triangle[chromosome] = new_total_bins_triangle[chromosome] - new_total_nonzero_bins_triangle[chromosome]
+        
+    # Update value dictionaries
+    self.min_value_diagonal = new_min_value_diagonal
+    self.max_value_diagonal = new_max_value_diagonal
+    self.total_value_diagonal = new_total_value_diagonal
+    self.min_value_no_diagonal = new_min_value_no_diagonal
+    self.max_value_no_diagonal = new_max_value_no_diagonal
+    self.total_value_no_diagonal = new_total_value_no_diagonal
+
+    # Update bin dictionaries
+    self.total_bins = new_total_bins
+    self.total_nonzero_bins = new_total_nonzero_bins
+    self.total_zero_bins = new_total_zero_bins
+    self.total_1d_bp = new_total_1d_bp
+    self.total_1d_bins = new_total_1d_bins
+    self.total_bins_triangle = new_total_bins_triangle
+    self.total_nonzero_bins_triangle = new_total_nonzero_bins_triangle
+    self.total_zero_bins_triangle = new_total_zero_bins_triangle
+
+  def calculate_statistics_value(self): # OK
     """Returns TODO.
     
     *Keyword arguments:*
@@ -496,47 +490,73 @@ class ContactMap():
       - return -- A return.
     """
 
-    # Adding load job
-    self.bedgraph_handler.add_load(self.resolution, self.matrix, output_file_name, start_index = 0)
+    # New value dictionaries
+    new_min_value_diagonal = dict()
+    new_max_value_diagonal = dict()
+    new_total_value_diagonal = dict()
+    new_min_value_no_diagonal = dict()
+    new_max_value_no_diagonal = dict()
+    new_total_value_no_diagonal = dict()
 
-    # Running load job
-    self.bedgraph_handler.run_load(return_type = "success")
+    # Iterating on valid chromosomes
+    for chromosome in self.valid_chromosome_list:
 
+      # Iterating on matrix
+      for key, value in self.matrix[chromosome].items():
 
-  #############################################################################
-  # Operational Operations
-  #############################################################################
+        # Only upper triangle and no 0 values
+        if(key[0] > key[1] or value <= 0): continue
 
-  def set(self, chrom i, j, value):
+        # Diagonal vs upper triangle w/o diagonal
+        if(key[0] == key[1]):
 
-    # Set matrix value
-    key = ":".join([chrom, str(i), str(j)])
-    self.matrix[key] = value
+          # Minimum and maximum diagonal value
+          try:
+            if(value < new_min_value_diagonal[chromosome]):
+              new_min_value_diagonal[chromosome] = value
+          except Exception:
+            new_min_value_diagonal[chromosome] = value
+          try:
+            if(value > new_max_value_diagonal[chromosome]):
+              new_max_value_diagonal[chromosome] = value
+          except Exception:
+            new_max_value_diagonal[chromosome] = value
 
-  def add(self, chrom, i, j, value):
+          # Total value of diagonal
+          try:
+            new_total_value_diagonal[chromosome] += value
+          except Exception:
+            new_total_value_diagonal[chromosome] = value
 
-    # Set matrix value
-    key = ":".join([chrom, str(i), str(j)])
-    try:
-      self.matrix[key] += value
-    except Exception:
-      self.matrix[key] = value
+        else:
 
-  def get(self, chrom, i, j):
+          # Minimum and maximum non-diagonal value
+          try:
+            if(value < new_min_value_no_diagonal[chromosome]):
+              new_min_value_no_diagonal[chromosome] = value
+          except Exception:
+            new_min_value_no_diagonal[chromosome] = value
+          try:
+            if(value > new_max_value_no_diagonal[chromosome]):
+              new_max_value_no_diagonal[chromosome] = value
+          except Exception:
+            new_max_value_no_diagonal[chromosome] = value
 
-    # Return value
-    key = ":".join([chrom, str(i), str(j)])
-    try:
-      return self.matrix[key]
-    except Exception:
-      return 0
+          # Total non-diagonal value
+          try:
+            new_total_value_no_diagonal[chromosome] += value
+          except Exception:
+            new_total_value_no_diagonal[chromosome] = value
+        
+    # Update value dictionaries
+    self.min_value_diagonal = new_min_value_diagonal
+    self.max_value_diagonal = new_max_value_diagonal
+    self.total_value_diagonal = new_total_value_diagonal
+    self.min_value_no_diagonal = new_min_value_no_diagonal
+    self.max_value_no_diagonal = new_max_value_no_diagonal
+    self.total_value_no_diagonal = new_total_value_no_diagonal
 
-
-  #############################################################################
-  # Sparsity Operations
-  #############################################################################
-
-  def total_upper_matrix(self):
+  def calculate_all_non_value_statistics(self, empty_matrix = False): # OK
     """Returns TODO.
     
     *Keyword arguments:*
@@ -547,9 +567,204 @@ class ContactMap():
     
       - return -- A return.
     """
+
+    # New bin dictionaries
+    new_total_bins = dict()
+    new_total_nonzero_bins = dict()
+    new_total_zero_bins = dict()
+    new_total_1d_bp = dict()
+    new_total_1d_bins = dict()
+    new_total_bins_triangle = dict()
+    new_total_nonzero_bins_triangle = dict()
+    new_total_zero_bins_triangle = dict()
+
+    # Iterating on valid chromosomes
+    for chromosome in self.valid_chromosome_list:
+
+      # Updating new_total_1d_bp
+      new_total_1d_bp[chromosome] = self.floor_bp(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome])
+
+      # Updating new_total_1d_bins
+      new_total_1d_bins[chromosome] = self.bp_to_bin(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome])
+
+      # Updating new_total_bins
+      new_total_bins[chromosome] = int(new_total_1d_bins[chromosome] ** 2)
+
+      # Updating new_total_bins_triangle
+      new_total_bins_triangle[chromosome] = int((new_total_1d_bins[chromosome] * (new_total_1d_bins[chromosome]-1)) / 2)
+
+      # Calculate value-based bins only if chromosome is not empty
+      if(not empty_matrix):
+
+        # Iterating on matrix
+        for key, value in self.matrix[chromosome].items():
+
+          # Only upper triangle and no 0 values
+          if(key[0] >= key[1] or value <= 0): continue
+
+          # Updating new_total_nonzero_bins
+          try:
+            new_total_nonzero_bins[chromosome] += 1
+          except Exception:
+            new_total_nonzero_bins[chromosome] = 1
+
+          # Updating new_total_nonzero_bins_triangle
+          try:
+            new_total_nonzero_bins_triangle[chromosome] += 1
+          except Exception:
+            new_total_nonzero_bins_triangle[chromosome] = 1
+
+        # Correcting new_total_nonzero_bins for full matrix
+        new_total_nonzero_bins[chromosome] = int(new_total_nonzero_bins[chromosome] * 2)
+
+        # Updating new_total_zero_bins
+        new_total_zero_bins[chromosome] = new_total_bins[chromosome] - new_total_nonzero_bins[chromosome]
+
+        # Updating new_total_zero_bins_triangle
+        new_total_zero_bins_triangle[chromosome] = new_total_bins_triangle[chromosome] - new_total_nonzero_bins_triangle[chromosome]
+
+    # Update bin dictionaries
+    self.total_bins = new_total_bins
+    self.total_nonzero_bins = new_total_nonzero_bins
+    self.total_zero_bins = new_total_zero_bins
+    self.total_1d_bp = new_total_1d_bp
+    self.total_1d_bins = new_total_1d_bins
+    self.total_bins_triangle = new_total_bins_triangle
+    self.total_nonzero_bins_triangle = new_total_nonzero_bins_triangle
+    self.total_zero_bins_triangle = new_total_zero_bins_triangle
+
+  def calculate_statistics_full(self, empty_matrix = False): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # New full matrix bin dictionaries
+    new_total_bins = dict()
+    new_total_nonzero_bins = dict()
+    new_total_zero_bins = dict()
+
+    # Iterating on valid chromosomes
+    for chromosome in self.valid_chromosome_list:
+
+      # Total bins
+      new_total_bins[chromosome] = int(self.bp_to_bin(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome]) ** 2)
+
+      # Calculate value-based bins only if chromosome is not empty
+      if(not empty_matrix):
+
+        # Iterating on matrix
+        for key, value in self.matrix[chromosome].items():
+
+          # Only upper triangle and no 0 values
+          if(key[0] >= key[1] or value <= 0): continue
+
+          # Updating new_total_nonzero_bins
+          try:
+            new_total_nonzero_bins[chromosome] += 1
+          except Exception:
+            new_total_nonzero_bins[chromosome] = 1
+
+        # Correcting new_total_nonzero_bins for full matrix
+        new_total_nonzero_bins[chromosome] = int(new_total_nonzero_bins[chromosome] * 2)
+
+        # Updating new_total_zero_bins
+        new_total_zero_bins[chromosome] = new_total_bins[chromosome] - new_total_nonzero_bins[chromosome]
+
+    # Update total bin dictionaries
+    self.total_bins = new_total_bins
+    self.total_nonzero_bins = new_total_nonzero_bins
+    self.total_zero_bins = new_total_zero_bins
+
+  def calculate_statistics_1D(self): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # New 1D bin dictionaries
+    new_total_1d_bp = dict()
+    new_total_1d_bins = dict()
+
+    # Iterating on valid chromosomes
+    for chromosome in self.valid_chromosome_list:
+
+      # Updating total 1D bp
+      new_total_1d_bp[chromosome] = self.floor_bp(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome])
+
+      # Updating total 1D bins
+      new_total_1d_bins[chromosome] = self.bp_to_bin(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome])
+
+    # Update 1D bin dictionaries
+    self.total_1d_bp = new_total_1d_bp
+    self.total_1d_bins = new_total_1d_bins
+
+  def calculate_statistics_upper_triangle(self, empty_matrix = False): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # New full matrix bin dictionaries
+    new_total_bins_triangle = dict()
+    new_total_nonzero_bins_triangle = dict()
+    new_total_zero_bins_triangle = dict()
+
+    # Iterating on valid chromosomes
+    for chromosome in self.valid_chromosome_list:
+
+      # Total bins in upper triangle
+      total_1d_bp = self.bp_to_bin(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome])
+      new_total_bins_triangle[chromosome] = int((total_1d_bp * (total_1d_bp-1)) / 2)
+
+      # Calculate value-based bins only if chromosome is not empty
+      if(not empty_matrix):
+
+        # Iterating on matrix
+        for key, value in self.matrix[chromosome].items():
+
+          # Only upper triangle and no 0 values
+          if(key[0] >= key[1] or value <= 0): continue
+
+          # Updating new_total_nonzero_bins_triangle
+          try:
+            new_total_nonzero_bins_triangle[chromosome] += 1
+          except Exception:
+            new_total_nonzero_bins_triangle[chromosome] = 1
+
+        # Updating new_total_zero_bins_triangle
+        new_total_zero_bins_triangle[chromosome] = new_total_bins_triangle[chromosome] - new_total_nonzero_bins_triangle[chromosome]
+
+    # Update triangular bin dictionaries
+    self.total_bins_triangle = new_total_bins_triangle
+    self.total_nonzero_bins_triangle = new_total_nonzero_bins_triangle
+    self.total_zero_bins_triangle = new_total_zero_bins_triangle
+
+  """
+  def calculate_non_basic_statistics(self):
+
+    # Update the non-basic vetor's values
 
     # Total bins = Summation of the total number of bins of each chromosome map upper triangular matrix without the diagonal bins
-    self.total_bins = 0
+    self.total_bins_triangle = 0
 
     # Get valid chromosome list
     valid_chromosome_dict = dict()
@@ -565,7 +780,7 @@ class ContactMap():
 
       chrom_size = self.chromosome_sizes.chromosome_sizes_dictionary[chrom]
       total_1d_bins = AuxiliaryFunctions.floor_multiple(chrom_size, self.resolution) / self.resolution
-      total_bins = ((total_1d_bins * (total_1d_bins-1))/2) + total_1d_bins
+      total_bins_triangle = ((total_1d_bins * (total_1d_bins-1))/2) + total_1d_bins
 
       # Update total number of 1D bins (numer of rows = number of columns)
       try:
@@ -575,17 +790,23 @@ class ContactMap():
 
       # Update total number of bins
       try:
-        self.total_bins[chrom] = total_bins
+        self.total_bins_triangle[chrom] = total_bins_triangle
       except Exception:
         self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
 
       # Update total bins = 0
       try:
-        self.total_zero_bins[chrom] = self.total_bins[chrom] - self.total_nonzero_bins[chrom]
+        self.total_zero_bins[chrom] = self.total_bins_triangle[chrom] - self.total_nonzero_bins[chrom]
       except Exception:
         self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
+  """
 
-  def standardize(self):
+
+  #############################################################################
+  # Distance Operations
+  #############################################################################
+
+  def bin_distance_from_diagonal_manhattan(self, bin_point): # OK
     """Returns TODO.
     
     *Keyword arguments:*
@@ -596,21 +817,26 @@ class ContactMap():
     
       - return -- A return.
     """
+    return max(bin_points) - min(bin_points)
 
-    # Iterate over matrix
-    for key, value in self.matrix.iteritems():
-  
-      # Get chromosome
-      chrom = key.split(":")[0]
-      newvalue = (float(value) - float(self.min_value[chrom])) / (float(self.max_value[chrom]) - float(self.min_value[chrom]))
-      
-      # Update values
-      try:
-        self.matrix[key] = newvalue
-      except Exception:
-        self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
+  def bin_distance_from_diagonal_euclidean(self, bin_point): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    return int(np.ceil((max(bin_points) - min(bin_points)) / 2))
 
-  def get_sparsity(self, chromosome):
+  #############################################################################
+  # Sparsity & Statistical Operations
+  #############################################################################
+
+  def get_sparsity(self, chromosome): # TODO
     """Returns TODO.
     
     *Keyword arguments:*
@@ -625,7 +851,7 @@ class ContactMap():
     # Return sparsity level
     return self.total_nonzero_bins[chromosome] / self.total_bins[chromosome]
 
-  def get_sparsity_weighted_sum(self, chromosome):
+  def get_sparsity_weighted_sum(self, chromosome): # TODO
     """Returns TODO.
     
     *Keyword arguments:*
@@ -638,21 +864,49 @@ class ContactMap():
     """
 
     # Return sparsity weighted sum
-    return self.total_nonzero_value[chromosome] * (self.total_nonzero_bins[chromosome] / self.total_bins[chromosome])
+    return self.total_value[chromosome] * (self.total_nonzero_bins[chromosome] / self.total_bins[chromosome])
+
+  def standardize(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Iterate over matrix
+    for key, value in self.matrix.iteritems(): # TODO
+  
+      # Get chromosome
+      chrom = key.split(":")[0]
+      newvalue = (float(value) - float(self.min_value[chrom])) / (float(self.max_value[chrom]) - float(self.min_value[chrom]))
+      
+      # Update values
+      try:
+        self.matrix[key] = newvalue
+      except Exception:
+        self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
 
 
   #############################################################################
-  # Binary Operations
+  # Multi-matrix Operations
   #############################################################################
 
-
-
-
-  #############################################################################
-  # Auxiliary Operations
-  #############################################################################
-
-  def compare_matrices(self, matrix):
+  def compare_matrices(self, matrix, similarity_degree = 0.1): # TODO
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Get input keys and compare
     mykeys = sorted(self.matrix.keys())
@@ -664,33 +918,10 @@ class ContactMap():
     for k in mykeys:
       myvalue = self.matrix[k]
       cpvalue = matrix[k]
-      if((myvalue > cpvalue + (0.1 * cpvalue)) or (myvalue < cpvalue - (0.1 * cpvalue))):
+      if((myvalue > cpvalue + (similarity_degree * cpvalue)) or (myvalue < cpvalue - (similarity_degree * cpvalue))):
         return False
 
     # Return
     return True
-
-  def distance_from_diagonal(self, key):
-
-    # Fetching rows and columns
-    kk = key.split(":")
-    i_bin = float(int(kk[1]) / self.resolution)
-    j_bin = float(int(kk[2]) / self.resolution)
-    
-    # Calculating standardized distance from diagonal
-    std_distance = ((j_bin - i_bin) / 2. ) / (self.total_1d_bins[chrom] / 2)
-
-    # Returning distance
-    return std_distance
-
-
-
-
-
-
-
-
-
-
 
 

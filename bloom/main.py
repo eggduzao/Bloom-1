@@ -15,8 +15,7 @@ Authors: Eduardo G. Gusmao.
 from time import time
 
 # Internal
-from bloom.__version__ import __version__
-from bloom.util import ErrorHandler, Juicer
+from bloom.util import ErrorHandler
 from bloom.arguments import ArgumentParser
 
 # External
@@ -55,8 +54,56 @@ def main():
   args = argument_parser.arguments
   opts = argument_parser.options
 
+  ###############################################################################
+  # Reading user's contact map
+  ###############################################################################
 
+  # TODO - contact_map, io (s)
 
+  ###############################################################################
+  # Preprocess
+  ###############################################################################
+
+  # TODO - preprocess
+
+  ###############################################################################
+  # ICA
+  ###############################################################################
+
+  # TODO - C code
+
+  ###############################################################################
+  # SICA
+  ###############################################################################
+
+  # TODO - Perform SICA
+
+  ###############################################################################
+  # GOBA
+  ###############################################################################
+
+  # TODO -  Perform GOBA
+
+  ###############################################################################
+  # DPMM
+  ###############################################################################
+
+  # TODO -  Perform DPMM
+  # 1. Diagonal degrade
+  # 2. Standardize contact map (Contact Map Class method)
+  # 3. Introduce shapes
+
+  ###############################################################################
+  # IFS
+  ###############################################################################
+
+  # TODO - Calculate IFS
+
+  ###############################################################################
+  # Write results
+  ###############################################################################
+
+  # TODO - Write results that have not been written
 
 
 
@@ -92,7 +139,7 @@ def main():
   # cmp --silent f1.txt f2.txt && echo 'equal' || echo 'different'
   # cmp --silent g1.txt g2.txt && echo 'equal' || echo 'different'
   # cmp --silent h1.txt h2.txt && echo 'equal' || echo 'different'
-  """
+
 
   # Test 3
   t1 = time()
@@ -105,4 +152,9 @@ def main():
   print(t2-t1)
 
   #input_file_name = "/usr/users/egadegu/Projects/Papantonis_Bloom/Data/5_dn_isHiC_Human_CM/dnHiC/HEART.mcool"
+  """
+
+
+
+
 

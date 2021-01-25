@@ -2,6 +2,9 @@
 Util Module
 ===================
 The Util classes contains many utilities needed by other classes such as the paths to input files.
+
+Authors: Eduardo G. Gusmao. Partially based on the Util class from RGT (https://www.regulatory-genomics.org/).
+
 """
 
 ###################################################################################################
@@ -37,6 +40,7 @@ os.path.expanduser - expand user (~)
 os.path.join - join paths
 os.path.splitext - removes extension of file
 os.path.basename - return the last thing after a "/"
+os.path.dirname = return everything before the last "/"
 
 =================================
 
@@ -368,7 +372,7 @@ class AuxiliaryFunctions:
   """
 
 
-# Add check int, float, string, path, file to Util
+  # Add check int, float, string, path, file to Util
 
   @staticmethod
   def string_is_int(s):
@@ -520,4 +524,23 @@ class AuxiliaryFunctions:
       - return -- A return.
     """
     return num - (num%divisor)
+
+  @staticmethod
+  def fast_minmax_swap(v1, v2):
+    """Returns TODO.
     
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    if(v1 > v2): return v2, v1
+    else: return v1, v2
+    
+
+
+
+

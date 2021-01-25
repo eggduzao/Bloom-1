@@ -17,10 +17,10 @@ import shutil
 import setuptools
 
 ###################################################################################################
-# Big Unsolved
+# TODO Big Unsolved TODOs TODO
 ###################################################################################################
 
-# Make chromosomes general based on the name provided by the user
+# Make chromosomes general based on the name provided by the user.
 
 ###################################################################################################
 # Unsupported Platforms

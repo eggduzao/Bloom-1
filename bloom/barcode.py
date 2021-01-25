@@ -7,8 +7,17 @@ Authors: Eduardo G. Gusmao.
 
 """
 
-# DUMP FILES (OUTPUT OF THIS CLASS) ARE ALREADY ON BG2 FORMAT
+# BINARY FILE = A BG2 FILE WHICH WAS CONVERTED INTO A BINARY FILE
 
+# BINARY BARCODE = A BG2 FILE CONTAINING A REPRESENTATIVE SUBSET OF THE CONTACT MAP COVERTED INTO A BINARY FILE
+
+# DUMP FILES (OUTPUT OF THIS CLASS) SHOULD BE ON BG2 FORMAT
+
+# EXAMPLE:
+# - mESC.bg2 (text file matix)
+# - mESC_barcode.bg2 (text file barcode)
+# - mESC.bin (binary file of mESC.bg2)
+# - mESC_barcode.bin (binary file of mESC_barcode.bg2)
 
 ###################################################################################################
 # Libraries
@@ -33,7 +42,7 @@ from bloom.io_juicer import Juicer
 # External
 
 ###################################################################################################
-# Basic Objects
+# Barcode Class
 ###################################################################################################
 
 class Barcode():
@@ -48,7 +57,7 @@ class Barcode():
     - argument2 -- Short description. This argument represents a long description. It can be:
       - Possibility 1: A possibility 1.
       - Possibility 2: A possibility 2.
-    """
+  """
 
   def __init__(self, ncpu, organism):
     """Returns TODO.
@@ -76,7 +85,213 @@ class Barcode():
     self.bedgraph_handler = Bedgraph(self.organism, self.ncpu)
     self.juicer_handler = Juicer(self.ncpu)
 
+
+  #############################################################################
+  # Main
+  #############################################################################
+
+  def main_guide(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Guides barcode sequence of events
+
+
+  #############################################################################
+  # Decompression: Binary -> to -> File
+  #############################################################################
+
+  def create_contact_map_from_binary_file(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Convert BINARY FILE -> CONTACT MAP
+
+  def create_contact_map_from_binary_barcode(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Convert BINARY BARCODE -> CONTACT MAP
+
+  def create_compartments_from_binary_barcode(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Convert BINARY BARCODE -> COMPARTMENTS
+
+  def create_tads_from_binary_barcode(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Convert BINARY BARCODE -> TADs
+
+  def create_contacts_from_binary_barcode(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Convert BINARY BARCODE -> CONTACTS (IFS)
+
+  #############################################################################
+  # Compression: File -> to -> Binary
+  #############################################################################
+
+  def create_binary_file_from_contact_map(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Convert CONTACT MAP -> BINARY FILE
+    pass
+
+  def create_binary_barcode_from_contact_map(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Convert CONTACT MAP -> BINARY BARCODE
+    pass
+
+  def create_binary_barcode_from_contact_map(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Convert COMPARTMENTS -> BINARY BARCODE
+    pass
+
+  def create_binary_barcode_from_contact_map(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Convert TADs -> BINARY BARCODE
+    pass
+
+  def create_binary_barcode_from_contact_map(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Convert CONTACTS (IFS) -> BINARY BARCODE
+    pass
+
+  #############################################################################
+  # Check barcode
+  #############################################################################
+
+  def match_barcode(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Match barcode from input contact map with barcodes from the existing files and report existance
+
+
+  #############################################################################
+  # OLD
+  #############################################################################
+
   def check_best_barcode_to_input(self, input_file_name, temporary_location, input_file_type = InputFileType.UNKNOWN): # This will assign a cfile matrix (output) to the input contact matrix, based on all bfiles matrices barcodes
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
     # Return status
     return_status = False
@@ -151,4 +366,14 @@ class Barcode():
     # Closing files
     bin_file.close()
     dump_file.close()
+
+
+
+
+
+
+
+
+
+
 

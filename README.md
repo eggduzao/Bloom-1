@@ -1,45 +1,95 @@
-**Edit a file, create a new file, and clone from Bitbucket in under 2 minutes**
+# **_Bloom_: A computational framework to reveal occult patterns in 3C data**
 
-When you're done, you can delete the content in this README and update the file with details for others getting started with your repository.
+### Bloom is a computational framework which takes a 3C-like contact map as input and will produce:
+* A new contact matrix showing potential occult patterns
+* A list of putative loops with an intrinsic scoring method (IFS; Interaction Frequency Score); shown to highgly correlate with function
 
-*We recommend that you open this README in another tab as you perform the tasks below. You can [watch our video](https://youtu.be/0ocf7u76WSo) for a full demo of all the steps in this tutorial. Open the video in a new tab to avoid leaving Bitbucket.*
+### Bloom is a very powerful framework, especially - but not limited to - the following types of analyses:
+* Sparse Data: Bloom is able to reveal patterns in sparse data (e.g. from single-cell Hi-C, Dip-seq, etc.)
+* Enhancer Function: Bloom has been shown to be able to correlate its results with elements' impact on gene expression. Allowing the creation of a cell's full enhancer atlas
 
----
-
-## Edit a file
-
-You’ll start by editing this README file to learn how to edit a file in Bitbucket.
-
-1. Click **Source** on the left side.
-2. Click the README.md link from the list of files.
-3. Click the **Edit** button.
-4. Delete the following text: *Delete this line to make a change to the README from Bitbucket.*
-5. After making your change, click **Commit** and then **Commit** again in the dialog. The commit page will open and you’ll see the change you just made.
-6. Go back to the **Source** page.
+### Bloom allows the following formats as input and output:
+* Juicer's ".hic" (single or multiple resolutions)
+* Cooler's ".(m)cool" (single or multiple resolutions)
+* Bedgraph ".bg2" plain text (single or multiple resolutions)
 
 ---
 
-## Create a file
+## Requirements
 
-Next, you’ll add a new file to this repository.
+Bloom has very few requirements, most of which are usually used by any standard scientific python environment:
+* Numpy (v. 1.17.x or higher): https://numpy.org/
+* Scipy (v. 1.4.x or higher): https://www.scipy.org/
+* Setuptools (python installation): https://pypi.org/project/setuptools/
 
-1. Click the **New file** button at the top of the **Source** page.
-2. Give the file a filename of **contributors.txt**.
-3. Enter your name in the empty file space.
-4. Click **Commit** and then **Commit** again in the dialog.
-5. Go back to the **Source** page.
+The installation of all the requirements can be easily done with python package manager PyPi:
 
-Before you move on, go ahead and explore the repository. You've already seen the **Source** page, but check out the **Commits**, **Branches**, and **Settings** pages.
+```
+pip install -U setuptools
+python -m pip install --user numpy scipy matplotlib ipython jupyter pandas sympy nose
+```
 
 ---
 
-## Clone a repository
+## Installation
 
-Use these steps to clone from SourceTree, our client for using the repository command-line free. Cloning allows you to work on your files locally. If you don't yet have SourceTree, [download and install first](https://www.sourcetreeapp.com/). If you prefer to clone from the command line, see [Clone a repository](https://confluence.atlassian.com/x/4whODQ).
+After making sure all the dependencies are installed. Simply execute the following steps:
 
-1. You’ll see the clone button under the **Source** heading. Click that button.
-2. Now click **Check out in SourceTree**. You may need to create a SourceTree account or log in.
-3. When you see the **Clone New** dialog in SourceTree, update the destination path and name if you’d like to and then click **Clone**.
-4. Open the directory you just created to see your repository’s files.
+```
+git clone https://github.com/CostaLab/reg-gen.git
+cd reg-gen
+python setup.py install --user
+```
 
-Now that you're more familiar with your Bitbucket repository, go ahead and add a new file locally. You can [push your change back to Bitbucket with SourceTree](https://confluence.atlassian.com/x/iqyBMg), or you can [add, commit,](https://confluence.atlassian.com/x/8QhODQ) and [push from the command line](https://confluence.atlassian.com/x/NQ0zDQ).
+This installation will automatically enable all C/C++ modules given your PC requirements and create a folder under your $HOME directory called _bloom_data_ containing extra data and scripts needed to obtain larger data, required to execute Bloom (check step 2 below). A more thorough tutorial will be made available soon.
+
+:warning: Bloom has been tested and is supported only for python 3. Bloom is **not** supported on Windows systems.
+
+---
+
+## Simple Usage
+
+Here we show a simple step-by-step example to execute Bloom. A complete tutorial and the full documentation of Bloom's package will be available soon.
+
+### 1. Downloading barcodes
+
+TBD
+
+### 2. Downloading a sample dataset (from the original _Bloom_ manuscript)
+
+TBD
+
+### 3. Execution of Bloom
+
+TBD
+
+---
+
+## Help and Citation
+
+For usage help, comments, suggestions and error reports, please send an email to:
+eduardo.gadegusmao at med.uni-goettingen.de
+
+Bloom's original manuscript is still under editorial process. If you wish to cite this tool, or the findings on the paper, please refer to the pre-print on BioRxiv: https://www.biorxiv.org/content/10.1101/2020.11.10.376533v1.full
+
+Textual citation:
+
+Gade Gusmao E, Mizi A, Brant L, Papantonis A. Retrieving high-resolution chromatin interactions and decoding enhancer regulatory potential in silico doi: https://doi.org/10.1101/2020.11.10.376533
+
+BibTex:
+
+```
+@article {Gusmao2021,
+	author = {Gusmao, Eduardo Gade and Mizi, Athanasia and Brant, Lilija and Papantonis, Argyris},
+	title = {Retrieving high-resolution chromatin interactions and decoding enhancer regulatory potential in silico},
+	elocation-id = {2020.11.10.376533},
+	year = {2021},
+	doi = {10.1101/2020.11.10.376533},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2020/11/10/2020.11.10.376533},
+	eprint = {https://www.biorxiv.org/content/early/2020/11/10/2020.11.10.376533.full.pdf},
+	journal = {bioRxiv}
+}
+```
+
+---

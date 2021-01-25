@@ -22,6 +22,7 @@ import configparser
 import multiprocessing
 
 # Internal
+from bloom.contact_map import ContactMap
 from bloom.util import ConfigurationFile, ChromosomeSizes, ErrorHandler
 from bloom.io_bedgraph import Bedgraph
 
@@ -29,7 +30,7 @@ from bloom.io_bedgraph import Bedgraph
 
 
 ###################################################################################################
-# Cooler Auxiliary Class
+# Cooler Class
 ###################################################################################################
 
 class Cooler(ConfigurationFile):
@@ -74,6 +75,10 @@ class Cooler(ConfigurationFile):
 
     # Bedgraph handler
     self.bed_graph_handler = Bedgraph(self.organism, self.ncpu)
+
+  #############################################################################
+  # Read: Single Cooler (.cool) -> Bedgraph (.bg)
+  #############################################################################
 
   def dump_single(self, region1, region2, input_file_name, output_file_name):
     """Returns TODO.
@@ -130,7 +135,7 @@ class Cooler(ConfigurationFile):
 
     # Clean queue
     pool = None
-    self.process_queue = None
+    self.process_queue = []
     gc.collect()
 
     # Check execution status
@@ -148,6 +153,10 @@ class Cooler(ConfigurationFile):
       return dump_process_output
     else:
       return None
+
+  #############################################################################
+  # Read: Multiple Cooler (.mcool) -> Bedgraph (.bg)
+  #############################################################################
 
   def dump_multiple(self, resolution, region1, region2, input_file_name, output_file_name):
     """Returns TODO.
@@ -204,7 +213,7 @@ class Cooler(ConfigurationFile):
 
     # Clean queue
     pool = None
-    self.process_queue = None
+    self.process_queue = []
     gc.collect()
 
     # Check execution status
@@ -223,7 +232,11 @@ class Cooler(ConfigurationFile):
     else:
       return None
 
-  def load(self, genome_id, resolution, sparse_matrix_dictionary, temporary_location, output_file_name):
+  #############################################################################
+  # Write: Contact Map -> Cooler (.(m)cool)
+  #############################################################################
+
+  def load(self, contact_map, temporary_location, output_file_name):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -237,12 +250,12 @@ class Cooler(ConfigurationFile):
 
     # Sparse matrix to bedgraph
     bedgraph_file_name = temporary_location + "bedgraph_file_name.bg2"
-    self.bed_graph_handler.load(resolution, sparse_matrix_dictionary, bedgraph_file_name)
+    self.bed_graph_handler.load(contact_map, bedgraph_file_name)
   
     # Execution of Cooler's dump
-    command = [self.cooler_command, "load", "-f", "bg2", "--assembly", genome_id, "--count-as-float",
-               ":".join(self.chromosome_sizes_file_name, str(resolution)), bedgraph_file_name, output_file_name]
-    load_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+    command = [self.cooler_command, "load", "-f", "bg2", "--assembly", contact_map.organism, "--count-as-float",
+               ":".join(self.chromosome_sizes_file_name, str(contact_map.resolution)), bedgraph_file_name, output_file_name]
+    load_process = subprocess.run(command, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
     # Remove the temporary bedgraph file
     remove_command = ["rm", "-rf", bedgraph_file_name]
@@ -251,7 +264,7 @@ class Cooler(ConfigurationFile):
     # Return load process
     return dump_process
 
-  def add_load(self, genome_id, resolution, sparse_matrix_dictionary, temporary_location, output_file_name):
+  def add_load(self, contact_map, temporary_location, output_file_name):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -264,7 +277,7 @@ class Cooler(ConfigurationFile):
     """
 
     # Append job to queue
-    self.process_queue.append((genome_id, resolution, sparse_matrix_dictionary, temporary_location, output_file_name))
+    self.process_queue.append((contact_map, temporary_location, output_file_name))
 
   def run_load(self, return_type = "success"):
     """Returns TODO.
@@ -286,7 +299,7 @@ class Cooler(ConfigurationFile):
 
     # Clean queue
     pool = None
-    self.process_queue = None
+    self.process_queue = []
     gc.collect()
 
     # Check execution status
@@ -304,6 +317,10 @@ class Cooler(ConfigurationFile):
       return load_process_output
     else:
       return None
+
+  #############################################################################
+  # Auxiliary IO identifying methods
+  #############################################################################
 
   def identify_minimal_resolution(self, input_file_name, temporary_location, check_type = "cool", region = "chr1:1,000,000-5,000,000"):
     """Returns TODO.
@@ -349,20 +366,20 @@ class Cooler(ConfigurationFile):
         # Temporary dump file
         output_file_name = os.path.join(temporary_location, "res_test_" + res + ".txt")
 
-          # Add single dump to queue
-          self.add_dump_multiple(res, region, region, input_file_name, output_file_name)
+        # Add single dump to queue
+        self.add_dump_multiple(res, region, region, input_file_name, output_file_name)
 
-          # Run single dump job
-          successful_execution = self.run_dump_multiple()
+        # Run single dump job
+        successful_execution = self.run_dump_multiple()
 
-          # Remove temporary files
-          remove_command = ["rm", "-rf", output_file_name]
-          remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+        # Remove temporary files
+        remove_command = ["rm", "-rf", output_file_name]
+        remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
-          # Check resolution
-          if(successful_execution):
-            resolution = res
-            break
+        # Check resolution
+        if(successful_execution):
+          resolution = res
+          break
 
     # Return
     return resolution
@@ -411,21 +428,22 @@ class Cooler(ConfigurationFile):
         # Temporary dump file
         output_file_name = os.path.join(temporary_location, "res_test_" + res + ".txt")
 
-          # Add single dump to queue
-          self.add_dump_multiple(res, region, region, input_file_name, output_file_name)
+        # Add single dump to queue
+        self.add_dump_multiple(res, region, region, input_file_name, output_file_name)
 
-          # Run single dump job
-          successful_execution = self.run_dump_multiple()
+        # Run single dump job
+        successful_execution = self.run_dump_multiple()
 
-          # Remove temporary files
-          remove_command = ["rm", "-rf", output_file_name]
-          remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+        # Remove temporary files
+        remove_command = ["rm", "-rf", output_file_name]
+        remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
-          # Check resolution
-          if(successful_execution):
-            is_cooler = True
-            break
+        # Check resolution
+        if(successful_execution):
+          is_cooler = True
+          break
 
     # Return
     return is_cooler 
+
 

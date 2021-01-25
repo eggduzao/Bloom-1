@@ -22,6 +22,7 @@ import configparser
 import multiprocessing
 
 # Internal
+from bloom.contact_map import ContactMap
 from bloom.util import ConfigurationFile, ChromosomeSizes, ErrorHandler, AuxiliaryFunctions
 
 # External
@@ -29,7 +30,7 @@ import numpy
 
 
 ###################################################################################################
-# Bedgraph Auxiliary Class
+# Bedgraph Class
 ###################################################################################################
 
 class Bedgraph(ConfigurationFile):
@@ -72,7 +73,11 @@ class Bedgraph(ConfigurationFile):
     # Error handler
     self.error_handler = ErrorHandler()
 
-  def dump(self, chromosome, input_file_name, contact_map, logit = True, pseudocount = 1.0):
+  #############################################################################
+  # Read: Bedgraph (.bg) -> Contact Map
+  #############################################################################
+
+  def dump(self, chromosome, input_file_name, contact_map, logit = False, pseudocount = 1.0):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -103,39 +108,7 @@ class Bedgraph(ConfigurationFile):
       if(logit): count = numpy.log10(count) + pseudocount
 
       # Updating matrix
-      region = ":".join([chrom1, str(min(pos11, pos21)), str(max(pos11, pos21))])
-      try:
-        contact_map.matrix[region] += count
-      except Exception:
-        contact_map.matrix[region] = count
-
-      # Updating matrice's sparsity indicators
-
-      # Update total of bins with value > 0
-      try:
-        contact_map.total_nonzero_bins[chrom] += 1
-      except Exception:
-        contact_map.total_nonzero_bins[chrom] = 1
-
-      # Update total value
-      try:
-        contact_map.total_nonzero_value[chrom] += count
-      except Exception:
-        contact_map.total_nonzero_value[chrom] = count
-
-      # Update max value
-      try:
-        if(value > contact_map.max_value[chrom]):
-          contact_map.max_value[chrom] = count
-      except Exception:
-        contact_map.max_value[chrom] = count
-
-      # Update min value
-      try:
-        if(value < contact_map.min_value[chrom]):
-          contact_map.min_value[chrom] = count
-      except Exception:
-        contact_map.min_value[chrom] = count
+      contact_map.add(chromosome, min(pos11, pos21), max(pos11, pos21), count)
 
     # Close bedgraph
     input_file.close()
@@ -143,7 +116,7 @@ class Bedgraph(ConfigurationFile):
     # Successful execution
     return True
 
-  def add_dump(self, chromosome, input_file_name, contact_map, logit = True, pseudocount = 1.0):
+  def add_dump(self, chromosome, input_file_name, contact_map, logit = False, pseudocount = 1.0):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -178,7 +151,7 @@ class Bedgraph(ConfigurationFile):
 
     # Clean queue
     pool = None
-    self.process_queue = None
+    self.process_queue = []
     gc.collect()
 
     # Check execution status
@@ -196,9 +169,13 @@ class Bedgraph(ConfigurationFile):
     else:
       return None
 
-  # UPPER MATRIX DICTIONARY -> BEDGRAPH
-  def load(self, resolution, sparse_matrix_dictionary, output_file_name, start_index = 0):
+  #############################################################################
+  # Write: Contact Map -> Bedgraph (.bg)
+  #############################################################################
+
+  def load(self, contact_map, output_file_name, start_index = 0):
     """Returns TODO.
+       Important = UPPER MATRIX TO BEDGRAPH
     
     *Keyword arguments:*
     
@@ -212,29 +189,15 @@ class Bedgraph(ConfigurationFile):
     # Open output bedgraph file
     output_file = codecs.open(input_file_name, "w", "utf8")
 
-    # Iterate over chromosome list
-    for chrom in self.chromosome_sizes.chromosome_sizes_list:
+    # Iterating on valid chromosomes
+    for chromosome in contact_map.valid_chromosome_list:
 
-      # Iterate over position 1
-      for i in range(start_index, self.chromosome_sizes.chromosome_sizes_dictionary[chrom], resolution):
+      # Iterating on matrix
+      for key, value in contact_map.matrix[chromosome].items():
 
-        # Iterate over position 2
-        for j in range(i, self.chromosome_sizes.chromosome_sizes_dictionary[chrom], resolution):
-
-          # General check
-          if(((i + resolution - start_index) > self.chromosome_sizes.chromosome_sizes_dictionary[chrom]) or
-             ((j + resolution - start_index) > self.chromosome_sizes.chromosome_sizes_dictionary[chrom])): 
-            continue
-
-          # Get count
-          region = ":".join([chrom, str(i), str(j)])
-          try:
-            count = sparse_matrix_dictionary[region]
-          except Exception: continue
-
-          # Write entry to bedgraph file
-          entry = [chrom, str(i), str(i + resolution), chrom, str(j), str(j + resolution), str(count)]
-          output_file.write("\t".join(entry) + "\n")
+        # Write entry to bedgraph file
+        entry = [chromosome, str(key[0]), str(key[0] + contact_map.resolution), chromosome, str(key[1]), str(key[1] + contact_map.resolution), str(value)]
+        output_file.write("\t".join(entry) + "\n")
 
     # Close temporary output file
     output_file.close()
@@ -242,7 +205,7 @@ class Bedgraph(ConfigurationFile):
     # Successful execution
     return True
 
-  def add_load(self, resolution, sparse_matrix_dictionary, output_file_name, start_index = 0):
+  def add_load(self, contact_map, output_file_name, start_index = 0):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -255,7 +218,7 @@ class Bedgraph(ConfigurationFile):
     """
 
     # Append job to queue
-    self.process_queue.append((resolution, sparse_matrix_dictionary, output_file_name, start_index))
+    self.process_queue.append((contact_map, output_file_name, start_index))
 
   def run_load(self, return_type = "success"):
     """Returns TODO.
@@ -277,7 +240,7 @@ class Bedgraph(ConfigurationFile):
 
     # Clean queue
     pool = None
-    self.process_queue = None
+    self.process_queue = []
     gc.collect()
 
     # Check execution status
@@ -294,6 +257,10 @@ class Bedgraph(ConfigurationFile):
       return load_process_output
     else:
       return None
+
+  #############################################################################
+  # Auxiliary IO identifying methods
+  #############################################################################
 
   def identify_minimal_resolution(self, input_file_name):
     """Returns TODO.
@@ -317,7 +284,7 @@ class Bedgraph(ConfigurationFile):
     ll = input_file.readline().strip().split("\t")
     pos11 = int(ll[1])
     pos12 = int(ll[2])
-    raw_resolution = 
+    raw_resolution = max(pos11, pos12) - min(pos11, pos12)
     if(raw_resolution % 10 == 0):
       pass
     elif(raw_resolution % 10 in [1, 2, 3, 4]): 
@@ -372,4 +339,5 @@ class Bedgraph(ConfigurationFile):
 
     # Return
     return is_bedgraph 
+
 
