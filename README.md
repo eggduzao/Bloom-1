@@ -36,8 +36,8 @@ python -m pip install --user numpy scipy matplotlib ipython jupyter pandas sympy
 After making sure all the dependencies are installed. Simply execute the following steps:
 
 ```
-git clone https://github.com/CostaLab/reg-gen.git
-cd reg-gen
+git clone https://github.com/eggduzao/Bloom.git
+cd Bloom
 python setup.py install --user
 ```
 
