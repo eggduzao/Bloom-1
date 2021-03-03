@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 GOBA Module
 ===================
@@ -25,6 +26,7 @@ import multiprocessing
 
 # Internal
 from bloom.contact_map import ContactMap
+from bloom.sica import Sica, SicaDist
 from bloom.util import ErrorHandler, AuxiliaryFunctions
 
 # External
@@ -50,24 +52,7 @@ class Goba():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    pass
-
-  #############################################################################
-  # Delineating
-  #############################################################################
-
-  def delineate_tads(self):
+  def __init__(self, contact_map, sica_instance):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -79,30 +64,26 @@ class Goba():
       - return -- A return.
     """
 
-    # Delineate TADs according to random, distance to diagonal and distance to important points
+    # Class objects
+    self.contact_map = contact_map
+    self.sica_instance = sica_instance
 
-  def delineate_compartments(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+    # Sica annotation
+    self.sica_allowed = ["T5", "T4", "T3", "T2", "T1"]
 
-    # Delineate compartments according to random, distance to diagonal and distance to important points
+    # Auxiliary parameters
+    self.ncpu = self.sica_instance.ncpu
+    self.process_queue = []
 
-
+    # Utilitary objects
+    self.error_handler = ErrorHandler()
 
 
   #############################################################################
   # Filling
   #############################################################################
 
-  def fill_tads(self):
+  def main_fill(self):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -114,9 +95,16 @@ class Goba():
       - return -- A return.
     """
 
-    # Fill TADs according to random, distance to diagonal and distance to important points
+    # Iterating on valid chromosomes - Calculate histograms
+    for chromosome in self.contact_map.valid_chromosome_list:
 
-  def fill_compartments(self):
+      # Add histogram calculation job to queue
+      self.add_fill(chromosome)
+
+    # Run histogram calculation jobs
+    self.run_fill()
+
+  def fill(self, chromosome):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -128,7 +116,76 @@ class Goba():
       - return -- A return.
     """
 
-    # Fill compartments according to random, distance to diagonal and distance to important points
+    # Iterating on matrix
+    for key, value in self.contact_map.matrix[chromosome].items():
+
+      # Bin row and col
+      brow, bcol = self.contact_map.bp_to_bin(key[i], key[j])
+
+      # Check if contact is a peak star
+      ann = self.sica_instance.annotation_dictionary[chromosome][key]
+      if(ann.isupper() and ann in self.sica_allowed):
+
+        # Check distance to diagonal
+        distance_to_diag = self.sica_instance.self.dist_to_diag_dictionary[chromosome][key]
+
+        # Basis value
+        basis_value = value / distance_to_diag
+        
+        # Iterating on rows
+        for i in range(brow, bcol + 1):
+
+          # Iterating on cols
+          for j in range(bcol, i - 1, -1):
+
+            # Multiplier
+            if(i == brow or j == bcol):
+              mult = random.uniform(0.0, 0.5)
+            else:
+              mult = random.uniform(0.0, 0.25)
+
+            # Final value add
+            final_value = basis_value * mult
+            bpi, bpj = self.contact_map.matrix.bin_to_bp(i, j)
+            self.contact_map.matrix.add(chromosome, bpi, bpj, final_value)
+
+  def add_fill(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Append job to queue
+    self.process_queue.append((chromosome))
+
+  def run_fill(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Execute job queue
+    pool = multiprocessing.Pool(self.ncpu)
+    pool.starmap(self.fill, [arguments for arguments in self.process_queue])
+    pool.close()
+    pool.join()
+
+    # Clean queue
+    pool = None
+    self.process_queue = []
+    gc.collect()
 
 
   #############################################################################
@@ -148,6 +205,7 @@ class Goba():
     """
 
     # Write the TADs based on the apexDict
+    pass # Future TODO
 
   def write_compartments(self):
     """Returns TODO.
@@ -162,37 +220,14 @@ class Goba():
     """
 
     # Write compartments based on the compDict
+    pass # Future TODO
 
 
+  #############################################################################
+  # Delineating
+  #############################################################################
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-class GOBA():
-  """This class represents TODO.
-
-  *Keyword arguments:*
-
-    - argument1 -- Short description. This argument represents a long description. It can be:
-      - Possibility 1: A possibility 1.
-      - Possibility 2: A possibility 2.
-
-    - argument2 -- Short description. This argument represents a long description. It can be:
-      - Possibility 1: A possibility 1.
-      - Possibility 2: A possibility 2.
-  """
-
-  def __init__(self, ncpu, contact_map):
+  def delineate_tads(self):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -204,17 +239,30 @@ class GOBA():
       - return -- A return.
     """
 
-    # Class objects
-    self.contact_map = contact_map
+    # Delineate TADs according to random, distance to diagonal and distance to important points
+    pass # Future TODO
 
-    # Auxiliary parameters
-    self.ncpu = ncpu
-    self.process_queue = []
+  def delineate_compartments(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
-    # Utilitary objects
-    self.error_handler = ErrorHandler()
+    # Delineate compartments according to random, distance to diagonal and distance to important points
+    pass # Future TODO
 
-  def unshear(D, g):
+
+  #############################################################################
+  # 2D Shearing
+  #############################################################################
+
+  def unshear(self, D, g):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -241,7 +289,7 @@ class GOBA():
     # Return objects
     return out
 
-  def draw_g_1d_weak_shear(D, phi, label):
+  def draw_g_1d_weak_shear(self, D, phi, label):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -257,17 +305,16 @@ class GOBA():
     Lam = 0.0  
     eta = 0.0
     for i, ph in enumerate(phi):
-    index = np.nonzero(label == i)
-    Lam += len(index[0])/ph
-    eta += np.sum(D[index]/ph)
+      index = np.nonzero(label == i)
+      Lam += len(index[0])/ph
+      eta += np.sum(D[index]/ph)
     var = 1./Lam
     mu = eta*var
 
     # Return objects
     return np.random.normal(loc=mu, scale=np.sqrt(var))
 
-
-  def draw_g_2d_weak_shear(D, phi, label):
+  def draw_g_2d_weak_shear(self, D, phi, label):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -283,9 +330,9 @@ class GOBA():
     Lam = 0.0  
     eta = 0.0
     for i, ph in enumerate(phi):
-    index = np.nonzero(label == i)
-    Lam += len(index[0])/ph
-    eta += np.sum(D[index]/ph, axis=0)
+      index = np.nonzero(label == i)
+      Lam += len(index[0])/ph
+      eta += np.sum(D[index]/ph, axis=0)
     var = 1./Lam
     mu = eta*var
 
@@ -293,6 +340,9 @@ class GOBA():
     return np.random.multivariate_normal(mean=mu, cov=var*np.eye(2))
 
 
+###################################################################################################
+# Linear 1D Shear Class
+###################################################################################################
 
 class Linear1DShear():
   """This class represents TODO.
@@ -375,6 +425,9 @@ class Linear1DShear():
     self.g = draw_g_1d_weak_shear(D, phi, label)
 
 
+###################################################################################################
+# Weak Shear Class
+###################################################################################################
 
 class WeakShear():
   """This class represents TODO.
@@ -456,6 +509,9 @@ class WeakShear():
     self.g = draw_g_2d_weak_shear(D, phi, label)
 
 
+###################################################################################################
+# Shear Class
+###################################################################################################
 
 class Shear():
   """This class represents TODO.
@@ -555,10 +611,4 @@ class Shear():
         self.g = prop_g
         self.Nacceptances += 1
         self.Nproposals += 1
-
-
-
-
-
-
 

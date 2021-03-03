@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 Contact Map Module
 ===================
@@ -39,7 +40,7 @@ class ContactMap():
   EXAMPLE OF MATRIX:
 
   chr1_matrix = matrix[chr1]
-  chr1_matrix[[pos1, pos2]] = 2.0
+  chr1_matrix[(pos1, pos2)] = 2.0
 
   *Keyword arguments:*
 
@@ -52,7 +53,7 @@ class ContactMap():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, organism = None, resolution = None, matrix = None):
+  def __init__(self, organism, resolution, matrix = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -133,103 +134,6 @@ class ContactMap():
 
 
   #############################################################################
-  # Matrix Operations
-  #############################################################################
-
-  def set(self, chrom, i, j, value): # OK
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    self.matrix[chrom][[i, j]] = value
-
-  def set_from_matrix(self, chromosome, matrix, matrix_type = "numpy_array", storage_type = "upper_triangle"): # OK
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Iterate through matrix's rows
-    for row in xrange(0, self.total_1d_bins[chromosome]):
-
-      # Iterate through matrix's columns
-      for col in xrange(row, self.total_1d_bins[chromosome]):
-
-        # Set value
-        row_bp, col_bp = self.bin_to_bp(row, col)
-        self.set(chromosome, row_bp, col_bp) = matrix[row, col]
-
-  def add(self, chrom, i, j, value): # OK
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    try:
-      self.matrix[chrom][[i, j]] += value
-    except Exception:
-      self.matrix[chrom][[i, j]] = value
-
-  def get(self, chrom, i, j): # OK
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    return self.matrix[chrom][[i, j]]
-
-  def get_full_matrix(self, chromosome, symmetric = True, return_type = "numpy_array"): # OK
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Creating empty matrix
-    max_bin = self.total_1d_bins[chromosome]
-    full_matrix = np.zeros((max_bin, max_bin))
-
-    # Iterating on internal matrix
-    for key, value in self.matrix[chromosome].items():
-    
-      # Binned locations
-      row_bin, col_bin = self.bp_to_bin(key[0], key[1])
-
-      # Writing value on cell
-      full_matrix[row_bin, col_bin] = value
-      if(symmetric):
-        full_matrix[col_bin, row_bin] = value
-
-    return full_matrix
-
-  #############################################################################
   # Resolution & bin/bp Operations
   #############################################################################
 
@@ -269,8 +173,6 @@ class ContactMap():
     else:
       return new_i
 
-    # TODO - given a bp pair, calculate it's bin pair
-
   def ceil_bp(self, bp_obj):  # OK
     """Returns TODO.
     
@@ -284,12 +186,13 @@ class ContactMap():
     """
     if(isinstance(bp_obj, int)):
       return AuxiliaryFunctions.ceil_multiple(bp_obj, self.resolution)
-    elif(isinstance(bp_obj, list)):
-      return [AuxiliaryFunctions.ceil_multiple(bp_obj[0], self.resolution), AuxiliaryFunctions.ceil_multiple(bp_obj[1], self.resolution)]
+    elif(isinstance(bp_obj, tuple)):
+      return ( AuxiliaryFunctions.ceil_multiple(bp_obj[0], self.resolution), AuxiliaryFunctions.ceil_multiple(bp_obj[1], self.resolution) )
     elif(isinstance(bp_obj, float)):
       return int(AuxiliaryFunctions.ceil_multiple(np.ceil(bp_obj), self.resolution))
     else:
-      pass # Error TODO
+      pass
+      # self.error_handler.throw_error("TODO") # TODO
 
   def floor_bp(self, bp_obj):  # OK
     """Returns TODO.
@@ -304,12 +207,118 @@ class ContactMap():
     """
     if(isinstance(bp_obj, int)):
       return AuxiliaryFunctions.floor_multiple(bp_obj, self.resolution)
-    elif(isinstance(bp_obj, list)):
-      return [AuxiliaryFunctions.floor_multiple(bp_obj[0], self.resolution), AuxiliaryFunctions.floor_multiple(bp_obj[1], self.resolution)]
+    elif(isinstance(bp_obj, tuple)):
+      return ( AuxiliaryFunctions.floor_multiple(bp_obj[0], self.resolution), AuxiliaryFunctions.floor_multiple(bp_obj[1], self.resolution) )
     elif(isinstance(bp_obj, float)):
       return int(AuxiliaryFunctions.floor_multiple(np.floor(bp_obj), self.resolution))
     else:
-      pass # Error TODO
+      pass
+      # self.error_handler.throw_error("TODO") # TODO
+
+
+  #############################################################################
+  # Matrix Operations
+  #############################################################################
+
+  def set(self, chrom, i, j, value): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    self.matrix[chrom][(i, j)] = value
+
+  def set_from_matrix(self, chromosome, matrix, matrix_type = "numpy_array", storage_type = "upper_triangle"): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Iterate through matrix's rows
+    for row in range(0, self.total_1d_bins[chromosome]):
+
+      # Iterate through matrix's columns
+      for col in range(row, self.total_1d_bins[chromosome]):
+
+        # Set value
+        if(matrix[row, col] > 0):
+          row_bp = self.bin_to_bp(row)
+          col_bp = self.bin_to_bp(col)
+          self.set(chromosome, row_bp, col_bp, matrix[row, col])
+
+  def add(self, chrom, i, j, value): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    try:
+      self.matrix[chrom][(i, j)] += value
+    except Exception:
+      self.matrix[chrom][(i, j)] = value
+
+  def get(self, chrom, i, j): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    try:
+      return self.matrix[chrom][(i, j)]
+    except Exception:
+      return None
+      # self.error_handler.throw_error("TODO") # TODO
+
+  def get_full_matrix(self, chromosome, symmetric = True, return_type = "numpy_array"): # OK
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Creating empty matrix
+    max_bin = self.total_1d_bins[chromosome]
+    full_matrix = np.zeros((max_bin, max_bin))
+
+    # Iterating on internal matrix
+    for key, value in self.matrix[chromosome].items():
+    
+      # Binned locations
+      row_bin = self.bp_to_bin(key[0])
+      col_bin = self.bp_to_bin(key[1])
+
+      # Writing value on cell
+      full_matrix[row_bin, col_bin] = value
+      if(symmetric):
+        full_matrix[col_bin, row_bin] = value
+
+    return full_matrix
 
   
   #############################################################################
@@ -380,6 +389,22 @@ class ContactMap():
     # Iterating on valid chromosomes
     for chromosome in self.valid_chromosome_list:
 
+      # Initialize all dictionaries
+      new_min_value_diagonal[chromosome] = np.inf
+      new_max_value_diagonal[chromosome] = -np.inf
+      new_total_value_diagonal[chromosome] = 0
+      new_min_value_no_diagonal[chromosome] = np.inf
+      new_max_value_no_diagonal[chromosome] = -np.inf
+      new_total_value_no_diagonal[chromosome] = 0
+      new_total_bins[chromosome] = 0
+      new_total_nonzero_bins[chromosome] = 0
+      new_total_zero_bins[chromosome] = 0
+      new_total_1d_bp[chromosome] = 0
+      new_total_1d_bins[chromosome] = 0
+      new_total_bins_triangle[chromosome] = 0
+      new_total_nonzero_bins_triangle[chromosome] = 0
+      new_total_zero_bins_triangle[chromosome] = 0
+
       # Updating new_total_1d_bp
       new_total_1d_bp[chromosome] = self.floor_bp(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome])
 
@@ -397,6 +422,12 @@ class ContactMap():
 
         # Only upper triangle and no 0 values
         if(key[0] > key[1] or value <= 0): continue
+
+        # Updating new_total_nonzero_bins
+        try:
+          new_total_nonzero_bins[chromosome] += 1
+        except Exception:
+          new_total_nonzero_bins[chromosome] = 1
 
         # Diagonal vs upper triangle w/o diagonal
         if(key[0] == key[1]):
@@ -438,12 +469,6 @@ class ContactMap():
             new_total_value_no_diagonal[chromosome] += value
           except Exception:
             new_total_value_no_diagonal[chromosome] = value
-
-          # Updating new_total_nonzero_bins
-          try:
-            new_total_nonzero_bins[chromosome] += 1
-          except Exception:
-            new_total_nonzero_bins[chromosome] = 1
 
           # Updating new_total_nonzero_bins_triangle
           try:
@@ -500,6 +525,14 @@ class ContactMap():
 
     # Iterating on valid chromosomes
     for chromosome in self.valid_chromosome_list:
+
+      # Initialize all dictionaries
+      new_min_value_diagonal[chromosome] = np.inf
+      new_max_value_diagonal[chromosome] = -np.inf
+      new_total_value_diagonal[chromosome] = 0
+      new_min_value_no_diagonal[chromosome] = np.inf
+      new_max_value_no_diagonal[chromosome] = -np.inf
+      new_total_value_no_diagonal[chromosome] = 0
 
       # Iterating on matrix
       for key, value in self.matrix[chromosome].items():
@@ -581,6 +614,16 @@ class ContactMap():
     # Iterating on valid chromosomes
     for chromosome in self.valid_chromosome_list:
 
+      # Initialize all dictionaries
+      new_total_bins[chromosome] = 0
+      new_total_nonzero_bins[chromosome] = 0
+      new_total_zero_bins[chromosome] = 0
+      new_total_1d_bp[chromosome] = 0
+      new_total_1d_bins[chromosome] = 0
+      new_total_bins_triangle[chromosome] = 0
+      new_total_nonzero_bins_triangle[chromosome] = 0
+      new_total_zero_bins_triangle[chromosome] = 0
+
       # Updating new_total_1d_bp
       new_total_1d_bp[chromosome] = self.floor_bp(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome])
 
@@ -653,6 +696,11 @@ class ContactMap():
     # Iterating on valid chromosomes
     for chromosome in self.valid_chromosome_list:
 
+      # Initialize all dictionaries
+      new_total_bins[chromosome] = 0
+      new_total_nonzero_bins[chromosome] = 0
+      new_total_zero_bins[chromosome] = 0
+
       # Total bins
       new_total_bins[chromosome] = int(self.bp_to_bin(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome]) ** 2)
 
@@ -701,6 +749,10 @@ class ContactMap():
     # Iterating on valid chromosomes
     for chromosome in self.valid_chromosome_list:
 
+      # Initialize all dictionaries
+      new_total_1d_bp[chromosome] = 0
+      new_total_1d_bins[chromosome] = 0
+
       # Updating total 1D bp
       new_total_1d_bp[chromosome] = self.floor_bp(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome])
 
@@ -730,6 +782,11 @@ class ContactMap():
 
     # Iterating on valid chromosomes
     for chromosome in self.valid_chromosome_list:
+
+      # Initialize all dictionaries
+      new_total_bins_triangle[chromosome] = 0
+      new_total_nonzero_bins_triangle[chromosome] = 0
+      new_total_zero_bins_triangle[chromosome] = 0
 
       # Total bins in upper triangle
       total_1d_bp = self.bp_to_bin(self.chromosome_sizes.chromosome_sizes_dictionary[chromosome])
@@ -817,7 +874,7 @@ class ContactMap():
     
       - return -- A return.
     """
-    return max(bin_points) - min(bin_points)
+    return max(bin_point) - min(bin_point)
 
   def bin_distance_from_diagonal_euclidean(self, bin_point): # OK
     """Returns TODO.
@@ -830,7 +887,7 @@ class ContactMap():
     
       - return -- A return.
     """
-    return int(np.ceil((max(bin_points) - min(bin_points)) / 2))
+    return int(np.ceil((max(bin_point) - min(bin_point)) / 2))
 
   #############################################################################
   # Sparsity & Statistical Operations
@@ -847,9 +904,11 @@ class ContactMap():
     
       - return -- A return.
     """
-
+    pass
     # Return sparsity level
-    return self.total_nonzero_bins[chromosome] / self.total_bins[chromosome]
+    #return self.total_nonzero_bins[chromosome] / self.total_bins[chromosome]
+    # Placeholder
+    # Future - TODO
 
   def get_sparsity_weighted_sum(self, chromosome): # TODO
     """Returns TODO.
@@ -862,11 +921,13 @@ class ContactMap():
     
       - return -- A return.
     """
-
+    pass
     # Return sparsity weighted sum
-    return self.total_value[chromosome] * (self.total_nonzero_bins[chromosome] / self.total_bins[chromosome])
+    #return self.total_value[chromosome] * (self.total_nonzero_bins[chromosome] / self.total_bins[chromosome])
+    # Placeholder
+    # Future - TODO
 
-  def standardize(self):
+  def standardize(self): # TODO
     """Returns TODO.
     
     *Keyword arguments:*
@@ -877,26 +938,28 @@ class ContactMap():
     
       - return -- A return.
     """
+    pass 
 
     # Iterate over matrix
-    for key, value in self.matrix.iteritems(): # TODO
+    #for key, value in self.matrix.iteritems(): # TODO
   
-      # Get chromosome
-      chrom = key.split(":")[0]
-      newvalue = (float(value) - float(self.min_value[chrom])) / (float(self.max_value[chrom]) - float(self.min_value[chrom]))
+    #  # Get chromosome
+    #  chrom = key.split(":")[0]
+    #  newvalue = (float(value) - float(self.min_value_diagonal[chrom])) / (float(self.max_value_diagonal[chrom]) - float(self.min_value_diagonal[chrom]))
       
-      # Update values
-      try:
-        self.matrix[key] = newvalue
-      except Exception:
-        self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
+    #  # Update values
+    #  try:
+    #    self.matrix[key] = newvalue
+    #  except Exception:
+    #    raise
+    #    # self.error_handler.throw_error("TODO") # TODO
 
 
   #############################################################################
   # Multi-matrix Operations
   #############################################################################
 
-  def compare_matrices(self, matrix, similarity_degree = 0.1): # TODO
+  def compare_matrices(self, chromosome, contact_map, similarity_degree = 0.1):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -909,19 +972,54 @@ class ContactMap():
     """
 
     # Get input keys and compare
-    mykeys = sorted(self.matrix.keys())
-    cpkeys = sorted(matrix)
+    mykeys = sorted(self.matrix[chromosome].keys())
+    cpkeys = sorted(contact_map.matrix[chromosome].keys())
     if(mykeys != cpkeys):
       return False
 
     # Compare each element
     for k in mykeys:
-      myvalue = self.matrix[k]
-      cpvalue = matrix[k]
-      if((myvalue > cpvalue + (similarity_degree * cpvalue)) or (myvalue < cpvalue - (similarity_degree * cpvalue))):
+      myvalue = self.matrix[chromosome][k]
+      cpvalue = contact_map.matrix[chromosome][k]
+      if((myvalue > (cpvalue + (similarity_degree * cpvalue))) or (myvalue < (cpvalue - (similarity_degree * cpvalue)))):
         return False
 
     # Return
     return True
+
+  def match_subset(self, chromosome, contact_map, similarity_degree = 0.1):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Match object
+    if(contact_map.matrix[chromosome]):
+      match = True
+    else:
+      if(self.matrix[chromosome]):
+        return False
+      else:
+        return True
+
+    # Iterating on matrix
+    for key, value in contact_map.matrix[chromosome].items():
+      try:
+        myvalue = self.matrix[chromosome][key]
+      except Exception:
+        match = False
+        break
+      if((myvalue > (value + (similarity_degree * value))) or (myvalue < (value - (similarity_degree * value)))):
+        match = False
+        break
+
+    # Return
+    return match
 
 

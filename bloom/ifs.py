@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 IFS Module
 ===================
@@ -12,10 +13,26 @@ Authors: Eduardo G. Gusmao.
 ###################################################################################################
 
 # Python
+import os
+import gc
+import sys
+import random
+import codecs
+import warnings
+import traceback
+import subprocess
+import configparser
+import multiprocessing
 
 # Internal
+from bloom.contact_map import ContactMap
+from bloom.sica import Sica, SicaDist
+from bloom.util import ErrorHandler, AuxiliaryFunctions
 
 # External
+import numpy as np
+import scipy
+import scipy.stats as st
 
 ###################################################################################################
 # Ifs Class
@@ -35,20 +52,7 @@ class Ifs():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    pass
-
-  def calculate_ifs(self):
+  def __init__(self, contact_map, sica_instance, goba_instance, dpmm_instance, io_instance, output_loop_file_name, output_matrix_file_name, matrix_output_format):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -60,9 +64,32 @@ class Ifs():
       - return -- A return.
     """
 
-    # Create a vector of significant contact points according to the points found in the dicionaries of SICA. Assign a value based on the point and their neighborhood - given the standardized matrix from DPMM.
+    # Class objects
+    self.contact_map = contact_map
+    self.sica_instance = sica_instance
+    self.goba_instance = goba_instance
+    self.dpmm_instance = dpmm_instance
+    self.io_instance = io_instance
+    self.output_loop_file_name = output_loop_file_name
+    self.output_matrix_file_name = output_matrix_file_name
+    self.matrix_output_format = matrix_output_format
 
-  def fix_matrix(self):
+    # Auxiliary objects
+    self.ifs_list = []
+
+    # Auxiliary parameters
+    self.ncpu = self.sica_instance.ncpu
+    self.process_queue = []
+
+    # Utilitary objects
+    self.error_handler = ErrorHandler()
+
+
+  #############################################################################
+  # IFS
+  #############################################################################
+
+  def main_calculate_ifs(self):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -74,20 +101,301 @@ class Ifs():
       - return -- A return.
     """
 
-    # 1. Remove intervals outside the chrom dict boundaries
-    # 2. Put all negative values to 0 and all >1 to 1
-    # 3. Make all sica.removed_dict rows/columns = 0
+    # Iterating on valid chromosomes - Calculate histograms
+    for chromosome in self.contact_map.valid_chromosome_list:
+
+      # Add histogram calculation job to queue
+      self.add_calculate_ifs(chromosome)
+
+    # Run histogram calculation jobs
+    self.run_calculate_ifs()
+
+    # Sort and write IFS list
+    self.sort_ifs_list()
+    self.standardize_ifs_list(min_to_zero = True)
+    self.write_ifs()
+
+  def calculate_ifs(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Iterating on matrix
+    for key, value in self.contact_map.matrix[chromosome].items():
+
+      # Check if contact is a peak star
+      ann = self.sica_instance.annotation_dictionary[chromosome][key]
+      if(ann.isupper() and ann in self.goba_instance.sica_allowed):
+
+        # Check distance to diagonal
+        self.ifs_list.append([chromosome] + key + [value])
+
+  def add_calculate_ifs(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Append job to queue
+    self.process_queue.append((chromosome))
+
+  def run_calculate_ifs(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Execute job queue
+    pool = multiprocessing.Pool(self.ncpu)
+    pool.starmap(self.calculate_ifs, [arguments for arguments in self.process_queue])
+    pool.close()
+    pool.join()
+
+    # Clean queue
+    pool = None
+    self.process_queue = []
+    gc.collect()
+
+  def sort_ifs_list(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Sort IFS list by: chromosome, pos1, pos2
+    self.ifs_list = sorted(self.ifs_list, key = lambda x: (x[0], x[1], x[2]))
+
+  def standardize_ifs_list(self, min_to_zero = True):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Calculate minimum and maximum
+    minV = np.inf
+    maxV = -np.inf
+    for v in self.ifs_list:
+      value = float(v[3])
+      if(value < minV): minV = value
+      if(value > maxV): maxV = value
+
+    # Minimum is 0
+    if(min_to_zero):
+      minV = 0.0
+ 
+    # Standardize list
+    for v in self.ifs_list:
+      v[3] = (float(v[3]) - minV) / (maxV - minV)
+      v[3] = max(1.0, v[3] + (random.uniform(0, 0.1) * v[3]))
+
+  def write_ifs(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Open output matrix file
+    output_loop_file = open(self.output_loop_file_name, "w")
+
+    # Write IFS list into bedgraph
+    for v in self.ifs_list:
+      chromosome = str(v[0])
+      p11 = str(v[1])
+      p12 = str(v[1] + self.contact_map.resolution)
+      p21 = str(v[2])
+      p22 = str(v[2] + self.contact_map.resolution)
+      value = '{:0.6e}'.format(str(v[3]))
+      output_loop_file.write("\t".join([chromosome, p11, p12, chromosome, p21, p22, value]) + "\n")
+
+    # Closing file
+    output_loop_file.close()
 
 
+  #############################################################################
+  # Fix Matrix
+  #############################################################################
+
+  def main_fix_matrix(self, multiplier = 1000, min_matrix_threshold = 1):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Iterating on valid chromosomes - Calculate histograms
+    for chromosome in self.contact_map.valid_chromosome_list:
+
+      # Add histogram calculation job to queue
+      self.add_fix_matrix(chromosome, multiplier, min_matrix_threshold)
+
+    # Run histogram calculation jobs
+    self.run_fix_matrix()
+
+    # Write matrix
+    self.write_matrix()
+
+  def fix_matrix(self, chromosome, multiplier, min_matrix_threshold):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # List of keys to remove from dictionary
+    maxV = -np.inf
+    removed_keys = []
+
+    # Iterating on matrix
+    for key, value in self.contact_map.matrix[chromosome].items():
+
+      # Binary version of keys
+      brow, bcol = self.contact_map.bp_to_bin(key[0], key[1])
+      bin_key = (brow, bcol)
+
+      # 1. Remove intervals outside the chrom dict boundaries (min / max // bin / bp)
+      if( (key[0] < 0) or (key[0] > self.contact_map.total_1d_bp[chromosome]) or (key[0] % self.contact_map.resolution) or 
+          (key[1] < 0) or (key[1] > self.contact_map.total_1d_bp[chromosome]) or (key[1] % self.contact_map.resolution)):
+        removed_keys.append(key)
+        continue
+
+      # 2. Make all sica.removed_dict rows/columns = 0 (remove the entry)
+      try:
+        self.sica_instance.removed_dict[chromosome][bin_key[0]]
+        removed_keys.append(key)
+        continue
+      except Exception:
+        pass
+      try:
+        self.sica_instance.removed_dict[chromosome][bin_key[1]]
+        removed_keys.append(key)
+        continue
+      except Exception:
+        pass
+
+      # 3. Remove all values <= min_matrix_threshold
+      if(value <= min_matrix_threshold):
+        removed_keys.append(key)
+        continue
+
+      # 4. Standardization: calculate the maximum value
+      if(value > maxV):
+        maxV = value
+
+    # Remove values from dictionary
+    for key in removed_keys:
+      self.contact_map.matrix[chromosome].pop(key)
+
+    # Iterating on matrix
+    for key, value in self.contact_map.matrix[chromosome].items():
+
+      # 4. Standardization: perform stanrdization and adding multiplier
+      self.contact_map.matrix[chromosome][key] = min(((value + random.random()) - 0) / (maxV - 0), 1) * multiplier
+
+  def add_fix_matrix(self, chromosome, multiplier, min_matrix_threshold):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Append job to queue
+    self.process_queue.append((chromosome, multiplier, min_matrix_threshold))
+
+  def run_fix_matrix(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Execute job queue
+    pool = multiprocessing.Pool(self.ncpu)
+    pool.starmap(self.fix_matrix, [arguments for arguments in self.process_queue])
+    pool.close()
+    pool.join()
+
+    # Clean queue
+    pool = None
+    self.process_queue = []
+    gc.collect()
 
 
+  def write_matrix(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Writing matrix using IO instance
+    self.io_instance.write(self.contact_map, self.output_matrix_file_name, output_format = self.matrix_output_format)
 
 
-
-
-
-
-
+###################################################################################################
+# Prior Class
+###################################################################################################
 
 class Prior():
   """This class represents TODO.
@@ -223,6 +531,9 @@ class Prior():
     raise NotImplementedError
 
 
+###################################################################################################
+# GaussianMeanKnownVariance Class
+###################################################################################################
 
 class GaussianMeanKnownVariance(Prior):
   """This class represents TODO.
@@ -333,6 +644,9 @@ class GaussianMeanKnownVariance(Prior):
     return np.exp(-0.5*(x-self.mu_0)**2/sigsqr) / np.sqrt(2*np.pi*sigsqr)
 
 
+###################################################################################################
+# InvGamma Class
+###################################################################################################
 
 class InvGamma(Prior):
   """This class represents TODO.
@@ -450,6 +764,9 @@ class InvGamma(Prior):
     raise NotImplementedError
 
 
+###################################################################################################
+# InvGamma2D Class
+###################################################################################################
 
 class InvGamma2D(Prior):
   """This class represents TODO.
@@ -585,6 +902,9 @@ class InvGamma2D(Prior):
     raise NotImplementedError
 
 
+###################################################################################################
+# NormInvChi2 Class
+###################################################################################################
 
 class NormInvChi2(Prior):
   """This class represents TODO.
@@ -730,7 +1050,7 @@ class NormInvChi2(Prior):
       n = len(D)
     except:
       n = 1
-    return (gamma(nu_n/2.0)/gamma(self.nu_0/2.0) * np.sqrt(self.kappa_0/kappa_n) *
+    return (gamma(nu_n/2.0)/gamma(self.nu_0/2.0) * np.sqrt(self.kappa_0/kappa_n) * \
            (self.nu_0*self.sigsqr_0)**(self.nu_0/2.0) / (nu_n*sigsqr_n)**(nu_n/2.0) / np.pi**(n/2.0))
 
   def marginal_var(self, var):
@@ -760,6 +1080,9 @@ class NormInvChi2(Prior):
     return t_density(self.nu_0, self.mu_0, self.sigsqr_0/self.kappa_0, mu)
 
 
+###################################################################################################
+# NormInvGamma Class
+###################################################################################################
 
 class NormInvGamma(Prior):
   """This class represents TODO.
@@ -908,7 +1231,7 @@ class NormInvGamma(Prior):
       n = len(D)
     except:
       n = 1
-    return (np.sqrt(np.abs(V_n/self.V_0)) * (self.b_0**self.a_0)/(b_n**a_n) *
+    return (np.sqrt(np.abs(V_n/self.V_0)) * (self.b_0**self.a_0)/(b_n**a_n) * \
             gamma(a_n)/gamma(self.a_0) / (np.pi**(n/2.0)*2.0**(n/2.0)))
 
   def marginal_var(self, var):
@@ -942,206 +1265,4 @@ class NormInvGamma(Prior):
     nu_0 = 2*self.a_0
     sigsqr_0 = 2*self.b_0/nu_0
     return t_density(nu_0, mu_0, sigsqr_0/kappa_0, mu)
-
-
-
-class NormInvWish(Prior):
-  """This class represents TODO.
-
-  *Keyword arguments:*
-
-    - argument1 -- Short description. This argument represents a long description. It can be:
-      - Possibility 1: A possibility 1.
-      - Possibility 2: A possibility 2.
-
-    - argument2 -- Short description. This argument represents a long description. It can be:
-      - Possibility 1: A possibility 1.
-      - Possibility 2: A possibility 2.
-  """
-
-  def __init__(self, mu_0, kappa_0, Lam_0, nu_0):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    self.mu_0 = np.array(mu_0, dtype=float)
-    self.kappa_0 = float(kappa_0)
-    self.Lam_0 = np.array(Lam_0, dtype=float)
-    self.nu_0 = int(nu_0)
-    self.d = len(mu_0)
-    self.model_dtype = np.dtype([('mu', float, self.d), ('Sig', float, (self.d, self.d))])
-    super(NormInvWish, self).__init__()
-
-  def _S(self, D):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    Dbar = np.mean(D, axis=0)
-    return np.dot((D-Dbar).T, (D-Dbar))
-
-  def sample(self, size=None):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    Sig = random_invwish(dof=self.nu_0, invS=self.Lam_0, size=size)
-    if size is None:
-      ret = np.zeros(1, dtype=self.model_dtype)
-      ret['Sig'] = Sig
-      ret['mu'] = np.random.multivariate_normal(self.mu_0, Sig/self.kappa_0)
-      return ret[0]
-    else:
-      ret = np.zeros(size, dtype=self.model_dtype)
-      ret['Sig'] = Sig
-      for r in ret.ravel():
-        r['mu'] = np.random.multivariate_normal(self.mu_0, r['Sig']/self.kappa_0)
-      return ret
-
-  def like1(self, *args):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    if len(args) == 2:
-      x, theta = args
-      mu = theta['mu']
-      Sig = theta['Sig']
-    elif len(args) == 3:
-      x, mu, Sig = args
-    assert x.shape[-1] == self.d
-    assert mu.shape[-1] == self.d
-    assert Sig.shape[-1] == Sig.shape[-2] == self.d
-    norm = np.sqrt((2*np.pi)**self.d * np.linalg.det(Sig))
-    einsum = np.einsum("...i,...ij,...j", x-mu, np.linalg.inv(Sig), x-mu)
-    return np.exp(-0.5*einsum)/norm
-
-  def __call__(self, *args):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    if len(args) == 1:
-      mu = args[0]['mu']
-      Sig = args[0]['Sig']
-    elif len(args) == 2:
-      mu, Sig = args
-    nu_0, d = self.nu_0, self.d
-    Z = (2.0**(nu_0*d/2.0) * gammad(d, nu_0/2.0) *
-        (2.0*np.pi/self.kappa_0)**(d/2.0) / np.linalg.det(self.Lam_0)**(nu_0/2.0))
-    detSig = np.linalg.det(Sig)
-    invSig = np.linalg.inv(Sig)
-    einsum = np.einsum("...i,...ij,...j", mu-self.mu_0, invSig, mu-self.mu_0)
-    return 1./Z * detSig**(-((nu_0+d)/2.0+1.0)) *
-           np.exp(-0.5*np.trace(np.einsum("...ij,...jk->...ik", self.Lam_0, invSig), axis1=-2, axis2=-1) - self.kappa_0/2.0*einsum)
-
-  def _post_params(self, D):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    shape = D.shape
-    if len(shape) == 2:
-      n = shape[0]
-      Dbar = np.mean(D, axis=0)
-    elif len(shape) == 1:
-      n = 1
-      Dbar = np.mean(D)
-    kappa_n = self.kappa_0 + n
-    nu_n = self.nu_0 + n
-    mu_n = (self.kappa_0 * self.mu_0 + n * Dbar) / kappa_n
-    x = (Dbar-self.mu_0)[:, np.newaxis]
-    Lam_n = (self.Lam_0 + self._S(D) + self.kappa_0*n/kappa_n*np.dot(x, x.T))
-    return mu_n, kappa_n, Lam_n, nu_n
-
-  def pred(self, x):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    return multivariate_t_density(self.nu_0-self.d+1, self.mu_0, self.Lam_0*(self.kappa_0+1)/(self.kappa_0 - self.d + 1), x)
-
-  def evidence(self, D):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    shape = D.shape
-    if len(shape) == 2:
-      n, d = shape
-    elif len(shape) == 1:
-      n, d = 1, shape[0]
-    assert d == self.d
-    mu_n, kappa_n, Lam_n, nu_n = self._post_params(D)
-    detLam0 = np.linalg.det(self.Lam_0)
-    detLamn = np.linalg.det(Lam_n)
-    num = gammad(d, nu_n/2.0) * detLam0**(self.nu_0/2.0)
-    den = np.pi**(n*d/2.0) * gammad(d, self.nu_0/2.0) * detLamn**(nu_n/2.0)
-    return num/den * (self.kappa_0/kappa_n)**(d/2.0)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

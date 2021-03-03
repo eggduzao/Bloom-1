@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 SICA Module
 ===================
@@ -74,15 +75,15 @@ class SicaDist():
     c1_distance_bp_min, c1_distance_bp_max = contact_map.bp_to_bin(10000000, 20000000)
 
     # Fixed distances
-    self.A = [avoid_distance_bp_min, avoid_distance_bp_max]
-    self.T5 = [t5_distance_bp_min, t5_distance_bp_max] # T5 TAD - Minimum
-    self.T4 = [t4_distance_bp_min, t4_distance_bp_max] # T4 TAD
-    self.T3 = [t3_distance_bp_min, t3_distance_bp_max] # T3 TAD - Average
-    self.T2 = [t2_distance_bp_min, t2_distance_bp_max] # T2 TAD -> Small compartment
-    self.T1 = [t1_distance_bp_min, t1_distance_bp_max] # T1 TAD - Maximum -> Small compartment
-    self.C3 = [c3_distance_bp_min, c3_distance_bp_max] # C1 - Medium compartment
-    self.C2 = [c2_distance_bp_min, c2_distance_bp_max] # C2 - Large compartment
-    self.C1 = [c1_distance_bp_min, c1_distance_bp_max] # C3 - Very large compartment
+    self.A = (avoid_distance_bp_min, avoid_distance_bp_max)
+    self.T5 = (t5_distance_bp_min, t5_distance_bp_max) # T5 TAD - Minimum
+    self.T4 = (t4_distance_bp_min, t4_distance_bp_max) # T4 TAD
+    self.T3 = (t3_distance_bp_min, t3_distance_bp_max) # T3 TAD - Average
+    self.T2 = (t2_distance_bp_min, t2_distance_bp_max) # T2 TAD -> Small compartment
+    self.T1 = (t1_distance_bp_min, t1_distance_bp_max) # T1 TAD - Maximum -> Small compartment
+    self.C3 = (c3_distance_bp_min, c3_distance_bp_max) # C1 - Medium compartment
+    self.C2 = (c2_distance_bp_min, c2_distance_bp_max) # C2 - Large compartment
+    self.C1 = (c1_distance_bp_min, c1_distance_bp_max) # C3 - Very large compartment
 
     # Distance list
     self.sica_dist_dict = dict([("a", self.A), ("t5", self.T5), ("t4", self.T4), ("t3", self.T3), ("t2", self.T2), 
@@ -103,7 +104,7 @@ class Sica():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, ncpu, contact_map, avoid_distance, removed_dict = None, min_contig_dist = 5, pvalue_threshold = 0.95):
+  def __init__(self, ncpu, contact_map, avoid_distance, removed_dict = None, pvalue_threshold = 0.95):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -118,12 +119,11 @@ class Sica():
     # Class objects
     self.contact_map = contact_map
     self.avoid_distance = avoid_distance
-    self.min_contig_dist = min_contig_dist
     self.pvalue_threshold = pvalue_threshold
     self.removed_dict = removed_dict
 
     # Annotation dictionary
-    self.annotation_dictionary = dict() # Same as contact_map.matrix, but in bins and with an extra annotation flag:
+    self.annotation_dictionary = dict() # Same as contact_map matrix, but with an extra annotation flag:
     # R = Points removed because they fall into a 0 contig or blacklist.
     # A = Points to avoid because they fall in 0-avoid_distance
     # T1, T2, T3, T4, T5 = Tad hierarchy levels depending on point's distance to diagonal.
@@ -216,8 +216,8 @@ class Sica():
     for key, value in self.contact_map.matrix[chromosome].items():
 
       # Check distance to diagonal
-      min_bin_key, max_bin_key = self.contact_map.bp_to_bin(key)
-      bin_key = [min_bin_key, max_bin_key]
+      min_bin_key, max_bin_key = self.contact_map.bp_to_bin(key[0], key[1])
+      bin_key = (min_bin_key, max_bin_key)
       distance_to_diag = self.contact_map.bin_distance_from_diagonal_manhattan(bin_key)
 
       # Add distance to diagonal to dictionary
@@ -227,8 +227,16 @@ class Sica():
       annotation = "o"
 
       # Attribute distance - Removed dict
-      if(bin_key[0] in self.removed_dict[chromosome] or bin_key in self.removed_dict[chromosome]):
+      try:
+        self.removed_dict[chromosome][bin_key[0]]
         annotation = "r"
+      except Exception:
+        pass
+      try:
+        self.removed_dict[chromosome][bin_key[1]]
+        annotation = "r"
+      except Exception:
+        pass
 
       # Attribute distance - Sica dist dict
       else:
@@ -421,7 +429,6 @@ class Sica():
   # Star Dictionaries
   #############################################################################
 
-
   def main_star_contacts(self):
     """Returns TODO.
     
@@ -443,19 +450,6 @@ class Sica():
     # Run histogram calculation jobs
     self.run_star_contacts()
 
-
-    self.distribution_dictionary = dict() # per chromosome / per SicaDist -> Contains all the matrix's signal within that specific SicaDist
-    self.dist_to_diag_dictionary = dict() # per chromosome / per regular matrix key -> Manhattan distance to the diagonal
-    self.pvalue_dictionary = dict() # per chromosome / per SicaDist -> Contains [name of the fitted distribution (FD), parameters of FD, value at pvalue_threshold (given FD)]
-
-    self.annotation_dictionary = dict() # Same as contact_map.matrix, but in bins and with an extra annotation flag:
-    # R = Points removed because they fall into a 0 contig or blacklist.
-    # A = Points to avoid because they fall in 0-avoid_distance
-    # T1, T2, T3, T4, T5 = Tad hierarchy levels depending on point's distance to diagonal.
-    # C1, C2, C3 = Compartment hierarchy levels depending on point's distance to diagonal.
-    # O = Points farther from diagonal than the biggest compartment length (C1)
-    # Upper case letters are important points. Lower case letters are less important points.
-
   def star_contacts(self, chromosome, bottom_bin_ext_range = [3,10], left_bin_ext_range = [3,10], right_bin_ext_range = [1,4], top_bin_ext_range = [1,4]):
     """Returns TODO.
     
@@ -474,8 +468,52 @@ class Sica():
       # Bin is a valid peak
       if(self.annotation_dictionary[chromosome][key].isupper()):
 
-        # Iterating on matrix creating the star
-        # TODO
+        # Key point
+        key_row = key[0]
+        key_col = key[1]
+
+        # Selecting lengths
+        bottom = random.randint(bottom_bin_ext_range[0], bottom_bin_ext_range[1])
+        left = random.randint(left_bin_ext_range[0], left_bin_ext_range[1])
+        right = random.randint(right_bin_ext_range[0], right_bin_ext_range[1])
+        top = random.randint(top_bin_ext_range[0], top_bin_ext_range[1])
+
+        # Iterating on point
+        for i in range(-top, bottom):
+          for j in range(-left, right):
+
+            # Absolute i and j
+            absi = abs(i)
+            absj = abs(j)
+
+            # If point is valid to be modified
+            if(((i <= 0) and (j <= 0) and ((absi + absj) <= min(left, top))) or
+               ((i != j) and (i >= 0) and (j >= 0) and ((absi + absj) <= min(right, bottom))) or
+               ((i < 0) and (j > 0) and ((absi + absj) <= min(right, top))) or
+               ((i > 0) and (j < 0) and ((absi + absj) <= min(left, bottom)))):
+
+              # Decrease
+              decrease = (absi + absj) / value
+
+              # Bonuscrosslb
+              bonuscrosslb = 0
+              if(((i == 0) and (j <= 0)) or ((j == 0) and (i >= 0))):
+                bonuscrosslb = random.uniform(0.25, 0.3) * value
+
+              # Bonuscross
+              bonuscross = 0
+              if((i == 0) or (j == 0)):
+                bonuscross = random.uniform(0.1, 0.25) * value
+
+              # Bonuslb
+              bonuslb = 0
+              if((i >= 0) and (j >= 0)):
+                bonuslb = random.uniform(0.1, 0.25) * value
+
+              # Final score
+              final_score = value - decrease + bonuscrosslb + bonuscross + bonuslb
+              bpi, bpj = self.contact_map.matrix.bin_to_bp(i, j)
+              self.contact_map.matrix.add(chromosome, key_row + bpi, key_col + bpj, final_score)
 
   def add_star_contacts(self, chromosome):
     """Returns TODO.
@@ -514,20 +552,4 @@ class Sica():
     pool = None
     self.process_queue = []
     gc.collect()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

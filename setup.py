@@ -50,10 +50,8 @@ Tools Dictionary Standard:
 """
 
 # Common dependencies.
-common_deps = ["cython>=0.29.0",
-               "numpy>=1.4.0",
-               "scipy>=1.0.0",
-               "pysam>=0.15.0"]
+common_deps = ["numpy>=1.12.0",
+               "scipy>=1.4.0"]
 
 tools_dictionary = {
   "bloom": (
@@ -108,9 +106,9 @@ package_version = "0.0.1"
 short_description = "Computational Framework to reveal occult patterns in 3C contact matrices"
 classifiers_list = ["Topic :: Scientific/Engineering :: Bio-Informatics",
                     "Topic :: Scientific/Engineering :: Artificial Intelligence"]
-keywords_list = ["NGS"]
+keywords_list = ["NGS", "Hi-C", "DPMM"]
 author_list = ["Eduardo G. Gusmao"]
-corresponding_mail = "eduardo.gusmao@rwth-aachen.de"
+corresponding_mail = "eduardo.gusmao@med.uni-goettingen.de"
 license_type = "GPL"
 
 # Fetching additional structural files

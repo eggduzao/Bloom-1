@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 IO Module
 ===================
@@ -119,11 +120,11 @@ class IO():
       - contact_map -- A contact map containing all the values from this class' input file.
     """
 
-    # Verify if input file exists
+    # Verify if input file exists and check file type
     self.verify_input_file()
 
     # Verify input file type
-    if(self.input_file_type == InputFileType.UNKNOWN):
+    if(not self.input_file_type or self.input_file_type == InputFileType.UNKNOWN):
       self.detect_file_type()
 
     # Verify input resolution(s)
@@ -132,24 +133,29 @@ class IO():
 
     # Create new contact map
     contact_map = ContactMap(self.organism, self.input_resolution)
-  
+
     # Load contact map based on file type and resolution
 
-      # Check if file is Juicer (.hic)
-      if(self.input_file_type == InputFileType.HIC):
-        self.load_contact_map_from_hic(contact_map)
+    # Check if file is Juicer (.hic)
+    if(self.input_file_type == InputFileType.HIC):
+      self.load_contact_map_from_hic(contact_map)
 
-      # Check if file is singular cooler (.cool)
-      elif(self.input_file_type == InputFileType.COOL):
-        self.load_contact_map_from_cool(contact_map)
+    # Check if file is singular cooler (.cool)
+    elif(self.input_file_type == InputFileType.COOL):
+      self.load_contact_map_from_cool(contact_map)
 
-      # Check if file is multiple cooler (.mcool)
-      elif(self.input_file_type == InputFileType.MCOOL):
-        self.load_contact_map_from_mcool(contact_map)
+    # Check if file is multiple cooler (.mcool)
+    elif(self.input_file_type == InputFileType.MCOOL):
+      self.load_contact_map_from_mcool(contact_map)
 
-      # Check if file is sparse text bedgraph (.bg2, .bed, .txt)
-      elif(self.input_file_type == InputFileType.SPARSE):
-        self.load_contact_map_from_sparse(contact_map)
+    # Check if file is sparse text bedgraph (.bg2, .bed, .txt)
+    elif(self.input_file_type == InputFileType.SPARSE):
+      self.load_contact_map_from_sparse(contact_map)
+
+    # Input file type not recognized
+    else:
+      pass
+      # self.error_handler.throw_error("TODO") # TODO
 
     # Return new contact map
     return contact_map
@@ -168,7 +174,15 @@ class IO():
 
     # Verify if input file exists
     if(not os.path.isfile(self.input_file_name)):
-      self.error_handler.throw_error("TODO") # TODO
+      pass
+      # self.error_handler.throw_error("TODO") # TODO
+
+    # Possible file types
+    possible_file_type_list = [InputFileType.UNKNOWN, InputFileType.HIC, InputFileType.COOL, InputFileType.MCOOL, InputFileType.SPARSE]
+
+    # Check if file is Juicer (.hic)
+    if(self.input_file_type not in possible_file_type_list):
+      self.input_file_type = InputFileType.UNKNOWN
 
   def detect_file_type(self):
     """Returns TODO.
@@ -203,11 +217,13 @@ class IO():
 
       # No recognizable file type
       else:
-        self.error_handler.throw_error("TODO") # TODO
+        pass
+        # self.error_handler.throw_error("TODO") # TODO
 
     # If file type continues to be unknown it was not detectable
     if(self.input_file_type == InputFileType.UNKNOWN):
-      self.error_handler.throw_error("TODO") # TODO
+      pass
+      # self.error_handler.throw_error("TODO") # TODO
 
   def detect_input_resolutions(self):
     """Returns TODO.
@@ -242,11 +258,13 @@ class IO():
 
       # No recognizable file type
       else:
-        self.error_handler.throw_error("TODO") # TODO
+        pass
+        # self.error_handler.throw_error("TODO") # TODO
 
     # If resolution continues to be unknown it was not detectable
     if(self.input_resolution == None):
-      self.error_handler.throw_error("TODO") # TODO
+      pass
+      # self.error_handler.throw_error("TODO") # TODO
 
   def load_contact_map_from_hic(self, contact_map):
     """Returns TODO.
@@ -277,26 +295,28 @@ class IO():
       list_files_to_remove.append(bedgraph_file_name)
 
       # Adding juicer dump job
-      self.juicer_handler.add_dump(self.input_resolution, region, region, self.input_file_name, self.temporary_location, bedgraph_file_name, output_type = "bedgraph")
+      self.juicer_handler.dump(self.input_resolution, region, region, self.input_file_name, self.temporary_location, bedgraph_file_name, output_type = "bedgraph")
+      # self.juicer_handler.add_dump(self.input_resolution, region, region, self.input_file_name, self.temporary_location, bedgraph_file_name, output_type = "bedgraph")
 
       # Adding bedgraph dump job
-      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, contact_map)
+      self.bedgraph_handler.dump(chrom, bedgraph_file_name, contact_map)
+      # self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, contact_map)
 
     # Running juicer jobs
-    dump_process_output = self.juicer_handler.run_dump(return_type = "process_out")
+    # dump_process_output = self.juicer_handler.run_dump(return_type = "process_out")
 
     # Verification of juicer dumping processes
-    self.load_process_verification(dump_process_output)
+    #self.load_process_verification(dump_process_output)
 
     # Running bedgraph jobs
-    dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
+    # dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
 
     # Verification of bedgraph loading processes
-    self.load_process_verification(dump_process_output)
+    #self.load_process_verification(dump_process_output)
 
     # Removing temporary files
     remove_command = ["rm", "-rf"] + list_files_to_remove
-    remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+    remove_process = subprocess.run(remove_command, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
   def load_contact_map_from_cool(self, contact_map):
     """Returns TODO.
@@ -326,22 +346,24 @@ class IO():
       list_files_to_remove.append(bedgraph_file_name)
 
       # Adding chromosome dump job
-      self.cooler_handler.add_dump_single(region, region, self.input_file_name, bedgraph_file_name)
+      self.cooler_handler.dump_single(region, region, self.input_file_name, bedgraph_file_name)
+      # self.cooler_handler.add_dump_single(region, region, self.input_file_name, bedgraph_file_name)
 
       # Adding bedgraph dump job
-      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, contact_map)
+      self.bedgraph_handler.dump(chrom, bedgraph_file_name, contact_map)
+      # self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, contact_map)
 
     # Running cooler jobs
-    dump_process_output = self.cooler_handler.run_dump_single(return_type = "process_out")
+    # dump_process_output = self.cooler_handler.run_dump_single(return_type = "process_out")
 
     # Verification of cooler dumping processes
-    self.load_process_verification(dump_process_output)
+    #self.load_process_verification(dump_process_output)
 
     # Running bedgraph jobs
-    dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
+    # dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
 
     # Verification of bedgraph loading processes
-    self.load_process_verification(dump_process_output)
+    #self.load_process_verification(dump_process_output)
 
     # Removing temporary files
     remove_command = ["rm", "-rf"] + list_files_to_remove
@@ -375,22 +397,24 @@ class IO():
       list_files_to_remove.append(bedgraph_file_name)
 
       # Adding chromosome dump job
-      self.cooler_handler.add_dump_multiple(self.input_resolution, region, region, self.input_file_name, bedgraph_file_name)
+      self.cooler_handler.dump_multiple(self.input_resolution, region, region, self.input_file_name, bedgraph_file_name)
+      # self.cooler_handler.add_dump_multiple(self.input_resolution, region, region, self.input_file_name, bedgraph_file_name)
 
       # Adding bedgraph dump job
-      self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, contact_map)
+      self.bedgraph_handler.dump(chrom, bedgraph_file_name, contact_map)
+      # self.bedgraph_handler.add_dump(chrom, bedgraph_file_name, contact_map)
 
     # Running cooler jobs
-    dump_process_output = self.cooler_handler.run_dump_multiple(return_type = "process_out")
+    # dump_process_output = self.cooler_handler.run_dump_multiple(return_type = "process_out")
 
     # Verification of cooler dumping processes
-    self.load_process_verification(dump_process_output)
+    #self.load_process_verification(dump_process_output)
 
     # Running bedgraph jobs
-    dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
+    # dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
 
     # Verification of bedgraph loading processes
-    self.load_process_verification(dump_process_output)
+    #self.load_process_verification(dump_process_output)
 
     # Removing temporary files
     remove_command = ["rm", "-rf"] + list_files_to_remove
@@ -412,13 +436,14 @@ class IO():
     for chrom in self.chromosome_sizes.chromosome_sizes_list:
 
       # Adding chromosome dump job
-      self.bedgraph_handler.add_dump(chrom, self.input_file_name, contact_map)
+      self.bedgraph_handler.dump(chrom, self.input_file_name, contact_map)
+      # self.bedgraph_handler.add_dump(chrom, self.input_file_name, contact_map)
 
     # Running all jobs
-    dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
+    # dump_process_output = self.bedgraph_handler.run_dump(return_type = "process_out")
 
     # Verification of loading processes
-    self.load_process_verification(dump_process_output)
+    #self.load_process_verification(dump_process_output)
 
   def load_process_verification(self, dump_process_output):
     """Returns TODO.
@@ -441,13 +466,16 @@ class IO():
 
       # Verify if chromosome executed correctly
       try:
-        returncode = cp.check_returncode()
-        if(returncode > 0): 
-          self.error_handler.throw_warning("TODO", chrom) # TODO - the process had an error, and exited with that code
+        returncode = cp.check_returncode() # TODO - AttributeError: 'bool' object has no attribute 'check_returncode'
+        if(returncode > 0):
+          pass
+          # self.error_handler.throw_warning("TODO", chrom) # TODO - the process had an error, and exited with that code
         elif(returncode < 0): 
-          self.error_handler.throw_warning("TODO", chrom) # TODO - the process was killed with a signal of -1 * exitcode
+          pass
+          # self.error_handler.throw_warning("TODO", chrom) # TODO - the process was killed with a signal of -1 * exitcode
       except subprocess.CalledProcessError:
-        self.error_handler.throw_error("TODO", chrom) # TODO
+        raise
+        # self.error_handler.throw_error("TODO") # TODO
 
 
   #############################################################################
@@ -472,23 +500,25 @@ class IO():
       try:
         os.mkdir(output_location)
       except OSError:
-        pass # TODO Error - Firectory could not be created
+        raise
+        # self.error_handler.throw_error("TODO") # TODO
 
     # Write file as Juicer (.hic)
-    if(self.input_file_type == InputFileType.HIC):
+    if(output_format == InputFileType.HIC):
       self.write_contact_map_as_hic(contact_map, output_file_name)
 
     # Write file as singular cooler (.cool)
-    elif(self.input_file_type == InputFileType.COOL):
+    elif(output_format == InputFileType.COOL):
       self.write_contact_map_as_cool(contact_map, output_file_name)
 
     # Write file as sparse text bedgraph (.bg2, .bed, .txt)
-    elif(self.input_file_type == InputFileType.SPARSE):
+    elif(output_format == InputFileType.SPARSE):
       self.write_contact_map_as_sparse(contact_map, output_file_name)
 
     # No recognizable output format
     else:
-      self.error_handler.throw_error("TODO") # TODO
+      pass
+      # self.error_handler.throw_error("TODO") # TODO
 
   def write_contact_map_as_hic(self, contact_map, output_file_name):
     """Returns TODO.
@@ -503,10 +533,11 @@ class IO():
     """
 
     # Adding load job
-    self.juicer_handler.add_load(contact_map, self.temporary_location, output_file_name)
+    self.juicer_handler.load(contact_map, self.temporary_location, output_file_name)
+    # self.juicer_handler.add_load(contact_map, self.temporary_location, output_file_name)
 
     # Running load job
-    self.juicer_handler.run_load(return_type = "success")
+    # self.juicer_handler.run_load(return_type = "success")
 
   def write_contact_map_as_cool(self, contact_map, output_file_name):
     """Returns TODO.
@@ -521,10 +552,11 @@ class IO():
     """
 
     # Adding load job
-    self.cooler_handler.add_load(contact_map, self.temporary_location, output_file_name)
+    self.cooler_handler.load(contact_map, self.temporary_location, output_file_name)
+    # self.cooler_handler.add_load(contact_map, self.temporary_location, output_file_name)
 
     # Running load job
-    self.cooler_handler.run_load(return_type = "success")
+    # self.cooler_handler.run_load(return_type = "success")
 
   def write_contact_map_as_sparse(self, contact_map, output_file_name):
     """Returns TODO.
@@ -539,9 +571,28 @@ class IO():
     """
 
     # Adding load job
-    self.bedgraph_handler.add_load(contact_map, output_file_name, start_index = 0)
+    self.bedgraph_handler.load(contact_map, output_file_name, start_index = 0)
+    # self.bedgraph_handler.add_load(contact_map, output_file_name, start_index = 0)
 
     # Running load job
-    self.bedgraph_handler.run_load(return_type = "success")
+    # self.bedgraph_handler.run_load(return_type = "success")
 
+
+  def write_loop_list(self, loop_list, output_file_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Write loop list
+    output_file = open(output_file_name, "w")
+    for loop in loop_list:
+      output_file.write(loop)
+    output_file.close()
 

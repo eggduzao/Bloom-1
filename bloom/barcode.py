@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 Barcode Module
 ===================
@@ -7,17 +8,7 @@ Authors: Eduardo G. Gusmao.
 
 """
 
-# BINARY FILE = A BG2 FILE WHICH WAS CONVERTED INTO A BINARY FILE
-
-# BINARY BARCODE = A BG2 FILE CONTAINING A REPRESENTATIVE SUBSET OF THE CONTACT MAP COVERTED INTO A BINARY FILE
-
-# DUMP FILES (OUTPUT OF THIS CLASS) SHOULD BE ON BG2 FORMAT
-
-# EXAMPLE:
-# - mESC.bg2 (text file matix)
-# - mESC_barcode.bg2 (text file barcode)
-# - mESC.bin (binary file of mESC.bg2)
-# - mESC_barcode.bin (binary file of mESC_barcode.bg2)
+# Dictionary in off/barcode_translation.txt
 
 ###################################################################################################
 # Libraries
@@ -27,6 +18,7 @@ Authors: Eduardo G. Gusmao.
 import os
 import gc
 import sys
+import lzma
 import codecs
 import traceback
 import subprocess
@@ -34,10 +26,9 @@ import configparser
 import multiprocessing
 
 # Internal
-from bloom.contact_map import ContactMap, InputFileType
-from bloom.util import ChromosomeSizes, BarcodeFiles, ErrorHandler
-from bloom.io_bedgraph import Bedgraph
-from bloom.io_juicer import Juicer
+from bloom.contact_map import ContactMap
+from bloom.util import AuxiliaryFunctions, BarcodeFiles, ErrorHandler
+from bloom.io import InputFileType, IO
 
 # External
 
@@ -59,7 +50,7 @@ class Barcode():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, ncpu, organism):
+  def __init__(self, ncpu, organism, contact_map, temporary_location):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -74,17 +65,12 @@ class Barcode():
     # Initialization
     self.ncpu = ncpu
     self.organism = organism
-
-    # Class objects
-    self.cfile = None
+    self.contact_map = contact_map
+    self.temporary_location = temporary_location
 
     # Utilitary objects
     self.error_handler = ErrorHandler()
-    self.barcode_handler = BarcodeFiles(self.organism)
-    self.chromosome_sizes = ChromosomeSizes(self.organism)
-    self.bedgraph_handler = Bedgraph(self.organism, self.ncpu)
-    self.juicer_handler = Juicer(self.ncpu)
-
+    self.barcode_handler = BarcodeFiles()
 
   #############################################################################
   # Main
@@ -102,14 +88,122 @@ class Barcode():
       - return -- A return.
     """
 
-    # Guides barcode sequence of events
+    # Returning files
+    final_contact_map = None
+    final_loop_list = None
+
+    # Iterate over barcoded cells
+    flag_found = False
+    for barcode_number in self.barcode_handler.barcode_number_list:
+
+      # Iterate over barcode resolutions
+      for barcode_resolution in self.barcode_handler.barcode_res_list:
+
+        # Check resolution
+        if(self.contact_map.resolution == barcode_resolution):
+          flag_found = True
+          barcode_list = self.barcode_handler.barcode_file_dictionary[barcode_number]
+          compbin_matrix_file_name = barcode_list[0]
+          compbin_loop_file_name = barcode_list[1]
+          compbin_barcode_file_name = barcode_list[2][barcode_resolution]
+          break
+
+      # Check if found
+      if(flag_found):
+        break
+
+    # Check if found
+    if(flag_found):
+
+      # Decompress barcode
+      barcode_contact_map = self.create_contact_map_from_binary_barcode(compbin_barcode_file_name, resolution = self.contact_map.resolution)
+
+      # Compare barcode and current input contact map
+      match = self.match_barcode(barcode_contact_map)
+
+      # Check match
+      if(match):
+
+        # Decompress matrix and loop
+        final_contact_map = self.create_contact_map_from_binary_file(compbin_matrix_file_name)
+        final_loop_list = self.create_loop_list_from_binary_file(compbin_loop_file_name)
+
+        # Return objects
+        return final_contact_map, final_loop_list
+
+      # Return objects
+      else:
+        return final_contact_map, final_loop_list
+
+    # Return objects
+    else:
+      return final_contact_map, final_loop_list
+
+  def open_lzma_file(f, *args, **kwargs):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    try:
+      import lzma
+    except ImportError:
+      raise NotImplementedError('''This version of python doesn't have "lzma" module''')
+    if hasattr(lzma, 'open'):
+      return lzma.open(f, *args, **kwargs)
+    if not isinstance(f, basestring):
+      if hasattr(f, 'name') and os.path.exists(f.name):
+        f = f.name
+      else:
+        raise TypeError('Expected `str`, `bytes`, `unicode` or file-like object with valid `name` attribute pointing to a valid path')
+    return lzma.LZMAFile(f, *args, **kwargs)
+
+  def string_to_bytelist(string):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    if(isinstance(string, str)):
+      return [format(ord(i), 'b') for i in string]
+    else: 
+      raise ValueError("Error: Input must be a string type")
+
+  def bytelist_to_stringlist(bytelist):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    if isinstance(bytelist, list):
+      return [chr(int(i, 2)) for i in bytelist if i]
+    else: 
+      raise ValueError("Error: Input must be a list")
 
 
   #############################################################################
   # Decompression: Binary -> to -> File
   #############################################################################
 
-  def create_contact_map_from_binary_file(self):
+  def compbin_to_bg(self, input_file_name, output_file_name, resolution = 1000):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -121,9 +215,30 @@ class Barcode():
       - return -- A return.
     """
 
-    # Convert BINARY FILE -> CONTACT MAP
+    input_file = self.open_lzma_file(input_file_name, mode="rb")
+    output_file = open(output_file_name, "w")
 
-  def create_contact_map_from_binary_barcode(self):
+    for line in inputFile:
+
+      bytelist = line.decode("utf8").split(" ")
+
+      ll = self.bytelist_to_stringlist(bytelist)
+      chrom = "chr" + ll[0]
+      p11 = AuxiliaryFunctions.expand_integer(ll[2])
+      p12 = str(int(p11) + resolution)
+      p21 = AuxiliaryFunctions.expand_integer(ll[4])
+      p22 = str(int(p21) + resolution)
+      v = ll[6]
+
+      out_vec = [chrom, p11, p12, p21, p22, v]
+
+      output_file.write("\t".join(out_vec) + "\n")
+
+    input_file.close()
+    output_file.close()
+
+  # Convert BINARY FILE -> CONTACT MAP
+  def create_contact_map_from_binary_file(self, compbin_matrix_file_name, resolution = 1000):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -135,9 +250,19 @@ class Barcode():
       - return -- A return.
     """
 
-    # Convert BINARY BARCODE -> CONTACT MAP
+    # Convert compbin to regular bedgraph
+    matrix_file_name = os.join(self.temporary_location, "matrix_file_name")
+    self.compbin_to_bg(compbin_matrix_file_name, matrix_file_name, resolution = resolution)
+    
+    # Create contact map
+    contact_map = IO(matrix_file_name, self.temporary_location, self.organism, self.ncpu, 
+                     input_resolution = resolution, input_file_type = InputFileType.SPARSE)
 
-  def create_compartments_from_binary_barcode(self):
+    # Return objects
+    return contact_map
+
+  # Convert BINARY BARCODE -> CONTACT MAP
+  def create_contact_map_from_binary_barcode(self, compbin_barcode_file_name, resolution = 1000):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -149,9 +274,19 @@ class Barcode():
       - return -- A return.
     """
 
-    # Convert BINARY BARCODE -> COMPARTMENTS
+    # Convert compbin to regular bedgraph
+    barcode_file_name = os.join(self.temporary_location, "barcode_file_name")
+    self.compbin_to_bg(compbin_barcode_file_name, barcode_file_name, resolution = resolution)
+    
+    # Create contact map
+    contact_map = IO(barcode_file_name, self.temporary_location, self.organism, self.ncpu, 
+                     input_resolution = resolution, input_file_type = InputFileType.SPARSE)
 
-  def create_tads_from_binary_barcode(self):
+    # Return objects
+    return contact_map
+
+  # Convert BINARY BARCODE -> CONTACTS (IFS)
+  def create_loop_list_from_binary_file(self, compbin_loop_file_name):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -163,27 +298,58 @@ class Barcode():
       - return -- A return.
     """
 
-    # Convert BINARY BARCODE -> TADs
+    # Convert compbin to regular bedgraph
+    loop_file_name = os.join(self.temporary_location, "loop_file_name")
+    self.compbin_to_bg(compbin_loop_file_name, loop_file_name, resolution = resolution)
+    
+    # Create contact map
+    loop_list = []
+    loop_file = open(loop_file_name, "rU")
+    for line in loop_file:
+      ll = line.strip().split("\t")
+      loop_list.append(ll)
+    loop_file.close()
 
-  def create_contacts_from_binary_barcode(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+    # Return objects
+    return loop_list
 
-    # Convert BINARY BARCODE -> CONTACTS (IFS)
 
   #############################################################################
   # Compression: File -> to -> Binary
   #############################################################################
 
-  def create_binary_file_from_contact_map(self):
+  def bg_to_compbin(self, input_file_name, output_file_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    input_file = open(inputFileName, "rU")
+    output_file = self.open_lzma_file(input_file_name, mode="wb")
+
+    for line in input_file:
+
+      ll = line.strip().split("\t")
+      chrN = ll[0].split("chr")[-1]
+      n1 = AuxiliaryFunctions.shorten_integer(ll[1])
+      n2 = AuxiliaryFunctions.shorten_integer(ll[2])
+      out_string = "\t".join([chrN, n1, n2, ll[3], "\n"])
+
+      bytelist = " ".join(self.string_to_bytelist(out_string)) + " "
+      binbytelist = bytearray(bytelist, "utf8")
+
+      output_file.write(binbytelist)
+
+    input_file.close()
+    output_file.close()
+
+  def create_binary_file_from_contact_map(self): # TODO
     """Returns TODO.
     
     *Keyword arguments:*
@@ -196,9 +362,10 @@ class Barcode():
     """
 
     # Convert CONTACT MAP -> BINARY FILE
+    # Future - TODO
     pass
 
-  def create_binary_barcode_from_contact_map(self):
+  def create_binary_barcode_from_contact_map(self): # TODO
     """Returns TODO.
     
     *Keyword arguments:*
@@ -211,39 +378,10 @@ class Barcode():
     """
 
     # Convert CONTACT MAP -> BINARY BARCODE
+    # Future - TODO
     pass
 
-  def create_binary_barcode_from_contact_map(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Convert COMPARTMENTS -> BINARY BARCODE
-    pass
-
-  def create_binary_barcode_from_contact_map(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Convert TADs -> BINARY BARCODE
-    pass
-
-  def create_binary_barcode_from_contact_map(self):
+  def create_binary_contacts_from_loop_list(self): # TODO
     """Returns TODO.
     
     *Keyword arguments:*
@@ -256,13 +394,14 @@ class Barcode():
     """
 
     # Convert CONTACTS (IFS) -> BINARY BARCODE
+    # Future - TODO
     pass
 
   #############################################################################
   # Check barcode
   #############################################################################
 
-  def match_barcode(self):
+  def match_barcode(self, barcode_contact_map, similarity_degree = 0.01):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -274,24 +413,26 @@ class Barcode():
       - return -- A return.
     """
 
-    # Match barcode from input contact map with barcodes from the existing files and report existance
+    # Similar object
+    is_similar = True
 
+    # Iterating on valid chromosomes
+    for chromosome in barcode_contact_map.valid_chromosome_list:
 
+      # Match input contact map and barcode
+      is_similar = self.contact_map.match_subset(chromosome, barcode_contact_map, similarity_degree = similarity_degree)
+      if(is_similar == False):
+        break
+
+    # Return objects
+    return is_similar
+
+  """
   #############################################################################
   # OLD
   #############################################################################
 
   def check_best_barcode_to_input(self, input_file_name, temporary_location, input_file_type = InputFileType.UNKNOWN): # This will assign a cfile matrix (output) to the input contact matrix, based on all bfiles matrices barcodes
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
 
     # Return status
     return_status = False
@@ -338,16 +479,6 @@ class Barcode():
     return return_status
 
   def binfile_to_dumpfile(self, bin_file_name, dump_file_name):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
 
     # Iterate on each byte of the file
     string_array = []
@@ -368,12 +499,5 @@ class Barcode():
     dump_file.close()
 
 
-
-
-
-
-
-
-
-
+"""
 

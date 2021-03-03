@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 DPMM Module
 ===================
@@ -47,7 +48,7 @@ class Dpmm():
   """
 
   def __init__(self, ncpu, contact_map, avoid_distance, removed_dict, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
-               half_length_bin_interval = [1, 5], value_range = [10e-3, 10e-4], random_range = [10e-9, 10e-10], iteration_multiplier = 1000, seed = 123):
+               half_length_bin_interval = [1, 5], value_range = [10e-4, 10e-3], random_range = [10e-10, 10e-9], iteration_multiplier = 1000, seed = 123):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -128,28 +129,21 @@ class Dpmm():
     # Iterate on the rows of this chromosome's contact map
     for row in range(0, contact_map.max_bin[chromosome] + 1):
 
-      # Check whether row is to be avoided (removed due to blacklist or zeros)
-      try:
-        avoid = self.removed_dict[row]
-        continue
-      except Exception: pass
-
       # Calculate row's random multiplier and exponential multiplier
       row_random_r = (random.uniform(self.random_degrade_range[0] * highest_value, self.random_degrade_range[1] * highest_value) + highest_value)
       row_expone_l = self.degrade_multiplier * highest_value # TODO - Decide this formula as a random range based also on the sparsity level and the avoid_distance
 
-      # Iterate on "diagonal-avoided" columns backwards
+      # Iterate on columns backwards
       counter = 1
       for col in range(row + self.avoid_distance, row - 1, -1):
 
         # Calculate value to add in the matrix
         value_to_add = row_random_r + ((1 + row_expone_l) ** counter)
-
-        # TODO - ADD VALUE TO ROW / COL
+        bprow, bpcol = self.contact_map.matrix.bin_to_bp(row, col)
+        contact_map.add(chromosome, bprow, bpcol, value_to_add)
 
         # Update counter
         counter += 1
-
 
   def add_degrade(self, contact_map, chromosome):
     """Returns TODO.
@@ -262,15 +256,9 @@ class Dpmm():
       for i in range(middle_bp - chosen_length, middle_bp + chosen_length + 1, contact_map.resolution):
         for j in range(middle_bp - chosen_length, middle_bp + chosen_length + 1, contact_map.resolution):
 
-          # Minimum and maximum coordinates
-          min_pos = min(i, j)
-          max_pos = max(i, j)
-
           # Value to add
           value_to_add = base_value + random.uniform(self.random_range[0], self.random_range[1])
-
-          # Add value to matrix
-          # TODO
+          contact_map.add(chromosome, i, j, value_to_add)
 
   def add_introduce_squares(self, contact_map, chromosome, iterations):
     """Returns TODO.
@@ -346,15 +334,9 @@ class Dpmm():
           if((abs(counterI) + abs(counterJ)) > base_chosen_length):
             continue
 
-          # Minimum and maximum coordinates
-          min_pos = min(i, j)
-          max_pos = max(i, j)
-
           # Value to add
           value_to_add = base_value + random.uniform(self.random_range[0], self.random_range[1])
-
-          # Add value to matrix
-          # TODO
+          contact_map.add(chromosome, i, j, value_to_add)
 
           # Updating counter j
           counterJ += 1
@@ -441,19 +423,9 @@ self.min_value = dict() # per chromosome
 """
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+###################################################################################################
+# DPMM Main Class
+###################################################################################################
 
 class DPMM():
   """This class represents TODO.
@@ -718,6 +690,9 @@ class DPMM():
       self.manip_needs_update = True
 
 
+###################################################################################################
+# GaussND Class
+###################################################################################################
 
 class GaussND():
   """This class represents TODO.
@@ -797,6 +772,9 @@ class GaussND():
       return np.random.multivariate_normal(self.mu, self.Sig, size=size)
 
 
+###################################################################################################
+# GMM Class
+###################################################################################################
 
 class GMM():
   """This class represents TODO.
@@ -812,7 +790,7 @@ class GMM():
       - Possibility 2: A possibility 2.
   """
 
-    def __init__(self, components, proportions):
+  def __init__(self, components, proportions):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -886,40 +864,327 @@ class GMM():
       return out
 
 
+###################################################################################################
+# Prior Class
+###################################################################################################
+
+class Prior():
+  """This class represents TODO.
+
+  *Keyword arguments:*
+
+    - argument1 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+
+    - argument2 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+  """
+
+  def __init__(self, post=None, *args, **kwargs):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    if post is None:
+      post = type(self)
+    self._post = post
+
+  def sample(self, size=None):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    raise NotImplementedError
+
+  def like1(self, x, *args, **kwargs):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    raise NotImplementedError
+
+  def likelihood(self, D, *args, **kwargs):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    return np.prod(self.like1(D, *args, **kwargs))
+
+  def lnlikelihood(self, D, *args, **kwargs):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    return np.log(self.likelihood(D, *args, **kwargs))
+
+  def __call__(self, *args):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    raise NotImplementedError
+
+  def _post_params(self, D):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    raise NotImplementedError
+
+  def post(self, D):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    return self._post(*self._post_params(D))
+
+  def pred(self, x):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    raise NotImplementedError
 
 
+###################################################################################################
+# NormInvWish Class
+###################################################################################################
 
+class NormInvWish(Prior):
+  """This class represents TODO.
 
+  *Keyword arguments:*
 
+    - argument1 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
 
+    - argument2 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+  """
 
+  def __init__(self, mu_0, kappa_0, Lam_0, nu_0):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    self.mu_0 = np.array(mu_0, dtype=float)
+    self.kappa_0 = float(kappa_0)
+    self.Lam_0 = np.array(Lam_0, dtype=float)
+    self.nu_0 = int(nu_0)
+    self.d = len(mu_0)
+    self.model_dtype = np.dtype([('mu', float, self.d), ('Sig', float, (self.d, self.d))])
+    super(NormInvWish, self).__init__()
 
+  def _S(self, D):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    Dbar = np.mean(D, axis=0)
+    return np.dot((D-Dbar).T, (D-Dbar))
 
+  def sample(self, size=None):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    Sig = random_invwish(dof=self.nu_0, invS=self.Lam_0, size=size)
+    if size is None:
+      ret = np.zeros(1, dtype=self.model_dtype)
+      ret['Sig'] = Sig
+      ret['mu'] = np.random.multivariate_normal(self.mu_0, Sig/self.kappa_0)
+      return ret[0]
+    else:
+      ret = np.zeros(size, dtype=self.model_dtype)
+      ret['Sig'] = Sig
+      for r in ret.ravel():
+        r['mu'] = np.random.multivariate_normal(self.mu_0, r['Sig']/self.kappa_0)
+      return ret
 
+  def like1(self, *args):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    if len(args) == 2:
+      x, theta = args
+      mu = theta['mu']
+      Sig = theta['Sig']
+    elif len(args) == 3:
+      x, mu, Sig = args
+    assert x.shape[-1] == self.d
+    assert mu.shape[-1] == self.d
+    assert Sig.shape[-1] == Sig.shape[-2] == self.d
+    norm = np.sqrt((2*np.pi)**self.d * np.linalg.det(Sig))
+    einsum = np.einsum("...i,...ij,...j", x-mu, np.linalg.inv(Sig), x-mu)
+    return np.exp(-0.5*einsum)/norm
 
+  def __call__(self, *args):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    if len(args) == 1:
+      mu = args[0]['mu']
+      Sig = args[0]['Sig']
+    elif len(args) == 2:
+      mu, Sig = args
+    nu_0, d = self.nu_0, self.d
+    Z = (2.0**(nu_0*d/2.0) * gammad(d, nu_0/2.0) * \
+        (2.0*np.pi/self.kappa_0)**(d/2.0) / np.linalg.det(self.Lam_0)**(nu_0/2.0))
+    detSig = np.linalg.det(Sig)
+    invSig = np.linalg.inv(Sig)
+    einsum = np.einsum("...i,...ij,...j", mu-self.mu_0, invSig, mu-self.mu_0)
+    return 1./Z * detSig**(-((nu_0+d)/2.0+1.0)) * \
+           np.exp(-0.5*np.trace(np.einsum("...ij,...jk->...ik", self.Lam_0, invSig), axis1=-2, axis2=-1) - self.kappa_0/2.0*einsum)
 
+  def _post_params(self, D):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    shape = D.shape
+    if len(shape) == 2:
+      n = shape[0]
+      Dbar = np.mean(D, axis=0)
+    elif len(shape) == 1:
+      n = 1
+      Dbar = np.mean(D)
+    kappa_n = self.kappa_0 + n
+    nu_n = self.nu_0 + n
+    mu_n = (self.kappa_0 * self.mu_0 + n * Dbar) / kappa_n
+    x = (Dbar-self.mu_0)[:, np.newaxis]
+    Lam_n = (self.Lam_0 + self._S(D) + self.kappa_0*n/kappa_n*np.dot(x, x.T))
+    return mu_n, kappa_n, Lam_n, nu_n
 
+  def pred(self, x):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    return multivariate_t_density(self.nu_0-self.d+1, self.mu_0, self.Lam_0*(self.kappa_0+1)/(self.kappa_0 - self.d + 1), x)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  def evidence(self, D):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    shape = D.shape
+    if len(shape) == 2:
+      n, d = shape
+    elif len(shape) == 1:
+      n, d = 1, shape[0]
+    assert d == self.d
+    mu_n, kappa_n, Lam_n, nu_n = self._post_params(D)
+    detLam0 = np.linalg.det(self.Lam_0)
+    detLamn = np.linalg.det(Lam_n)
+    num = gammad(d, nu_n/2.0) * detLam0**(self.nu_0/2.0)
+    den = np.pi**(n*d/2.0) * gammad(d, self.nu_0/2.0) * detLamn**(nu_n/2.0)
+    return num/den * (self.kappa_0/kappa_n)**(d/2.0)
 

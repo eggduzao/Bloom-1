@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 IO Bedgraph Module
 ===================
@@ -159,7 +160,8 @@ class Bedgraph(ConfigurationFile):
     for cp in dump_process_output:
       if(not cp):
         successful_execution = False
-        self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly. Or warning showing the parameters.
+        pass
+        # self.error_handler.throw_error("TODO") # TODO
 
     # Return mode
     if(return_type == "success"):
@@ -187,7 +189,7 @@ class Bedgraph(ConfigurationFile):
     """
 
     # Open output bedgraph file
-    output_file = codecs.open(input_file_name, "w", "utf8")
+    output_file = codecs.open(output_file_name, "w", "utf8")
 
     # Iterating on valid chromosomes
     for chromosome in contact_map.valid_chromosome_list:
@@ -248,7 +250,8 @@ class Bedgraph(ConfigurationFile):
     for cp in load_process_output:
       if(not cp):
         successful_execution = False
-        self.error_handler.throw_error("TODO") # TODO - Error: One or more processes didnt execute correctly.
+        pass
+        # self.error_handler.throw_error("TODO") # TODO
 
     # Return mode
     if(return_type == "success"):
@@ -258,11 +261,12 @@ class Bedgraph(ConfigurationFile):
     else:
       return None
 
+
   #############################################################################
   # Auxiliary IO identifying methods
   #############################################################################
 
-  def identify_minimal_resolution(self, input_file_name):
+  def identify_minimal_resolution(self, input_file_name, multiple_check = 1000):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -285,12 +289,12 @@ class Bedgraph(ConfigurationFile):
     pos11 = int(ll[1])
     pos12 = int(ll[2])
     raw_resolution = max(pos11, pos12) - min(pos11, pos12)
-    if(raw_resolution % 10 == 0):
-      pass
-    elif(raw_resolution % 10 in [1, 2, 3, 4]): 
-      resolution = AuxiliaryFunctions.floor_multiple(raw_resolution, 10)
+    if(int(raw_resolution % multiple_check) == 0):
+      resolution = raw_resolution
+    elif(int(raw_resolution % multiple_check) in list(range(1, int(multiple_check / 2)))): 
+      resolution = AuxiliaryFunctions.floor_multiple(raw_resolution, multiple_check)
     else:
-      resolution = AuxiliaryFunctions.ceil_multiple(raw_resolution, 10)
+      resolution = AuxiliaryFunctions.ceil_multiple(raw_resolution, multiple_check)
 
     # Close bedgraph
     input_file.close()
@@ -316,6 +320,7 @@ class Bedgraph(ConfigurationFile):
     # Open bedgraph input file [chrom1, pos11, pos12, chrom2, po21, pos22, count]
     try:
       input_file = codecs.open(input_file_name, "rU", "utf8")
+      line = input_file.readline()
     except Exception:
       is_bedgraph = False
 

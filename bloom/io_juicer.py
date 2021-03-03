@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 IO Juicer Module
 ===================
@@ -76,7 +77,7 @@ class Juicer(ConfigurationFile):
     self.error_handler = ErrorHandler()
 
   #############################################################################
-  # Read: Juicer (.hic) -> Bedgraph (.bg)
+  # Read: Juicer (.hic) -> Bedgraph (.bg) or Juicer Pre (.pre)
   #############################################################################
 
   def dumpfile_to_bedgraph(self, chromosome, resolution, input_file_name, output_file_name):
@@ -134,8 +135,8 @@ class Juicer(ConfigurationFile):
       # Execution of Juicer's dump
       command = [self.juicer_command] + self.juicer_options.split(" ") + [self.juicer_jar_location, "dump", 
                  self.kind_of_matrix, self.kind_of_normalization, input_file_name,
-                 region1, region2, self.unit_of_resolution, resolution, output_file_name]
-      dump_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+                 region1, region2, self.unit_of_resolution, str(resolution), output_file_name]
+      dump_process = subprocess.run(command, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
     # Bedgraph output
     if(output_type == "bedgraph"):
@@ -146,7 +147,7 @@ class Juicer(ConfigurationFile):
       # Execution of Juicer's dump
       command = [self.juicer_command] + self.juicer_options.split(" ") + [self.juicer_jar_location, "dump", 
                  self.kind_of_matrix, self.kind_of_normalization, input_file_name,
-                 region1, region2, self.unit_of_resolution, resolution, temp_output_file_name]
+                 region1, region2, self.unit_of_resolution, str(resolution), temp_output_file_name]
       dump_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
       # Convert juicer dump file (pre) to bedgraph
@@ -205,6 +206,8 @@ class Juicer(ConfigurationFile):
         cp.check_returncode()
       except subprocess.CalledProcessError:
         successful_execution = False # TODO - Error: One or more processes didnt execute correctly.
+        # raise
+        # self.error_handler.throw_error("TODO") # TODO
 
     # Return mode
     if(return_type == "success"):
@@ -299,7 +302,7 @@ class Juicer(ConfigurationFile):
 
     # Execution of Juicer's pre
     pre_command = [self.juicer_command] + self.juicer_options.split(" ") + [self.juicer_jar_location, "pre", 
-                   "-d", "-n", "-r", contact_map.resolution, "-t", temporary_location, pre_file_name, output_file_name, contact_map.organism]
+                   "-d", "-n", "-r", str(contact_map.resolution), "-t", temporary_location, pre_file_name, output_file_name, contact_map.organism]
     pre_process = subprocess.run(pre_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
     # Remove temporary files
@@ -354,6 +357,8 @@ class Juicer(ConfigurationFile):
         cp.check_returncode()
       except subprocess.CalledProcessError:
         successful_execution = False # TODO - Error: One or more processes didnt execute correctly.
+        # raise
+        # self.error_handler.throw_error("TODO") # TODO
 
     # Return mode
     if(return_type == "success"):

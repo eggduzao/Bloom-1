@@ -24,7 +24,7 @@ import multiprocessing
 
 # Internal
 from bloom.contact_map import ContactMap
-from bloom.util import ErrorHandler, ChromosomeSizes, AuxiliaryFunctions
+from bloom.util import ErrorHandler, ExcList, AuxiliaryFunctions
 
 # External
 import numpy as np
@@ -49,7 +49,7 @@ class Preprocess():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, ncpu, input_contact_map, minimal_resolution = 1000):
+  def __init__(self, ncpu, input_contact_map, minimal_resolution = 1000, min_contig_removed_bins = 5, remove_threshold = 1):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -64,16 +64,20 @@ class Preprocess():
     # Main objects
     self.input_contact_map = input_contact_map
     self.minimal_resolution = minimal_resolution
+    self.min_contig_removed_bins = min_contig_removed_bins
+    self.remove_threshold = remove_threshold
+
+    # Statistics dictionaries
+    self.removed_dict = dict() # Points removed because falls into a 0 contig or blacklist. For every chromosome -> for every row/col bin -> True or error.
+    self.colsum_dict = dict() # For every chromosome -> for every col bin -> total sum of that col signal
 
     # Auxiliary objects
     self.ncpu = ncpu
     self.process_queue = []
 
-    #self.removed_dict = dict() # Points removed because falls into a 0 contig or blacklist. For every chromosome -> for every row/col bin -> True or error.
-
     # Utilitary objects
     self.error_handler = ErrorHandler()
-    self.chromosome_sizes = ChromosomeSizes(self.input_contact_map.organism)
+    self.exclist_handler = ExcList(self.input_contact_map.organism, self.minimal_resolution)
 
 
   #############################################################################
@@ -99,10 +103,11 @@ class Preprocess():
     for chromosome in new_contact_map.valid_chromosome_list:
 
       # Add reshape process to list
-      self.add_reshape(chromosome, new_contact_map)
+      self.reshape(chromosome, new_contact_map)
+      # self.add_reshape(chromosome, new_contact_map)
 
     # Execute reshape
-    self.run_reshape()
+    # self.run_reshape()
 
     # Recalculate statistics
     if(recalculate_statistics):
@@ -296,36 +301,15 @@ class Preprocess():
     
       - return -- A return.
     """
-
-    # Calculates sparsity to decide whether to do SICA or ICA
+    pass
+    # Placeholder
+    # Future - TODO
 
   #############################################################################
   # Blacklist
   #############################################################################
 
-  def remove_blacklist(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Removes intervals of the new minimal_contact_map on a blacklist file (if any)
-
-    # DO THE VOID INTERVALS BELOW AS WELL!
-    # 1. CALCULATE, FOR EVERY CHROM, FOR EVERY DIAG POINT -> THE ROW/COL SUM
-    # 2. IF ROW/COL SUM OF X CONTIGUOUS LOCATIONS ARE = 0 OR A THRESHOLD, MARK AS REMOVED: REMOVED_DICT[i] = TRUE OR None (ERROR)
-
-  #############################################################################
-  # Row/Col Iteration to remove void intervals
-  #############################################################################
-
-  def main_void_statistics(self, remove_threshold):
+  def main_remove_blacklist(self, contact_map):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -338,19 +322,25 @@ class Preprocess():
     """
 
     # Get valid chromosome list
-    valid_chromosome_list = self.contact_map.valid_chromosome_list
-    
+    valid_chromosome_list = contact_map.valid_chromosome_list
+
     # Iterating on valid chromosomes
     for chromosome in valid_chromosome_list:
 
-      # Add remove_void_intervals_and_rowcol_statistics to the queue
-      self.add_void_statistics(self.contact_map, chromosome, remove_threshold)
+      # Add chromosome to dictionaries
+      try:
+        self.removed_dict[chromosome]
+      except Exception:
+        self.removed_dict[chromosome] = dict()
 
-    # Run remove_void_intervals_and_rowcol_statistics
-    self.run_void_statistics()
+      # Add remove_from_map job to the queue
+      self.remove_blacklist(chromosome, contact_map)
+      # self.add_remove_blacklist(chromosome, contact_map)
 
-  # TODO - Remove threshold is a value in [0.0, 1.0] -> A row/col percentage below this threshold will be removed
-  def remove_void_intervals_and_rowcol_statistics(self, contact_map, chromosome, remove_threshold):
+    # Run remove_from_map
+    # self.run_remove_blacklist()
+
+  def remove_blacklist(self, chromosome, contact_map):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -362,8 +352,347 @@ class Preprocess():
       - return -- A return.
     """
 
-    # Create dictionary in removed_dict for this chromosome
-    self.removed_dict[chromosome] = dict()
+    # Iterating on matrix
+    for key in self.exclist_handler.exclude_dictionary[chromosome].keys():
+
+      # Binary version of key
+      kbin = contact_map.bp_to_bin(key[0])
+
+      # Putting key on removed_dict
+      self.removed_dict[chromosome][kbin] = True
+
+  def add_remove_blacklist(self, chromosome, contact_map):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Append job to queue
+    self.process_queue.append((chromosome, contact_map))
+
+  def run_remove_blacklist(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    
+    # Execute job queue
+    pool = multiprocessing.Pool(self.ncpu)
+    pool.starmap(self.remove_blacklist, [arguments for arguments in self.process_queue])
+    pool.close()
+    pool.join()
+
+    # Clean queue
+    pool = None
+    self.process_queue = []
+    gc.collect()
+
+
+  #############################################################################
+  # Row/Col Iteration to remove void intervals
+  #############################################################################
+
+  def main_void_statistics(self, contact_map):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Get valid chromosome list
+    valid_chromosome_list = contact_map.valid_chromosome_list
+    
+    # Iterating on valid chromosomes
+    for chromosome in valid_chromosome_list:
+
+      # Add chromosome to dictionaries
+      self.colsum_dict[chromosome] = [0.0] * contact_map.total_1d_bp
+
+      # Add colsum job to the queue
+      self.colsum(chromosome, contact_map)
+      # self.add_colsum(chromosome, contact_map)
+
+    # Run colsum
+    #self.run_colsum()
+
+    # Iterating on valid chromosomes
+    for chromosome in valid_chromosome_list:
+
+      # Add chromosome to dictionaries
+      try:
+        self.removed_dict[chromosome]
+      except Exception:
+        self.removed_dict[chromosome] = dict()
+
+      # Add remove rowcol job to the queue
+      self.remove_rowcol(chromosome)
+      # self.add_remove_rowcol(chromosome)
+
+    # Run remove_rowcol
+    # self.run_remove_rowcol()
+
+    # Iterating on valid chromosomes
+    for chromosome in valid_chromosome_list:
+
+      # Add remove_from_map job to the queue
+      self.remove_from_map(chromosome, contact_map)
+      # self.add_remove_from_map(chromosome, contact_map)
+
+    # Run remove_from_map
+    # self.run_remove_from_map()
+
+  def colsum(self, chromosome, contact_map):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Iterating on matrix
+    for key, value in contact_map.matrix[chromosome].items():
+
+      # Binary version of keys
+      brow, bcol = contact_map.bp_to_bin(key[0], key[1])
+
+      # Check if value is above threshold
+      if(value > self.remove_threshold):
+
+        # Add amount to dictionary
+        self.colsum_dict[chromosome][brow] += value
+        self.colsum_dict[chromosome][bcol] += value
+
+  def add_colsum(self, chromosome, contact_map):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Append job to queue
+    self.process_queue.append((chromosome, contact_map))
+
+  def run_colsum(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    
+    # Execute job queue
+    pool = multiprocessing.Pool(self.ncpu)
+    pool.starmap(self.colsum, [arguments for arguments in self.process_queue])
+    pool.close()
+    pool.join()
+
+    # Clean queue
+    pool = None
+    self.process_queue = []
+    gc.collect()
+
+  def remove_rowcol(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Help flag
+    zero_track = []
+
+    # Iterating on colsum dictionary
+    for i in range(0, len(self.colsum_dict[chromosome])):
+
+      # Fetching column count
+      colcount = self.colsum_dict[chromosome][i]
+
+      # Column with signal found
+      if(colcount > 0):
+
+        # Enough continuous cols
+        if(len(zero_track) >= self.min_contig_removed_bins):
+
+          # Put all contiguous columns in removed dictionary
+          for z in zero_track:
+            self.removed_dict[chromosome][z] = True
+
+        # Re-set zero_track
+        zero_track = []
+
+      # Column with signal not found
+      else:
+        zero_track.append(i)
+
+    # LAST VERIFICATION -> Enough continuous cols
+    if(len(zero_track) >= self.min_contig_removed_bins):
+
+      # LAST VERIFICATION -> Put all contiguous columns in removed dictionary
+      for z in zero_track:
+        self.removed_dict[chromosome][z] = True
+
+  def add_remove_rowcol(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Append job to queue
+    self.process_queue.append((chromosome))
+
+  def run_remove_rowcol(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    
+    # Execute job queue
+    pool = multiprocessing.Pool(self.ncpu)
+    pool.starmap(self.remove_rowcol, [arguments for arguments in self.process_queue])
+    pool.close()
+    pool.join()
+
+    # Clean queue
+    pool = None
+    self.process_queue = []
+    gc.collect()
+
+
+  #############################################################################
+  # Remove from contact map
+  #############################################################################
+
+  def remove_from_map(self, chromosome, contact_map):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # List of keys to remove from dictionary
+    removed_keys = []
+
+    # Iterating on matrix
+    for key, value in contact_map.matrix[chromosome].items():
+
+      # Binary version of keys
+      brow, bcol = contact_map.bp_to_bin(key[0], key[1])
+
+      # Check if entry needs to be removed
+      try:
+        self.removed_dict[chromosome][brow]
+        removed_keys.append(key)
+        continue
+      except Exception:
+        pass
+      try:
+        self.removed_dict[chromosome][bcol]
+        removed_keys.append(key)
+        continue
+      except Exception:
+        pass
+
+    # Remove values from dictionary
+    for key in removed_keys:
+      contact_map.matrix[chromosome].pop(key)
+
+  def add_remove_from_map(self, chromosome, contact_map):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Append job to queue
+    self.process_queue.append((chromosome, contact_map))
+
+  def run_remove_from_map(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    
+    # Execute job queue
+    pool = multiprocessing.Pool(self.ncpu)
+    pool.starmap(self.remove_from_map, [arguments for arguments in self.process_queue])
+    pool.close()
+    pool.join()
+
+    # Clean queue
+    pool = None
+    self.process_queue = []
+    gc.collect()
+
+
+  #############################################################################
+  # OLD
+  #############################################################################
+
+  """
+  def remove_rowcol(self, chromosome, contact_map):
 
     # Main loop corresponding to the current row/col being analyzed
     for k in range(self.avoid_distance + 1, contact_map.max_bin[chromosome] + 1):
@@ -403,60 +732,5 @@ class Preprocess():
 
     # Placeholder
 
-  def add_void_statistics(self, contact_map, chromosome, remove_threshold):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Append job to queue
-    self.process_queue.append((contact_map, chromosome, remove_threshold))
-
-  def run_void_statistics(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-    
-    # Execute job queue
-    pool = multiprocessing.Pool(self.ncpu)
-    pool.starmap(self.remove_void_intervals_and_rowcol_statistics, [arguments for arguments in self.process_queue])
-    pool.close()
-    pool.join()
-
-    # Clean queue
-    pool = None
-    self.process_queue = []
-    gc.collect()
-
-  #############################################################################
-  # Barcode
-  #############################################################################
-
-  def load_barcode(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Perform all operations related to the barcodes - output flags to let all modules know that the barcodes should be used
-
+  """
 

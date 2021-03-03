@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 IO Cooler Module
 ===================
@@ -68,7 +69,7 @@ class Cooler(ConfigurationFile):
     self.ncpu = ncpu
     self.organism = organism
     self.process_queue = []
-    self.cooler_resolution_list = [str(i*1000) for i in [1, 5, 10, 50, 100, 500, 1000]] # Please check: http://dcic.4dnucleome.org/data%20standards/
+    self.cooler_resolution_list = [str(i*1000) for i in [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]] # Please check: http://dcic.4dnucleome.org/data%20standards/
 
     # Error handler
     self.error_handler = ErrorHandler()
@@ -93,9 +94,8 @@ class Cooler(ConfigurationFile):
     """
   
     # Execution of Cooler's dump
-    command = [self.cooler_command, "dump", "-t", "pixels", "--join", "-r", region1, "-r2", region2,
-               input_file_name, ">", output_file_name]
-    dump_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+    dump_command = [self.cooler_command, "dump", "-t", "pixels", "--join", "-r", region1, "-r2", region2, "-o", output_file_name, input_file_name]
+    dump_process = subprocess.run(dump_command, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
     # Return dump process
     return dump_process
@@ -145,6 +145,8 @@ class Cooler(ConfigurationFile):
         cp.check_returncode()
       except subprocess.CalledProcessError:
         successful_execution = False # TODO - Error: One or more processes didnt execute correctly.
+        # raise
+        # self.error_handler.throw_error("TODO") # TODO
 
     # Return mode
     if(return_type == "success"):
@@ -171,8 +173,7 @@ class Cooler(ConfigurationFile):
     """
   
     # Execution of Cooler's dump
-    command = [self.cooler_command, "dump", "-t", "pixels", "--join", "-r", region1, "-r2", region2,
-                 "::".join(input_file_name, "resolutions/" + str(resolution)), ">", output_file_name]
+    command = [self.cooler_command, "dump", "-t", "pixels", "--join", "-r", region1, "-r2", region2, "-o", output_file_name, "::".join([input_file_name, "resolutions/" + str(resolution)])]
     dump_process = subprocess.run(command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
     # Return dump process
@@ -223,6 +224,8 @@ class Cooler(ConfigurationFile):
         cp.check_returncode()
       except subprocess.CalledProcessError:
         successful_execution = False # TODO - Error: One or more processes didnt execute correctly.
+        # raise
+        # self.error_handler.throw_error("TODO") # TODO
 
     # Return mode
     if(return_type == "success"):
@@ -249,12 +252,12 @@ class Cooler(ConfigurationFile):
     """
 
     # Sparse matrix to bedgraph
-    bedgraph_file_name = temporary_location + "bedgraph_file_name.bg2"
+    bedgraph_file_name = os.path.join(temporary_location, "bedgraph_file_name.bg2")
     self.bed_graph_handler.load(contact_map, bedgraph_file_name)
   
     # Execution of Cooler's dump
     command = [self.cooler_command, "load", "-f", "bg2", "--assembly", contact_map.organism, "--count-as-float",
-               ":".join(self.chromosome_sizes_file_name, str(contact_map.resolution)), bedgraph_file_name, output_file_name]
+               ":".join([self.chromosome_sizes_file_name, str(contact_map.resolution)]), bedgraph_file_name, output_file_name]
     load_process = subprocess.run(command, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
     # Remove the temporary bedgraph file
@@ -262,7 +265,7 @@ class Cooler(ConfigurationFile):
     remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
     # Return load process
-    return dump_process
+    return load_process
 
   def add_load(self, contact_map, temporary_location, output_file_name):
     """Returns TODO.
@@ -309,6 +312,8 @@ class Cooler(ConfigurationFile):
         cp.check_returncode()
       except subprocess.CalledProcessError:
         successful_execution = False # TODO - Error: One or more processes didnt execute correctly.
+        # raise
+        # self.error_handler.throw_error("TODO") # TODO
 
     # Return mode
     if(return_type == "success"):
@@ -322,7 +327,7 @@ class Cooler(ConfigurationFile):
   # Auxiliary IO identifying methods
   #############################################################################
 
-  def identify_minimal_resolution(self, input_file_name, temporary_location, check_type = "cool", region = "chr1:1,000,000-5,000,000"):
+  def identify_minimal_resolution(self, input_file_name, temporary_location, check_type = "cool", region = "chr1:0-5,000,000"):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -384,7 +389,7 @@ class Cooler(ConfigurationFile):
     # Return
     return resolution
 
-  def filetype_is_cooler(self, input_file_name, temporary_location, check_type = "cool", region = "chr1:1,000,000-5,000,000"):
+  def filetype_is_cooler(self, input_file_name, temporary_location, check_type = "cool", region = "chr1:0-5,000,000"):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -446,4 +451,34 @@ class Cooler(ConfigurationFile):
     # Return
     return is_cooler 
 
+    """
+    # Current result
+    is_cooler = False
+
+    # Temporary list file
+    output_file_name = os.path.join(temporary_location, "iscool_test.txt")
+
+    # Execute list command
+    list_command = ["cooler", "ls", input_file_name, ">", output_file_name]
+    list_process = subprocess.run(list_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+
+    # Number of lines in output file
+    try:
+      nlines = AuxiliaryFunctions.number_of_lines(output_file_name)
+    except Exception:
+      pass
+      # self.error_handler.throw_error("TODO") # TODO
+
+    # If checking type is single cooler (.cool)
+    if(check_type == "cool" and nlines == 1):
+      is_cooler = True
+
+    # If checking type is multiple cooler (.mcool)
+    if(check_type == "mcool" and nlines > 1):
+      is_cooler = True
+
+    # Return
+    return is_cooler 
+
+    """
 

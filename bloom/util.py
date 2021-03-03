@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 Util Module
 ===================
@@ -15,6 +16,7 @@ Authors: Eduardo G. Gusmao. Partially based on the Util class from RGT (https://
 import os
 import gc
 import sys
+import glob
 import codecs
 import optparse
 import traceback
@@ -26,68 +28,6 @@ import multiprocessing
 
 # External
 
-
-
-
-"""
-
-=================================
-
-os.path.isfile - file exists
-os.path.isdir - directory exists
-os.path.abspath - absolute path
-os.path.expanduser - expand user (~)
-os.path.join - join paths
-os.path.splitext - removes extension of file
-os.path.basename - return the last thing after a "/"
-os.path.dirname = return everything before the last "/"
-
-=================================
-
-def mysleep(number):
-    command = ["sleep", str(number) + "s"]
-    out_process = subprocess.run(command, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
-    return number
-
---
-
-pool = mp.Pool(mp.cpu_count())
-
-results = pool.starmap(mysleep, [(seconds,) for i in list(range(0, times))])
-
-pool.close()
-pool.join()
-
-=================================
-
-def worker(f1, f2):
-    os.system("run program x on f1 and f2")
-
-def test_run(pool):
-     filelist = os.listdir(files_dir)
-     for f1 in filelist:
-          for f2 in filelist:
-               pool.apply_async(worker, args=(f1, f2))
-
---
-
-if __name__ == "__main__":
-     import multiprocessing as mp
-     pool = mp.Pool(NUM_CPUS)
-     test_run(pool)
-     pool.close()
-     pool.join()
-
-=================================
-
-  def wrapper_dump(self, args):
-
-    # Wrapper
-    self.juicer_dump(*args)
-    
-=================================
-
-"""
 
 ###################################################################################################
 # Configuration File Handling
@@ -184,7 +124,53 @@ class BarcodeFiles(ConfigurationFile):
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, organism):
+  def __init__(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Configuration file initialization
+    ConfigurationFile.__init__(self)
+    self.bcf = os.path.join(self.bloom_data_path, self.config.get("Barcode", "bcf"))
+
+    self.barcode_file_dictionary = dict() # Cell number -> [out_matrix_1K, loop_1K, dict: res -> barcode_file_name]
+    self.barcode_number_list = []
+    self.barcode_res_list = [500000, 250000, 100000, 50000, 25000, 10000, 5000, 1000]
+
+    # Barcode name list
+    counter = 1
+    while True:
+      try:
+        barcode_name_list = [os.path.join(self.bcf ,e) for e in self.config.get("Barcode", "bc" + str(counter)).split(",")]
+      except Exception:
+        break
+      barcode_dict = dict(zip(self.barcode_res_list, barcode_name_list[2:]))
+      self.barcode_number_list.append(counter)
+      self.barcode_file_dictionary[counter] = [barcode_name_list[0], barcode_name_list[1], barcode_dict]
+      counter += 1
+
+class ExcList(ConfigurationFile):
+  """This class represents TODO.
+
+  *Keyword arguments:*
+
+    - argument1 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+
+    - argument2 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+  """
+
+  def __init__(self, organism, resolution):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -199,15 +185,24 @@ class BarcodeFiles(ConfigurationFile):
     # Configuration file initialization
     ConfigurationFile.__init__(self)
     self.organism = organism
-    self.barcode_name_list = self.config.get("Barcode", organism).split(",")
+    self.resolution = resolution
+    self.exclist_file_name = os.path.join(self.bloom_data_path, self.config.get("ExclusionList", organism))
 
-    # Creating barcode dictionary
-    self.barcode_file_dictionary = dict()
-    for bname in self.barcode_list:
-      barcode_file = os.path.join(self.bloom_data_path, bname) + ".bin"
-      output_file = os.path.join(self.bloom_data_path, bname) + ".clang"
-      self.barcode_file_dictionary[barcode_file] = output_file
-    self.barcode_file_list = sorted(self.barcode_file_dictionary.keys())
+    # Creating excluded regions dictionary
+    self.exclude_dictionary = dict()
+    exclist_file = codecs.open(self.exclist_file_name, "rU", "utf8")
+    for line in exclist_file:
+      ll = line.strip().split("\t")
+      chrom = ll[0]
+      try:
+        self.exclude_dictionary[chrom]
+      except Exception:
+        self.exclude_dictionary[chrom] = dict()
+      p1 = AuxiliaryFunctions.floor_multiple(int(ll[1]), self.resolution)
+      p2 = AuxiliaryFunctions.ceil_multiple(int(ll[2]), self.resolution)
+      for i in range(p1, p2, self.resolution): 
+        self.exclude_dictionary[chrom][i] = True
+    exclist_file.close()
 
 
 ###################################################################################################
@@ -389,7 +384,7 @@ class AuxiliaryFunctions:
     try:
       int(s)
       return True
-    except ValueError:
+    except (ValueError, OverflowError):
       return False
 
   @staticmethod
@@ -407,7 +402,7 @@ class AuxiliaryFunctions:
     try:
       float(s)
       return True
-    except ValueError:
+    except (ValueError, OverflowError):
       return False
 
   @staticmethod
@@ -539,8 +534,80 @@ class AuxiliaryFunctions:
     """
     if(v1 > v2): return v2, v1
     else: return v1, v2
+
+  @staticmethod  
+  def shorten_integer(n):
+    """Returns TODO.
     
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
+    # Replacing m and k
+    if((len(n) > 6) and (n[-6:] == "000000")):
+      return n[:-6] + "m"
+    elif((len(n) > 3) and (n[-3:] == "000")):
+      return n[:-3] + "k"
+    else:
+      return n
 
+  @staticmethod
+  def expand_integer(n):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
 
+    # Replacing m and k
+    n1 = n.replace("m", "000000", 1)
+    n2 = n1.replace("k", "000", 1)
+    return n2
+
+  @staticmethod
+  def remove_folder_files(folder_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    file_name_list = glob.glob(os.path.join(folder_name, "*"))
+    for file_name in file_name_list:
+      if(os.path.isfile(file_name)):
+        remove_command = ["rm", "-rf", file_name]
+        remove_process = subprocess.run(remove_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+
+  @staticmethod
+  def number_of_lines(file_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    nlines = -1
+    with open(file_name) as f:
+      for nlines, l in enumerate(f):
+        pass
+    return nlines + 1
 
