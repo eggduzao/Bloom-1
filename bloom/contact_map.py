@@ -1027,8 +1027,8 @@ class ContactMap():
   # Drop-in / Drop-out Operations
   #############################################################################
 
-  def yajiehere(self, a):
-    return a
+  def create_depetion(self, chromosome, start, end):
+    pass
 
 
 
