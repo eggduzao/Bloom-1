@@ -55,13 +55,13 @@ class ContactMap():
 
   def __init__(self, organism, resolution, matrix = None):
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -110,13 +110,13 @@ class ContactMap():
 
   def load_blank_matrix(self): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -139,13 +139,13 @@ class ContactMap():
 
   def bp_to_bin(self, i, j = None): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
     new_i = int(np.floor(AuxiliaryFunctions.floor_multiple(i, self.resolution) / self.resolution))
@@ -157,13 +157,13 @@ class ContactMap():
 
   def bin_to_bp(self, i, j = None):  # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
     new_i = int(np.floor(i * self.resolution))
@@ -175,13 +175,13 @@ class ContactMap():
 
   def ceil_bp(self, bp_obj):  # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
     if(isinstance(bp_obj, int)):
@@ -196,13 +196,13 @@ class ContactMap():
 
   def floor_bp(self, bp_obj):  # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
     if(isinstance(bp_obj, int)):
@@ -222,26 +222,26 @@ class ContactMap():
 
   def set(self, chrom, i, j, value): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
     self.matrix[chrom][(i, j)] = value
 
   def set_from_matrix(self, chromosome, matrix, matrix_type = "numpy_array", storage_type = "upper_triangle"): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -259,13 +259,13 @@ class ContactMap():
 
   def add(self, chrom, i, j, value): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
     try:
@@ -275,13 +275,13 @@ class ContactMap():
 
   def get(self, chrom, i, j): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
     try:
@@ -292,13 +292,13 @@ class ContactMap():
 
   def get_full_matrix(self, chromosome, symmetric = True, return_type = "numpy_array"): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -308,7 +308,7 @@ class ContactMap():
 
     # Iterating on internal matrix
     for key, value in self.matrix[chromosome].items():
-    
+
       # Binned locations
       row_bin = self.bp_to_bin(key[0])
       col_bin = self.bp_to_bin(key[1])
@@ -320,20 +320,20 @@ class ContactMap():
 
     return full_matrix
 
-  
+
   #############################################################################
   # Auxiliary Vectors and Dictionaries Operations
   #############################################################################
 
   def update_valid_chromosome_list(self): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -358,13 +358,13 @@ class ContactMap():
 
   def calculate_all_statistics(self): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -484,7 +484,7 @@ class ContactMap():
 
       # Updating new_total_zero_bins_triangle
       new_total_zero_bins_triangle[chromosome] = new_total_bins_triangle[chromosome] - new_total_nonzero_bins_triangle[chromosome]
-        
+
     # Update value dictionaries
     self.min_value_diagonal = new_min_value_diagonal
     self.max_value_diagonal = new_max_value_diagonal
@@ -505,13 +505,13 @@ class ContactMap():
 
   def calculate_statistics_value(self): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -580,7 +580,7 @@ class ContactMap():
             new_total_value_no_diagonal[chromosome] += value
           except Exception:
             new_total_value_no_diagonal[chromosome] = value
-        
+
     # Update value dictionaries
     self.min_value_diagonal = new_min_value_diagonal
     self.max_value_diagonal = new_max_value_diagonal
@@ -591,13 +591,13 @@ class ContactMap():
 
   def calculate_all_non_value_statistics(self, empty_matrix = False): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -678,13 +678,13 @@ class ContactMap():
 
   def calculate_statistics_full(self, empty_matrix = False): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -732,13 +732,13 @@ class ContactMap():
 
   def calculate_statistics_1D(self): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -765,13 +765,13 @@ class ContactMap():
 
   def calculate_statistics_upper_triangle(self, empty_matrix = False): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -865,26 +865,26 @@ class ContactMap():
 
   def bin_distance_from_diagonal_manhattan(self, bin_point): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
     return max(bin_point) - min(bin_point)
 
   def bin_distance_from_diagonal_euclidean(self, bin_point): # OK
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
     return int(np.ceil((max(bin_point) - min(bin_point)) / 2))
@@ -895,13 +895,13 @@ class ContactMap():
 
   def get_sparsity(self, chromosome): # TODO
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
     pass
@@ -912,13 +912,13 @@ class ContactMap():
 
   def get_sparsity_weighted_sum(self, chromosome): # TODO
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
     pass
@@ -929,24 +929,24 @@ class ContactMap():
 
   def standardize(self): # TODO
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
-    pass 
+    pass
 
     # Iterate over matrix
     #for key, value in self.matrix.iteritems(): # TODO
-  
+
     #  # Get chromosome
     #  chrom = key.split(":")[0]
     #  newvalue = (float(value) - float(self.min_value_diagonal[chrom])) / (float(self.max_value_diagonal[chrom]) - float(self.min_value_diagonal[chrom]))
-      
+
     #  # Update values
     #  try:
     #    self.matrix[key] = newvalue
@@ -961,13 +961,13 @@ class ContactMap():
 
   def compare_matrices(self, chromosome, contact_map, similarity_degree = 0.1):
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -989,13 +989,13 @@ class ContactMap():
 
   def match_subset(self, chromosome, contact_map, similarity_degree = 0.1):
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -1027,8 +1027,13 @@ class ContactMap():
   # Drop-in / Drop-out Operations
   #############################################################################
 
-  def create_depetion(self, chromosome, start, end):
-    pass
+  def delete_strips(self, chromosome, start, end):
+    for key in self.matrix[chromosome]:
+        if start <= key[0] < end or start <= key[1] < end:
+            self.matrix[chromosome][key] = 0
 
-
-
+  def delete_points(self,chromosome,i,j):
+      try:
+          self.matrix[chromosome][(i,j)] = 0
+      except Exception:
+          print ("Please specify a coordinate divisible by the resolution!")
