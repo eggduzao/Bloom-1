@@ -23,6 +23,7 @@ import traceback
 import subprocess
 import configparser
 import multiprocessing
+import random
 
 # Internal
 from bloom.util import ErrorHandler, ChromosomeSizes, AuxiliaryFunctions
@@ -1022,7 +1023,6 @@ class ContactMap():
     # Return
     return match
 
-
   #############################################################################
   # Drop-in / Drop-out Operations
   #############################################################################
@@ -1032,8 +1032,22 @@ class ContactMap():
         if start <= key[0] < end or start <= key[1] < end:
             self.matrix[chromosome][key] = 0
 
-  def delete_points(self,chromosome,i,j):
+  def delete_signal(self,chromosome,i,j):
       try:
           self.matrix[chromosome][(i,j)] = 0
       except Exception:
           print ("Please specify a coordinate divisible by the resolution!")
+
+  def delete_signal_randomly_select_bins(self,chromosome,percentage):
+      counter = 0
+      while counter < self.total_bins_triangle * percentage:
+          bin_pair = random(choice(list(self.matrix[chromosome].keys()))
+          self.delete_signal(chromosome,*bin_pair)
+          counter += 1
+
+  def add_signal_randomly_select_bins(self,chromosome,percentage,value):
+      counter = 0
+      while counter < self.total_bins_triangle * percentage:
+          bin_pair = random(choice(list(self.matrix[chromosome].keys()))
+          self.add(chromosome,*bin_pair, value)
+          counter += 1

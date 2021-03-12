@@ -16,6 +16,7 @@ Authors: Eduardo G. Gusmao.
 import os
 import sys
 import subprocess
+#import unittest
 
 # Internal
 from bloom.contact_map import ContactMap
@@ -44,13 +45,13 @@ class ContactMapTest():
 
   def __init__(self, input_location, temporary_location, output_location):
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -126,13 +127,13 @@ class ContactMapTest():
 
   def load_contact_map(self):
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -173,13 +174,13 @@ class ContactMapTest():
 
   def matrix_operations(self):
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -214,6 +215,15 @@ class ContactMapTest():
     value3 = contact_map.get("chr3", 6 * contact_map.resolution, 10 * contact_map.resolution)
     self.write_list("get", [value1, value2, value3], output_file)
 
+    # Delete strips
+    contact_map.delete_strips("chr1", 3 * contact_map.resolution, 8 * contact_map.resolution)
+    value1 = contact_map.get("chr1", 5 * contact_map.resolution, 10 * contact_map.resolution)
+    value2 = contact_map.get("chr1", 6 * contact_map.resolution, 11 * contact_map.resolution)
+    value3 = contact_map.get("chr1", 10 * contact_map.resolution, 10 * contact_map.resolution)
+    assert value1 == 0, "should be 0"
+    assert value2 == 0, "should be 0"
+    assert value3 == 10.0, "should be 10.0"
+
     # Set from matrix
     numpy_matrix = np.random.rand(contact_map.total_1d_bins["chr2"],contact_map.total_1d_bins["chr2"])
     contact_map.set_from_matrix("chr2", numpy_matrix, matrix_type = "numpy_array", storage_type = "upper_triangle")
@@ -238,13 +248,13 @@ class ContactMapTest():
 
   def resolution_bin_bp_operations(self):
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -282,13 +292,13 @@ class ContactMapTest():
 
   def auxiliary_vectors_operations(self):
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -406,13 +416,13 @@ class ContactMapTest():
 
   def distance_operations(self):
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -440,13 +450,13 @@ class ContactMapTest():
 
   def sparsity_statistics(self):
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -461,13 +471,13 @@ class ContactMapTest():
 
   def multimatrix_operations(self):
     """Returns TODO.
-    
+
     *Keyword arguments:*
-    
+
       - argument -- An argument.
-    
+
     *Return:*
-    
+
       - return -- A return.
     """
 
@@ -546,7 +556,7 @@ if __name__ == "__main__":
   input_location = os.path.join(current_path, "input")
   temporary_location = os.path.join(current_path, "temp", current_name)
   output_location = os.path.join(current_path, "output", current_name)
-  
+
   # Creating test
   test = ContactMapTest(input_location, temporary_location, output_location)
 
@@ -566,4 +576,3 @@ if __name__ == "__main__":
 # cat test/output/test_1_contact_map/5_distance_operations.txt
 # cat test/output/test_1_contact_map/6_sparsity_statistics.txt
 # cat test/output/test_1_contact_map/7_multimatrix_operations.txt
-
