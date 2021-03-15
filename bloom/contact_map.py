@@ -1028,26 +1028,40 @@ class ContactMap():
   #############################################################################
 
   def delete_strips(self, chromosome, start, end):
+    keys = []
     for key in self.matrix[chromosome]:
-        if start <= key[0] < end or start <= key[1] < end:
-            self.matrix[chromosome][key] = 0
+      if start <= key[0] < end or start <= key[1] < end:
+        keys.append(key)
+    for key in keys:
+      self.matrix[chromosome].pop(key)
+
 
   def delete_signal(self,chromosome,i,j):
-      try:
-          self.matrix[chromosome][(i,j)] = 0
-      except Exception:
-          print ("Please specify a coordinate divisible by the resolution!")
+    try:
+      self.matrix[chromosome].pop((i,j))
+    except Exception:
+      print ("Please specify a valid coordinate divisible by the resolution!")
 
   def delete_signal_randomly_select_bins(self,chromosome,percentage):
-      counter = 0
-      while counter < self.total_bins_triangle * percentage:
-          bin_pair = random(choice(list(self.matrix[chromosome].keys()))
-          self.delete_signal(chromosome,*bin_pair)
-          counter += 1
+    all_bin_pairs = list(self.matrix[chromosome].keys())
+    ## get a list of N bin pairs to delete
+    N = int(self.total_bins_triangle[chromosome] * percentage)
+    bin_pairs = random.sample(all_bin_pairs, N)
+    for bin_pair in bin_pairs:
+      self.delete_signal(chromosome,*bin_pair) 
 
   def add_signal_randomly_select_bins(self,chromosome,percentage,value):
-      counter = 0
-      while counter < self.total_bins_triangle * percentage:
-          bin_pair = random(choice(list(self.matrix[chromosome].keys()))
-          self.add(chromosome,*bin_pair, value)
-          counter += 1
+    all_bin_pairs = list(self.matrix[chromosome].keys())
+    ## get a list of N bin pairs to delete
+    N = int(self.total_bins_triangle[chromosome] * percentage)
+    bin_pairs = random.sample(all_bin_pairs, N)
+    for bin_pair in bin_pairs:
+      self.add(chromosome,*bin_pair, value)
+
+  def main_delete_signal_randomly_select_bins(self,chromosomes,percentage):
+    for chromosome in chromosomes:
+      self.delete_signal_randomly_select_bins(chromosome,percentage)
+
+  def main_add_signal_randomly_select_bins(self,chromosomes,percentage,value):
+    for chromosome in chromosomes:
+      self.add_signal_randomly_select_bins(chromosome,percentage,value)
