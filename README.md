@@ -1,5 +1,9 @@
 # **_Bloom_: A computational framework to reveal occult patterns in 3C data**
 
+
+:warning: **Bloom is undergoing some changes**: For the time being, the code is not usable. We have noticed all emails that were sent to us and we will reply to all of them as soon as Bloom is in a working condition again. The current changes are being made to acommodate for some suggestions made by colleagues and reviewers.
+
+
 ### Bloom is a computational framework which takes a 3C-like contact map as input and will produce:
 * A new contact matrix showing potential occult patterns
 * A list of putative loops with an intrinsic scoring method (IFS; Interaction Frequency Score); shown to highgly correlate with function
