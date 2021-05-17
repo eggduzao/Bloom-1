@@ -6,8 +6,8 @@ Placeholder.
 
 Authors: Eduardo G. Gusmao.
 
-Install Command: pip3 install --user .
-                 pip3 install --user . --upgrade
+Install Command: pip3.9 install --user .
+                 pip3.9 install --user . --upgrade
 """
 
 # Python
@@ -91,9 +91,10 @@ for tool_option in tools_dictionary.keys():
 # Default bloom_data_path
 current_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bloom_data")
 bloom_data_path = os.path.join(os.path.expanduser("~"), "bloom_data")
-if os.path.exists(bloom_data_path):
-  shutil.rmtree(bloom_data_path)
-shutil.copytree(current_path, bloom_data_path)
+
+# if os.path.exists(bloom_data_path): # TODO
+#  shutil.rmtree(bloom_data_path)
+# shutil.copytree(current_path, bloom_data_path)
 
 
 ###################################################################################################

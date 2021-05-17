@@ -20,6 +20,7 @@ import subprocess
 # Internal
 from bloom.contact_map import ContactMap
 from bloom.barcode import Barcode
+from bloom.io import InputFileType, IO
 
 # External
 import numpy as np
@@ -125,13 +126,6 @@ class BarcodeTest():
       output_file.write("None\n")
     output_file.write("\n")
 
-
-
-
-
-
-
-
   def main_guide(self):
     """Returns TODO.
     
@@ -143,28 +137,84 @@ class BarcodeTest():
     
       - return -- A return.
     """
+
+    # Input file
+    input_file_name_bg = os.path.join(self.input_location, "bedgraph_matrix", "MESC_500000.bg")
+    input_file_name_hic = os.path.join(self.input_location, "juicer_matrix", "SCONT_500000.hic")
+    input_file_name_co = os.path.join(self.input_location, "cooler_matrix", "MESC_500000.cool")
+    input_file_name_mco = os.path.join(self.input_location, "cooler_matrix", "E14R1.mcool")
 
     # Output file
-    output_file_name = os.path.join(self.output_location, "main_guide.txt")
-    output_file = open(output_file_name, "w")
+    output_file_name_bg_map1 = os.path.join(self.output_location, "main_guide_bg_map1.txt")
+    output_file_name_bg_map2 = os.path.join(self.output_location, "main_guide_bg_map2.txt")
+    output_file_contact_bg = os.path.join(self.output_location, "main_contact_bg.txt")
+    output_file_name_hic_map1 = os.path.join(self.output_location, "main_guide_hic_map1.txt")
+    output_file_name_hic_map2 = os.path.join(self.output_location, "main_guide_hic_map2.txt")
+    output_file_contact_hic = os.path.join(self.output_location, "main_contact_hic.txt")
+    output_file_name_co_map1 = os.path.join(self.output_location, "main_guide_co_map1.txt")
+    output_file_name_co_map2 = os.path.join(self.output_location, "main_guide_co_map2.txt")
+    output_file_contact_co = os.path.join(self.output_location, "main_contact_co.txt")
+    output_file_name_mco_map1 = os.path.join(self.output_location, "main_guide_mco_map1.txt")
+    output_file_name_mco_map2 = os.path.join(self.output_location, "main_guide_mco_map2.txt")
+    output_file_contact_mco = os.path.join(self.output_location, "main_contact_mco.txt")
 
-    # TODO
+    # Read bedgraph
+    io = IO(input_file_name_bg, self.temporary_location, "mm9", 4, input_resolution = 500000, input_file_type = InputFileType.SPARSE)
+    contact_map = io.read()
+    contact_map.update_valid_chromosome_list()
+    io.write(contact_map, output_file_name_bg_map1, InputFileType.SPARSE)
 
-    # Termination
-    output_file.close()
+    # Barcode
+    barcode_instance = Barcode(4, "mm9", contact_map, self.temporary_location)
+    final_contact_map, final_loop_list = barcode_instance.main_guide()
+    if(final_contact_map):
+      final_contact_map.update_valid_chromosome_list()
+      io.write(final_contact_map, output_file_name_bg_map2, InputFileType.SPARSE)
+      io.write_loop_list(final_loop_list, output_file_contact_bg)
 
+    # Read bedgraph
+    io = IO(input_file_name_hic, self.temporary_location, "hg19", 4, input_resolution = 500000, input_file_type = InputFileType.HIC)
+    contact_map = io.read()
+    contact_map.update_valid_chromosome_list()
+    io.write(contact_map, output_file_name_hic_map1, InputFileType.SPARSE)
 
-  def main_guide(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+    # Barcode
+    barcode_instance = Barcode(4, "hg19", contact_map, self.temporary_location)
+    final_contact_map, final_loop_list = barcode_instance.main_guide()
+    if(final_contact_map):
+      final_contact_map.update_valid_chromosome_list()
+      io.write(final_contact_map, output_file_name_hic_map2, InputFileType.SPARSE)
+      io.write_loop_list(final_loop_list, output_file_contact_hic)
+
+    # Read bedgraph
+    io = IO(input_file_name_co, self.temporary_location, "mm9", 4, input_resolution = 500000, input_file_type = InputFileType.COOL)
+    contact_map = io.read()
+    contact_map.update_valid_chromosome_list()
+    io.write(contact_map, output_file_name_co_map1, InputFileType.SPARSE)
+
+    # Barcode
+    barcode_instance = Barcode(4, "mm9", contact_map, self.temporary_location)
+    final_contact_map, final_loop_list = barcode_instance.main_guide()
+    if(final_contact_map):
+      final_contact_map.update_valid_chromosome_list()
+      io.write(final_contact_map, output_file_name_co_map2, InputFileType.SPARSE)
+      io.write_loop_list(final_loop_list, output_file_contact_co)
+
+    # Read bedgraph
+    io = IO(input_file_name_mco, self.temporary_location, "mm9", 4, input_resolution = 500000, input_file_type = InputFileType.MCOOL)
+    contact_map = io.read()
+    contact_map.update_valid_chromosome_list()
+    io.write(contact_map, output_file_name_mco_map1, InputFileType.SPARSE)
+
+    # Barcode
+    barcode_instance = Barcode(4, "mm9", contact_map, self.temporary_location)
+    final_contact_map, final_loop_list = barcode_instance.main_guide()
+    if(final_contact_map):
+      final_contact_map.update_valid_chromosome_list()
+      io.write(final_contact_map, output_file_name_mco_map2, InputFileType.SPARSE)
+      io.write_loop_list(final_loop_list, output_file_contact_mco)
+
+https://www.encodeproject.org/files/ENCFF005XOG/@@download/ENCFF005XOG.fastq.gz
 
 
 ###################################################################################################
@@ -184,5 +234,5 @@ if __name__ == "__main__":
   test = BarcodeTest(input_location, temporary_location, output_location)
 
   # Tests
-  test.xxxxx()
+  test.main_guide()
 

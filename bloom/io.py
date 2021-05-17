@@ -593,6 +593,6 @@ class IO():
     # Write loop list
     output_file = open(output_file_name, "w")
     for loop in loop_list:
-      output_file.write(loop)
+      output_file.write("\t".join(loop) + "\n")
     output_file.close()
 
