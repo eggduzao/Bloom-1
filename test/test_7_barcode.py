@@ -139,10 +139,10 @@ class BarcodeTest():
     """
 
     # Input file
-    input_file_name_bg = os.path.join(self.input_location, "bedgraph_matrix", "MESC_500000.bg")
-    input_file_name_hic = os.path.join(self.input_location, "juicer_matrix", "SCONT_500000.hic")
-    input_file_name_co = os.path.join(self.input_location, "cooler_matrix", "MESC_500000.cool")
-    input_file_name_mco = os.path.join(self.input_location, "cooler_matrix", "E14R1.mcool")
+    input_file_name_bg = os.path.join(self.input_location, "bedgraph_matrix", "MESC_500000.bg") # OK
+    input_file_name_hic = os.path.join(self.input_location, "juicer_matrix", "SCONT_500000.hic") # OK
+    input_file_name_co = os.path.join(self.input_location, "cooler_matrix", "MESC_500000.cool") # Error because cooler trim values with chrom size > genome
+    input_file_name_mco = os.path.join(self.input_location, "cooler_matrix", "E14R1.mcool") # Error because it is another dataset
 
     # Output file
     output_file_name_bg_map1 = os.path.join(self.output_location, "main_guide_bg_map1.txt")
@@ -157,6 +157,7 @@ class BarcodeTest():
     output_file_name_mco_map1 = os.path.join(self.output_location, "main_guide_mco_map1.txt")
     output_file_name_mco_map2 = os.path.join(self.output_location, "main_guide_mco_map2.txt")
     output_file_contact_mco = os.path.join(self.output_location, "main_contact_mco.txt")
+
 
     # Read bedgraph
     io = IO(input_file_name_bg, self.temporary_location, "mm9", 4, input_resolution = 500000, input_file_type = InputFileType.SPARSE)
@@ -213,9 +214,6 @@ class BarcodeTest():
       final_contact_map.update_valid_chromosome_list()
       io.write(final_contact_map, output_file_name_mco_map2, InputFileType.SPARSE)
       io.write_loop_list(final_loop_list, output_file_contact_mco)
-
-https://www.encodeproject.org/files/ENCFF005XOG/@@download/ENCFF005XOG.fastq.gz
-
 
 ###################################################################################################
 # Execution

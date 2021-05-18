@@ -1008,9 +1008,13 @@ class ContactMap():
       try:
         myvalue = self.matrix[chromosome][key]
       except Exception:
+        #print("No value")
+        #print("\t".join([str(e) for e in [chromosome, key[0], key[0] + self.resolution, key[1], key[1] + self.resolution, value]]))
         match = False
         break
       if((myvalue > (value + (similarity_degree * value))) or (myvalue < (value - (similarity_degree * value)))):
+        #print("No match")
+        #print("\t".join([str(e) for e in [chromosome, key[0], key[0] + self.resolution, key[1], key[1] + self.resolution, value]]))
         match = False
         break
 
@@ -1059,3 +1063,4 @@ class ContactMap():
   def main_add_signal_randomly_select_bins(self,chromosomes,percentage,value):
     for chromosome in chromosomes:
       self.add_signal_randomly_select_bins(chromosome,percentage,value)
+

@@ -72,6 +72,7 @@ class Barcode():
     self.error_handler = ErrorHandler()
     self.barcode_handler = BarcodeFiles()
 
+
   #############################################################################
   # Main
   #############################################################################
@@ -101,44 +102,41 @@ class Barcode():
 
         # Check resolution
         if(self.contact_map.resolution == barcode_resolution):
-          flag_found = True
+          
+          # Resolution found
           barcode_list = self.barcode_handler.barcode_file_dictionary[barcode_number]
-          compbin_matrix_file_name = barcode_list[2][barcode_resolution]    #  barcode_list[0] ################# CHANGEEEEEEEEEEEEEEEEEEEEEEEE
+          compbin_matrix_file_name = barcode_list[0] # barcode_list[2][barcode_resolution] # Use this when testing
           compbin_loop_file_name = barcode_list[1]
           compbin_barcode_file_name = barcode_list[2][barcode_resolution]
+          flag_found = True
           break
 
       # Check if found
       if(flag_found):
-        break
 
-    # Check if found
-    if(flag_found):
+        # Decompress barcode
+        barcode_contact_map = self.create_contact_map_from_binary_barcode(compbin_barcode_file_name, resolution = self.contact_map.resolution)
 
-      # Decompress barcode
-      barcode_contact_map = self.create_contact_map_from_binary_barcode(compbin_barcode_file_name, resolution = self.contact_map.resolution)
+        # Compare barcode and current input contact map
+        match = self.match_barcode(barcode_contact_map)
 
-      # Compare barcode and current input contact map
-      match = self.match_barcode(barcode_contact_map)
+        # Check match
+        if(match):
 
-      # Check match
-      if(match):
+          # Decompress matrix and loop
+          final_contact_map = self.create_contact_map_from_binary_file(compbin_matrix_file_name, resolution = self.contact_map.resolution)
+          final_contact_map.update_valid_chromosome_list()
+          final_loop_list = self.create_loop_list_from_binary_file(compbin_loop_file_name, resolution = self.contact_map.resolution)
 
-        # Decompress matrix and loop
-        final_contact_map = self.create_contact_map_from_binary_file(compbin_matrix_file_name, resolution = self.contact_map.resolution)
-        final_contact_map.update_valid_chromosome_list()
-        final_loop_list = self.create_loop_list_from_binary_file(compbin_loop_file_name, resolution = self.contact_map.resolution)
+          # Return objects
+          break
 
         # Return objects
-        return final_contact_map, final_loop_list
-
-      # Return objects
-      else:
-        return final_contact_map, final_loop_list
+        else:
+          continue
 
     # Return objects
-    else:
-      return final_contact_map, final_loop_list
+    return final_contact_map, final_loop_list
 
   def open_lzma_file(self, f, *args, **kwargs):
     """Returns TODO.
@@ -198,7 +196,6 @@ class Barcode():
       return [chr(int(i, 2)) for i in bytelist if i]
     else: 
       raise ValueError("Error: Input must be a list")
-
 
 
   #############################################################################
@@ -456,6 +453,7 @@ class Barcode():
     # Convert CONTACTS (IFS) -> BINARY BARCODE
     # Future - TODO
     pass
+
 
   #############################################################################
   # Check barcode
