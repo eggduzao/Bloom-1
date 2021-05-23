@@ -18,6 +18,8 @@ import sys
 import subprocess
 
 # Internal
+#from bloom.contact_map import ContactMap
+from bloom.io import InputFileType, IO
 from bloom.preprocess import Preprocess
 from bloom.sica import Sica
 from bloom.goba import Goba
@@ -146,64 +148,46 @@ class PipelineTest():
       - return -- A return.
     """
 
+    # Input file
+    input_file_name_bg = os.path.join(self.input_location, "bedgraph_matrix", "MESC_500000.bg")
+
     # Output file
-    output_file_name = os.path.join(self.output_location, "convert_to_minimal_resolution.txt")
-    output_file = open(output_file_name, "w")
+    output_initial_matrix_bg = os.path.join(self.output_location, "1_output_initial_matrix.bg")
+    output_initial_matrix_hc = os.path.join(self.output_location, "1_output_initial_matrix.hic")
 
-    # TODO
+    output_minres_matrix_bg = os.path.join(self.output_location, "2_output_minres_matrix.bg")
+    output_minres_matrix_hc = os.path.join(self.output_location, "2_output_minres_matrix.hic")
 
-    # Termination
-    output_file.close()
-
-
-  def convert_to_minimal_resolution(self, recalculate_statistics = True):
-    """Returns TODO.
+    # Read bedgraph
+    io = IO(input_file_name_bg, self.temporary_location, "mm9", 4, input_resolution = 500000, input_file_type = InputFileType.SPARSE)
+    contact_map = io.read()
+    #contact_map.update_valid_chromosome_list()
+    contact_map.valid_chromosome_list = ["chrX"] # Force to play only with chrX
     
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+    # Write bedgraph and hic
+    io.write(contact_map, output_initial_matrix_bg, InputFileType.SPARSE)
+    io.write(contact_map, output_initial_matrix_hc, InputFileType.HIC)
 
-    # Create new contact map
-    new_contact_map = ContactMap(organism = self.input_contact_map.organism, resolution = self.minimal_resolution, matrix = None)
+    # Convert to minimal resolution
+    preprocess = Preprocess(4, contact_map, minimal_resolution = 100000, min_contig_removed_bins = 5, remove_threshold = 1)
+    minimal_res_contact_map = preprocess.convert_to_minimal_resolution(recalculate_statistics = True)
 
-    # Iterating on valid chromosomes
-    for chromosome in new_contact_map.valid_chromosome_list:
+    # Write bedgraph and hic
+    io.write(minimal_res_contact_map, output_minres_matrix_bg, InputFileType.SPARSE)
+    io.write(minimal_res_contact_map, output_minres_matrix_hc, InputFileType.HIC)
 
-      # Add reshape process to list
-      self.add_reshape(chromosome, new_contact_map)
-
-    # Execute reshape
-    self.run_reshape()
-
-    # Recalculate statistics
-    if(recalculate_statistics):
-      new_contact_map.update_valid_chromosome_list()
-      new_contact_map.calculate_all_statistics()
-
-    # Return new contact map
-    return new_contact_map
+    # Return objects
+    return minimal_res_contact_map
 
 
 
 
+
+  """
 
 
   def main_remove_blacklist(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Output file
     output_file_name = os.path.join(self.output_location, "main_remove_blacklist.txt")
@@ -216,16 +200,7 @@ class PipelineTest():
 
 
   def main_remove_blacklist(self, contact_map):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Get valid chromosome list
     valid_chromosome_list = contact_map.valid_chromosome_list
@@ -251,17 +226,10 @@ class PipelineTest():
 
 
 
+
+
   def main_void_statistics(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Output file
     output_file_name = os.path.join(self.output_location, "main_void_statistics.txt")
@@ -274,16 +242,8 @@ class PipelineTest():
 
 
   def main_void_statistics(self, contact_map):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
+
 
 
 
@@ -295,16 +255,7 @@ class PipelineTest():
 
 
   def main_calculate_distributions(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Output file
     output_file_name = os.path.join(self.output_location, "main_calculate_distributions.txt")
@@ -317,16 +268,7 @@ class PipelineTest():
 
 
   def main_calculate_distributions(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Iterating on valid chromosomes - Calculate histograms
     for chromosome in self.contact_map.valid_chromosome_list:
@@ -364,16 +306,7 @@ class PipelineTest():
 
 
   def main_star_contacts(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Output file
     output_file_name = os.path.join(self.output_location, "main_star_contacts.txt")
@@ -386,16 +319,7 @@ class PipelineTest():
 
 
   def main_star_contacts(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Iterating on valid chromosomes - Starring contacts
     for chromosome in self.contact_map.valid_chromosome_list:
@@ -418,16 +342,7 @@ class PipelineTest():
   ###################################################################################################
 
   def main_fill(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Output file
     output_file_name = os.path.join(self.output_location, "main_fill.txt")
@@ -440,16 +355,7 @@ class PipelineTest():
 
 
   def main_fill(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Iterating on valid chromosomes - Calculate histograms
     for chromosome in self.contact_map.valid_chromosome_list:
@@ -474,16 +380,7 @@ class PipelineTest():
 
 
   def diagonal_degrade(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Output file
     output_file_name = os.path.join(self.output_location, "diagonal_degrade.txt")
@@ -496,16 +393,7 @@ class PipelineTest():
 
 
   def diagonal_degrade(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Get valid chromosome list
     valid_chromosome_list = self.contact_map.valid_chromosome_list
@@ -527,16 +415,7 @@ class PipelineTest():
 
 
   def introduce_shapes(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Output file
     output_file_name = os.path.join(self.output_location, "introduce_shapes.txt")
@@ -548,16 +427,7 @@ class PipelineTest():
     output_file.close()
 
   def introduce_shapes(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
 
 
@@ -569,16 +439,7 @@ class PipelineTest():
 
 
   def main_calculate_ifs(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Output file
     output_file_name = os.path.join(self.output_location, "main_calculate_ifs.txt")
@@ -591,16 +452,7 @@ class PipelineTest():
 
 
   def main_calculate_ifs(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Iterating on valid chromosomes - Calculate histograms
     for chromosome in self.contact_map.valid_chromosome_list:
@@ -622,16 +474,7 @@ class PipelineTest():
 
 
   def main_fix_matrix(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Output file
     output_file_name = os.path.join(self.output_location, "main_fix_matrix.txt")
@@ -643,16 +486,7 @@ class PipelineTest():
     output_file.close()
 
   def main_fix_matrix(self, multiplier = 1000, min_matrix_threshold = 1):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
+
 
     # Iterating on valid chromosomes - Calculate histograms
     for chromosome in self.contact_map.valid_chromosome_list:
@@ -667,7 +501,7 @@ class PipelineTest():
     self.write_matrix()
 
 
-
+  """
 
 
 
@@ -688,5 +522,5 @@ if __name__ == "__main__":
   test = PipelineTest(input_location, temporary_location, output_location)
 
   # Tests
-  test.xxxxx()
+  minimal_res_contact_map = test.convert_to_minimal_resolution()
 

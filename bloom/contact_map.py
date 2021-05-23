@@ -315,9 +315,12 @@ class ContactMap():
       col_bin = self.bp_to_bin(key[1])
 
       # Writing value on cell
+      #try:
       full_matrix[row_bin, col_bin] = value
       if(symmetric):
         full_matrix[col_bin, row_bin] = value
+      #except IndexError: # Error - TODO
+      #  continue
 
     return full_matrix
 

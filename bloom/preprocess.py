@@ -98,6 +98,7 @@ class Preprocess():
 
     # Create new contact map
     new_contact_map = ContactMap(organism = self.input_contact_map.organism, resolution = self.minimal_resolution, matrix = None)
+    new_contact_map.valid_chromosome_list = [chromosome for chromosome in self.input_contact_map.valid_chromosome_list]
 
     # Iterating on valid chromosomes
     for chromosome in new_contact_map.valid_chromosome_list:
