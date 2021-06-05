@@ -24,10 +24,12 @@ import configparser
 import multiprocessing
 
 # Internal
+from bloom.sica import SicaDist
 from bloom.contact_map import ContactMap
 from bloom.util import ErrorHandler
 
 # External
+import numpy as np
 
 ###################################################################################################
 # Dpmm Class
@@ -47,8 +49,8 @@ class Dpmm():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, ncpu, contact_map, avoid_distance, removed_dict, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
-               half_length_bin_interval = [1, 5], value_range = [10e-4, 10e-3], random_range = [10e-10, 10e-9], iteration_multiplier = 1000, seed = 123):
+  def __init__(self, ncpu, contact_map, sica_instance, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
+               half_length_bin_interval = [1, 5], value_range = [10e-4, 10e-3], random_range = [10e-8, 10e-7], iteration_multiplier = 1000, seed = 123):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -64,8 +66,7 @@ class Dpmm():
     self.contact_map = contact_map
 
     # Degrade objects
-    self.avoid_distance = avoid_distance
-    self.removed_dict = removed_dict
+    self.sica_instance = sica_instance
     self.random_degrade_range = random_degrade_range
     self.degrade_multiplier = degrade_multiplier
 
@@ -82,6 +83,7 @@ class Dpmm():
 
     # Utilitary objects
     self.error_handler = ErrorHandler()
+    self.sica_dist_handler = SicaDist(self.contact_map, self.sica_instance.avoid_distance)
 
   #############################################################################
   # Diagonal Degrade
@@ -106,10 +108,11 @@ class Dpmm():
     for chromosome in valid_chromosome_list:
 
       # Add introduce_squares to the queue
-      self.add_degrade(self.contact_map, chromosome)
+      #self.add_degrade(self.contact_map, chromosome)
+      self.degrade(self.contact_map, chromosome)
 
     # Run introduce squares
-    self.run_degrade()
+    #self.run_degrade()
 
   def degrade(self, contact_map, chromosome):
     """Returns TODO.
@@ -122,28 +125,38 @@ class Dpmm():
     
       - return -- A return.
     """
+    # Vector of elements to add
+    elements_to_add = []
 
     # Get highest matrix value
-    highest_value = contact_map.max_value[chromosome]
+    #highest_value = contact_map.max_value[chromosome]
+    avoid_numpy_array = np.array(self.sica_instance.distribution_dictionary[chromosome][self.sica_dist_handler.A])
+    average_avoided_value = np.mean(avoid_numpy_array)
 
     # Iterate on the rows of this chromosome's contact map
-    for row in range(0, contact_map.max_bin[chromosome] + 1):
+    for row in range(0, contact_map.total_1d_bins[chromosome]):
 
       # Calculate row's random multiplier and exponential multiplier
-      row_random_r = (random.uniform(self.random_degrade_range[0] * highest_value, self.random_degrade_range[1] * highest_value) + highest_value)
-      row_expone_l = self.degrade_multiplier * highest_value # TODO - Decide this formula as a random range based also on the sparsity level and the avoid_distance
+      row_random_r = (random.uniform(self.random_degrade_range[0] * average_avoided_value, self.random_degrade_range[1] * average_avoided_value) + average_avoided_value)
+      row_expone_l = self.degrade_multiplier * average_avoided_value # TODO - Decide this formula as a random range based also on the sparsity level and the avoid_distance
 
       # Iterate on columns backwards
       counter = 1
-      for col in range(row + self.avoid_distance, row - 1, -1):
+      avoid_distance_in_bins = self.contact_map.bp_to_bin(self.sica_instance.avoid_distance)
+      for col in range(row + avoid_distance_in_bins, row - 1, -1):
 
         # Calculate value to add in the matrix
-        value_to_add = row_random_r + ((1 + row_expone_l) ** counter)
-        bprow, bpcol = self.contact_map.matrix.bin_to_bp(row, col)
-        contact_map.add(chromosome, bprow, bpcol, value_to_add)
+        value_to_add = row_random_r + ((1 + row_expone_l) * counter)
+        bprow = self.contact_map.bin_to_bp(row)
+        bpcol = self.contact_map.bin_to_bp(col)
+        elements_to_add.append((chromosome, bprow, bpcol, value_to_add))
 
         # Update counter
         counter += 1
+
+    # Adding elements
+    for element in elements_to_add:
+      self.contact_map.add(element[0], element[1], element[2], element[3])
 
   def add_degrade(self, contact_map, chromosome):
     """Returns TODO.
@@ -207,25 +220,27 @@ class Dpmm():
     for chromosome in valid_chromosome_list:
 
       # Get number of iterations based on the size of the matrix
-      iterations = self.contact_map.total_bins * self.iteration_multiplier
+      iterations = self.contact_map.total_bins[chromosome] * self.iteration_multiplier
 
       # Add introduce_squares to the queue
-      self.add_introduce_squares(contact_map, chromosome, iterations)
+      #self.add_introduce_squares(self.contact_map, chromosome, iterations)
+      self.introduce_squares(self.contact_map, chromosome, iterations)
 
     # Run introduce squares
-    self.run_introduce_squares()
+    #self.run_introduce_squares()
 
     # Iterating on valid chromosomes
     for chromosome in valid_chromosome_list:
 
       # Get number of iterations based on the size of the matrix
-      iterations = self.contact_map.total_bins * self.iteration_multiplier
+      iterations = self.contact_map.total_bins[chromosome] * self.iteration_multiplier
 
       # Add introduce_circles to the queue
-      self.add_introduce_circles(contact_map, chromosome, iterations)
+      #self.add_introduce_circles(self.contact_map, chromosome, iterations)
+      self.introduce_circles(self.contact_map, chromosome, iterations)
 
     # Run introduce circles
-    self.run_introduce_circles()
+    #self.run_introduce_circles()
 
   def introduce_squares(self, contact_map, chromosome, iterations):
     """Returns TODO.
@@ -240,21 +255,22 @@ class Dpmm():
     """
 
     # Maximum bp
-    maximum_bp = contact_map.max_bp[chromosome] + 1
+    maximum_bp = contact_map.total_1d_bp[chromosome]
   
     # Performing the total number of iterations
     for main_iteration in range(0, iterations):
 
       # Square middle point
-      middle_bp = random.randrange(0, maximum_bp, contact_map.resolution)
       chosen_length = random.randint(self.half_length_bin_interval[0], self.half_length_bin_interval[1]) * contact_map.resolution
+      middle_bp_i = random.randrange(chosen_length, maximum_bp - (2 * chosen_length), contact_map.resolution)
+      middle_bp_j = random.randrange(middle_bp_i + chosen_length, maximum_bp - chosen_length, contact_map.resolution)
 
       # Base value to add
       base_value = random.uniform(self.value_range[0], self.value_range[1])
 
       # Add a square
-      for i in range(middle_bp - chosen_length, middle_bp + chosen_length + 1, contact_map.resolution):
-        for j in range(middle_bp - chosen_length, middle_bp + chosen_length + 1, contact_map.resolution):
+      for i in range(middle_bp_i - chosen_length, middle_bp_i + chosen_length + 1, contact_map.resolution):
+        for j in range(middle_bp_j - chosen_length, middle_bp_j + chosen_length + 1, contact_map.resolution):
 
           # Value to add
           value_to_add = base_value + random.uniform(self.random_range[0], self.random_range[1])
@@ -311,15 +327,16 @@ class Dpmm():
     """
 
     # Maximum bp
-    maximum_bp = contact_map.max_bp[chromosome] + 1
+    maximum_bp = contact_map.total_1d_bp[chromosome]
   
     # Performing the total number of iterations
     for main_iteration in range(0, iterations):
 
       # Square middle point
-      middle_bp = random.randrange(0, maximum_bp, contact_map.resolution)
       base_chosen_length = random.randint(self.half_length_bin_interval[0], self.half_length_bin_interval[1])
       chosen_length = base_chosen_length * contact_map.resolution
+      middle_bp_i = random.randrange(chosen_length, maximum_bp - (2 * chosen_length), contact_map.resolution)
+      middle_bp_j = random.randrange(middle_bp_i + chosen_length, maximum_bp - chosen_length, contact_map.resolution)
 
       # Base value to add
       base_value = random.uniform(self.value_range[0], self.value_range[1])
@@ -327,8 +344,8 @@ class Dpmm():
       # Add a circle
       counterI = - base_chosen_length
       counterJ = - base_chosen_length
-      for i in range(middle_bp - chosen_length, middle_bp + chosen_length + 1, contact_map.resolution):
-        for j in range(middle_bp - chosen_length, middle_bp + chosen_length + 1, contact_map.resolution):
+      for i in range(middle_bp_i - chosen_length, middle_bp_i + chosen_length + 1, contact_map.resolution):
+        for j in range(middle_bp_j - chosen_length, middle_bp_j + chosen_length + 1, contact_map.resolution):
 
           # Circle constraint
           if((abs(counterI) + abs(counterJ)) > base_chosen_length):

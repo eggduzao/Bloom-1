@@ -353,11 +353,17 @@ class Preprocess():
       - return -- A return.
     """
 
+    # Verify if chromosome exists
+    try:
+      self.exclist_handler.exclude_dictionary[chromosome]
+    except Exception:
+      return
+
     # Iterating on matrix
     for key in self.exclist_handler.exclude_dictionary[chromosome].keys():
 
       # Binary version of key
-      kbin = contact_map.bp_to_bin(key[0])
+      kbin = contact_map.bp_to_bin(key)
 
       # Putting key on removed_dict
       self.removed_dict[chromosome][kbin] = True
@@ -424,7 +430,7 @@ class Preprocess():
     for chromosome in valid_chromosome_list:
 
       # Add chromosome to dictionaries
-      self.colsum_dict[chromosome] = [0.0] * contact_map.total_1d_bp
+      self.colsum_dict[chromosome] = [0.0] * contact_map.total_1d_bins[chromosome]
 
       # Add colsum job to the queue
       self.colsum(chromosome, contact_map)
@@ -475,7 +481,8 @@ class Preprocess():
     for key, value in contact_map.matrix[chromosome].items():
 
       # Binary version of keys
-      brow, bcol = contact_map.bp_to_bin(key[0], key[1])
+      brow = contact_map.bp_to_bin(key[0])
+      bcol = contact_map.bp_to_bin(key[1])
 
       # Check if value is above threshold
       if(value > self.remove_threshold):
@@ -629,7 +636,8 @@ class Preprocess():
     for key, value in contact_map.matrix[chromosome].items():
 
       # Binary version of keys
-      brow, bcol = contact_map.bp_to_bin(key[0], key[1])
+      brow = contact_map.bp_to_bin(key[0])
+      bcol = contact_map.bp_to_bin(key[1])
 
       # Check if entry needs to be removed
       try:

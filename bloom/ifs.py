@@ -105,10 +105,11 @@ class Ifs():
     for chromosome in self.contact_map.valid_chromosome_list:
 
       # Add histogram calculation job to queue
-      self.add_calculate_ifs(chromosome)
+      #self.add_calculate_ifs(chromosome)
+      self.calculate_ifs(chromosome)
 
     # Run histogram calculation jobs
-    self.run_calculate_ifs()
+    #self.run_calculate_ifs()
 
     # Sort and write IFS list
     self.sort_ifs_list()
@@ -128,14 +129,14 @@ class Ifs():
     """
 
     # Iterating on matrix
-    for key, value in self.contact_map.matrix[chromosome].items():
+    for key, value in self.sica_instance.annotation_dictionary[chromosome].items():
 
       # Check if contact is a peak star
-      ann = self.sica_instance.annotation_dictionary[chromosome][key]
-      if(ann.isupper() and ann in self.goba_instance.sica_allowed):
+      newvalue = self.contact_map.matrix[chromosome][key]
+      if(value.isupper() and value in self.goba_instance.sica_allowed):
 
         # Check distance to diagonal
-        self.ifs_list.append([chromosome] + key + [value])
+        self.ifs_list.append([chromosome] + [key[0], key[1]] + [newvalue])
 
   def add_calculate_ifs(self, chromosome):
     """Returns TODO.
@@ -241,7 +242,7 @@ class Ifs():
       p12 = str(v[1] + self.contact_map.resolution)
       p21 = str(v[2])
       p22 = str(v[2] + self.contact_map.resolution)
-      value = '{:0.6e}'.format(str(v[3]))
+      value = '{:0.6e}'.format(v[3])
       output_loop_file.write("\t".join([chromosome, p11, p12, chromosome, p21, p22, value]) + "\n")
 
     # Closing file
@@ -268,10 +269,11 @@ class Ifs():
     for chromosome in self.contact_map.valid_chromosome_list:
 
       # Add histogram calculation job to queue
-      self.add_fix_matrix(chromosome, multiplier, min_matrix_threshold)
+      #self.add_fix_matrix(chromosome, multiplier, min_matrix_threshold)
+      self.fix_matrix(chromosome, multiplier, min_matrix_threshold)
 
     # Run histogram calculation jobs
-    self.run_fix_matrix()
+    #self.run_fix_matrix()
 
     # Write matrix
     self.write_matrix()
@@ -296,24 +298,24 @@ class Ifs():
     for key, value in self.contact_map.matrix[chromosome].items():
 
       # Binary version of keys
-      brow, bcol = self.contact_map.bp_to_bin(key[0], key[1])
-      bin_key = (brow, bcol)
+      brow = self.contact_map.bp_to_bin(key[0])
+      bcol = self.contact_map.bp_to_bin(key[1])
 
       # 1. Remove intervals outside the chrom dict boundaries (min / max // bin / bp)
-      if( (key[0] < 0) or (key[0] > self.contact_map.total_1d_bp[chromosome]) or (key[0] % self.contact_map.resolution) or 
-          (key[1] < 0) or (key[1] > self.contact_map.total_1d_bp[chromosome]) or (key[1] % self.contact_map.resolution)):
+      if( (key[0] < 0) or (key[0] >= self.contact_map.total_1d_bp[chromosome]) or (key[0] % self.contact_map.resolution) or 
+          (key[1] < 0) or (key[1] >= self.contact_map.total_1d_bp[chromosome]) or (key[1] % self.contact_map.resolution)):
         removed_keys.append(key)
         continue
 
       # 2. Make all sica.removed_dict rows/columns = 0 (remove the entry)
       try:
-        self.sica_instance.removed_dict[chromosome][bin_key[0]]
+        self.sica_instance.removed_dict[chromosome][brow]
         removed_keys.append(key)
         continue
       except Exception:
         pass
       try:
-        self.sica_instance.removed_dict[chromosome][bin_key[1]]
+        self.sica_instance.removed_dict[chromosome][bcol]
         removed_keys.append(key)
         continue
       except Exception:

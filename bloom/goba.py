@@ -69,7 +69,7 @@ class Goba():
     self.sica_instance = sica_instance
 
     # Sica annotation
-    self.sica_allowed = ["T5", "T4", "T3", "T2", "T1"]
+    self.sica_allowed = {"T5": True, "T4": True, "T3": True, "T2": True, "T1": True}
 
     # Auxiliary parameters
     self.ncpu = self.sica_instance.ncpu
@@ -99,10 +99,11 @@ class Goba():
     for chromosome in self.contact_map.valid_chromosome_list:
 
       # Add histogram calculation job to queue
-      self.add_fill(chromosome)
+      #self.add_fill(chromosome)
+      self.fill(chromosome)
 
     # Run histogram calculation jobs
-    self.run_fill()
+    #self.run_fill()
 
   def fill(self, chromosome):
     """Returns TODO.
@@ -116,38 +117,52 @@ class Goba():
       - return -- A return.
     """
 
+    # Vector of elements to add
+    elements_to_add = []
+
     # Iterating on matrix
     for key, value in self.contact_map.matrix[chromosome].items():
 
       # Bin row and col
-      brow, bcol = self.contact_map.bp_to_bin(key[i], key[j])
+      brow = self.contact_map.bp_to_bin(key[0])
+      bcol = self.contact_map.bp_to_bin(key[1])
 
       # Check if contact is a peak star
       ann = self.sica_instance.annotation_dictionary[chromosome][key]
-      if(ann.isupper() and ann in self.sica_allowed):
+      try:
+        self.sica_allowed[ann]
+      except Exception:
+        return
 
-        # Check distance to diagonal
-        distance_to_diag = self.sica_instance.self.dist_to_diag_dictionary[chromosome][key]
+      # Check distance to diagonal
+      distance_to_diag = self.sica_instance.self.dist_to_diag_dictionary[chromosome][key]
 
-        # Basis value
-        basis_value = value / distance_to_diag
+      # Basis value
+      basis_value = value / distance_to_diag
         
-        # Iterating on rows
-        for i in range(brow, bcol + 1):
+      # Iterating on rows
+      #for i in range(brow, bcol + 1):
+      for i in range(brow, bcol):
 
-          # Iterating on cols
-          for j in range(bcol, i - 1, -1):
+        # Iterating on cols
+        #for j in range(bcol, i - 1, -1):
+        for j in range(bcol, i, -1):
 
-            # Multiplier
-            if(i == brow or j == bcol):
-              mult = random.uniform(0.0, 0.5)
-            else:
-              mult = random.uniform(0.0, 0.25)
+          # Multiplier
+          if(i == brow or j == bcol):
+            mult = random.uniform(0.25, 0.5)
+          else:
+            mult = random.uniform(0.01, 0.3)
 
-            # Final value add
-            final_value = basis_value * mult
-            bpi, bpj = self.contact_map.matrix.bin_to_bp(i, j)
-            self.contact_map.matrix.add(chromosome, bpi, bpj, final_value)
+          # Final value add
+          final_value = basis_value * mult
+          bpi = self.contact_map.bin_to_bp(i)
+          bpj = self.contact_map.bin_to_bp(j)
+          elements_to_add.append((chromosome, bpi, bpj, final_value))
+
+    # Adding elements
+    for element in elements_to_add:
+      self.contact_map.add(element[0], element[1], element[2], element[3])
 
   def add_fill(self, chromosome):
     """Returns TODO.

@@ -64,15 +64,32 @@ class SicaDist():
     """
     
     # Fetching distance in bins given resolution
-    avoid_distance_bp_min, avoid_distance_bp_max = contact_map.bp_to_bin(0, avoid_distance)
-    t5_distance_bp_min, t5_distance_bp_max = contact_map.bp_to_bin(avoid_distance, 250000)
-    t4_distance_bp_min, t4_distance_bp_max = contact_map.bp_to_bin(250000, 500000)
-    t3_distance_bp_min, t3_distance_bp_max = contact_map.bp_to_bin(500000, 1000000)
-    t2_distance_bp_min, t2_distance_bp_max = contact_map.bp_to_bin(1000000, 2000000)
-    t1_distance_bp_min, t1_distance_bp_max = contact_map.bp_to_bin(2000000, 3000000)
-    c3_distance_bp_min, c3_distance_bp_max = contact_map.bp_to_bin(3000000, 5000000)
-    c2_distance_bp_min, c2_distance_bp_max = contact_map.bp_to_bin(5000000, 10000000)
-    c1_distance_bp_min, c1_distance_bp_max = contact_map.bp_to_bin(10000000, 20000000)
+    avoid_distance_bp_min = contact_map.bp_to_bin(0)
+    avoid_distance_bp_max = contact_map.bp_to_bin(avoid_distance)
+
+    t5_distance_bp_min = contact_map.bp_to_bin(avoid_distance)
+    t5_distance_bp_max = contact_map.bp_to_bin(250000)
+
+    t4_distance_bp_min = contact_map.bp_to_bin(250000)
+    t4_distance_bp_max = contact_map.bp_to_bin(500000)
+
+    t3_distance_bp_min = contact_map.bp_to_bin(500000)
+    t3_distance_bp_max = contact_map.bp_to_bin(1000000)
+
+    t2_distance_bp_min = contact_map.bp_to_bin(1000000)
+    t2_distance_bp_max = contact_map.bp_to_bin(2000000)
+
+    t1_distance_bp_min = contact_map.bp_to_bin(2000000)
+    t1_distance_bp_max = contact_map.bp_to_bin(3000000)
+
+    c3_distance_bp_min = contact_map.bp_to_bin(3000000)
+    c3_distance_bp_max = contact_map.bp_to_bin(5000000)
+
+    c2_distance_bp_min = contact_map.bp_to_bin(5000000)
+    c2_distance_bp_max = contact_map.bp_to_bin(10000000)
+
+    c1_distance_bp_min = contact_map.bp_to_bin(10000000)
+    c1_distance_bp_max = contact_map.bp_to_bin(20000000)
 
     # Fixed distances
     self.A = (avoid_distance_bp_min, avoid_distance_bp_max)
@@ -88,7 +105,6 @@ class SicaDist():
     # Distance list
     self.sica_dist_dict = dict([("a", self.A), ("t5", self.T5), ("t4", self.T4), ("t3", self.T3), ("t2", self.T2), 
                                 ("t1", self.T1), ("c3", self.C3), ("c2", self.C2), ("c1", self.C1)])
-
 
 class Sica():
   """This class represents TODO.
@@ -180,10 +196,11 @@ class Sica():
       self.dist_to_diag_dictionary[chromosome] = dict()
 
       # Add histogram calculation job to queue
-      self.add_calculate_histogram(chromosome)
+      #self.add_calculate_histogram(chromosome)
+      self.calculate_histogram(chromosome)
 
     # Run histogram calculation jobs
-    self.run_calculate_histogram()
+    #self.run_calculate_histogram()
 
     # Iterating on valid chromosomes - Calculate pvalues
     for chromosome in self.contact_map.valid_chromosome_list:
@@ -195,10 +212,11 @@ class Sica():
       for skey, svalue in self.dist_handler.sica_dist_dict.items():
 
         # Add p-value calculation job to queue
-        self.add_calculate_pvalues(chromosome, svalue)
+        #self.add_calculate_pvalues(chromosome, svalue)
+        self.calculate_pvalues(chromosome, svalue)
 
     # Run p-value calculation jobs
-    self.run_calculate_pvalues()
+    #self.run_calculate_pvalues()
 
   def calculate_histogram(self, chromosome):
     """Returns TODO.
@@ -216,7 +234,9 @@ class Sica():
     for key, value in self.contact_map.matrix[chromosome].items():
 
       # Check distance to diagonal
-      min_bin_key, max_bin_key = self.contact_map.bp_to_bin(key[0], key[1])
+      min_bin_key = self.contact_map.bp_to_bin(key[0])
+      max_bin_key = self.contact_map.bp_to_bin(key[1])
+
       bin_key = (min_bin_key, max_bin_key)
       distance_to_diag = self.contact_map.bin_distance_from_diagonal_manhattan(bin_key)
 
@@ -239,7 +259,7 @@ class Sica():
         pass
 
       # Attribute distance - Sica dist dict
-      else:
+      if(annotation != "r"):
 
         # Iterating on SicaDist distances
         for skey, svalue in self.dist_handler.sica_dist_dict.items():
@@ -250,7 +270,7 @@ class Sica():
               self.distribution_dictionary[chromosome][svalue].append(value)
             except Exception:
               self.distribution_dictionary[chromosome][svalue] = [value]
-          break
+            break
 
       # Put value in the annotation dictionary
       self.annotation_dictionary[chromosome][key] = annotation
@@ -294,7 +314,7 @@ class Sica():
     self.process_queue = []
     gc.collect()
 
-  def best_fit_distribution(data, bins = 100):
+  def best_fit_distribution(self, data, bins = 100):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -365,9 +385,16 @@ class Sica():
     """
 
     # Calculating best p-value given the current distribution
-    data = self.distribution_dictionary[chromosome][sica_dist]
-    best_distribution, best_params, best_pvalue = self.best_fit_distribution(data)
+    try:
+      data = self.distribution_dictionary[chromosome][sica_dist]
+    except Exception:
+      return 0
+    curr_bins = min(int(len(data)/5),100)
+    best_distribution, best_params, best_pvalue = self.best_fit_distribution(data, bins = curr_bins)
     self.pvalue_dictionary[chromosome][sica_dist] = [best_distribution, best_params, best_pvalue]
+
+    # Do not calculate best p values for avoided
+    #if(sica_dist == self.dist_handler.sica_dist_dict["a"]): return
 
     # Iterating on matrix to update annotation dictionary
     for key, value in self.contact_map.matrix[chromosome].items():
@@ -426,10 +453,10 @@ class Sica():
 
 
   #############################################################################
-  # Star Dictionaries
+  # Diagonal Borderline
   #############################################################################
 
-  def main_star_contacts(self):
+  def main_diagonal_borderline(self):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -445,10 +472,97 @@ class Sica():
     for chromosome in self.contact_map.valid_chromosome_list:
 
       # Add histogram calculation job to queue
-      self.add_star_contacts(chromosome)
+      #self.add_diagonal_borderline(chromosome)
+      self.diagonal_borderline(chromosome)
 
     # Run histogram calculation jobs
-    self.run_star_contacts()
+    #self.run_diagonal_borderline()
+
+  def diagonal_borderline(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Vector of elements to add
+    elements_to_add = []
+
+    # Iterating on matrix
+    #for d in range()
+    # 1. Go through the dictionary and get the row==col of "A"s.
+    # 2. Add value to consecutive "A"s.
+    # 3. Add this point to star = Add them as significant as C1, ..., C3 / T1, ..., T5 in dictionary.
+
+  def add_diagonal_borderline(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Append job to queue
+    self.process_queue.append((chromosome))
+
+  def run_diagonal_borderline(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Execute job queue
+    pool = multiprocessing.Pool(self.ncpu)
+    pool.starmap(self.diagonal_borderline, [arguments for arguments in self.process_queue])
+    pool.close()
+    pool.join()
+
+    # Clean queue
+    pool = None
+    self.process_queue = []
+    gc.collect()
+
+
+  #############################################################################
+  # Star Dictionaries
+  #############################################################################
+
+  def main_star_contacts(self, bottom_bin_ext_range = [3,10], left_bin_ext_range = [3,10], right_bin_ext_range = [1,4], top_bin_ext_range = [1,4]):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Iterating on valid chromosomes - Starring contacts
+    for chromosome in self.contact_map.valid_chromosome_list:
+
+      # Add histogram calculation job to queue
+      #self.add_star_contacts(chromosome)
+      self.star_contacts(chromosome, bottom_bin_ext_range, left_bin_ext_range, right_bin_ext_range, top_bin_ext_range)
+
+    # Run histogram calculation jobs
+    #self.run_star_contacts()
 
   def star_contacts(self, chromosome, bottom_bin_ext_range = [3,10], left_bin_ext_range = [3,10], right_bin_ext_range = [1,4], top_bin_ext_range = [1,4]):
     """Returns TODO.
@@ -462,11 +576,14 @@ class Sica():
       - return -- A return.
     """
 
+    # Vector of elements to add
+    elements_to_add = []
+
     # Iterating on matrix
     for key, value in self.contact_map.matrix[chromosome].items():
 
       # Bin is a valid peak
-      if(self.annotation_dictionary[chromosome][key].isupper()):
+      if(self.annotation_dictionary[chromosome][key].isupper() and self.annotation_dictionary[chromosome][key] not in ["a", "o"]):
 
         # Key point
         key_row = key[0]
@@ -512,8 +629,13 @@ class Sica():
 
               # Final score
               final_score = value - decrease + bonuscrosslb + bonuscross + bonuslb
-              bpi, bpj = self.contact_map.matrix.bin_to_bp(i, j)
-              self.contact_map.matrix.add(chromosome, key_row + bpi, key_col + bpj, final_score)
+              bpi = self.contact_map.bin_to_bp(i)
+              bpj = self.contact_map.bin_to_bp(j)
+              elements_to_add.append((chromosome, key_row + bpi, key_col + bpj, final_score))
+
+    # Adding elements
+    for element in elements_to_add:
+      self.contact_map.add(element[0], element[1], element[2], element[3])
 
   def add_star_contacts(self, chromosome):
     """Returns TODO.
