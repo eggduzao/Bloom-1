@@ -189,6 +189,11 @@ class ArgumentParser():
 
     # Options
 
+    chromosome_help = ("If this option is used, bloom will perform its analysis only on the "
+                     "desired chromosome. The chromosome should follow the input file's "
+                     "chromosome name conventions.")
+    self.add_option("x", "chromosome", "string", "STRING", None, chromosome_help)
+
     organism_help = ("The organism in which the analysis is being applied to. It can be one of "
                      "the following: hg19, hg38, mm9, mm10. If you are analyzing other organism, "
                      "please check the manual for the necessary files and configuration.")
@@ -257,23 +262,44 @@ class ArgumentParser():
     sica_top_bin_ext_range_help = None
     self.add_option("G", "sica_top_bin_ext_range", "string", "STRING", "1,4", sica_top_bin_ext_range_help)
 
+    sica_bonuscrosslb_range_help = None
+    self.add_option("H", "sica_bonuscrosslb_range", "string", "STRING", "0.25,0.3", sica_bonuscrosslb_range_help)
+
+    sica_bonuscross_range_help = None
+    self.add_option("I", "sica_bonuscross_range", "string", "STRING", "0.1,0.25", sica_bonuscross_range_help)
+
+    sica_bonuslb_range_help = None
+    self.add_option("J", "sica_bonuslb_range", "string", "STRING", "0.1,0.25", sica_bonuslb_range_help)
+
+    goba_vertical_multiplier_help = None
+    self.add_option("K", "goba_vertical_multiplier", "string", "STRING", "0.5,0.75", goba_vertical_multiplier_help)
+
+    goba_ortogonal_multiplier_help = None
+    self.add_option("L", "goba_ortogonal_multiplier", "string", "STRING", "0.1,0.3", goba_ortogonal_multiplier_help)
+
     dpmm_random_degrade_range_help = None
-    self.add_option("H", "dpmm_random_degrade_range", "string", "STRING", "0.01,0.02", dpmm_random_degrade_range_help)
+    self.add_option("M", "dpmm_random_degrade_range", "string", "STRING", "0.01,0.02", dpmm_random_degrade_range_help)
 
     dpmm_degrade_multiplier_help = None
-    self.add_option("I", "dpmm_degrade_multiplier", "float", "FLOAT", 0.05, dpmm_degrade_multiplier_help)
+    self.add_option("N", "dpmm_degrade_multiplier", "float", "FLOAT", 0.05, dpmm_degrade_multiplier_help)
 
     dpmm_half_length_bin_interval_help = None
-    self.add_option("J", "dpmm_half_length_bin_interval", "string", "STRING", "1,5", dpmm_half_length_bin_interval_help)
+    self.add_option("O", "dpmm_half_length_bin_interval", "string", "STRING", "1,5", dpmm_half_length_bin_interval_help)
 
     dpmm_value_range_help = None
-    self.add_option("K", "dpmm_value_range", "string", "STRING", "0.0001,0.001", dpmm_value_range_help)
+    self.add_option("P", "dpmm_value_range", "string", "STRING", "0.0001,0.001", dpmm_value_range_help)
 
     dpmm_random_range_help = None
-    self.add_option("L", "dpmm_random_range", "string", "STRING", "0.0000000001,0.000000001", dpmm_random_range_help)
+    self.add_option("Q", "dpmm_random_range", "string", "STRING", "0.00001,0.0001", dpmm_random_range_help)
 
     dpmm_iteration_multiplier_help = None
-    self.add_option("M", "dpmm_iteration_multiplier", "int", "INT", 1000, dpmm_iteration_multiplier_help)
+    self.add_option("R", "dpmm_iteration_multiplier", "int", "INT", 1, dpmm_iteration_multiplier_help)
+
+    ifs_multiplier_help = None
+    self.add_option("S", "ifs_multiplier", "int", "INT", 1000, ifs_multiplier_help)
+
+    ifs_min_matrix_threshold_help = None
+    self.add_option("T", "ifs_min_matrix_threshold", "int", "INT", 0, ifs_min_matrix_threshold_help)
 
 
     """

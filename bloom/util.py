@@ -204,6 +204,46 @@ class ExcList(ConfigurationFile):
         self.exclude_dictionary[chrom][i] = True
     exclist_file.close()
 
+class Channel(ConfigurationFile):
+  """This class represents TODO.
+
+  *Keyword arguments:*
+
+    - argument1 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+
+    - argument2 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+  """
+
+  def __init__(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Configuration file initialization
+    ConfigurationFile.__init__(self)
+    self.tname_list = self.config.get("Channel", "tname").split(",")
+    self.tnumb_list = self.config.get("Channel", "tnumb").split(",")
+    self.cname_list = self.config.get("Channel", "cname").split(",")
+    self.cnumb_list = self.config.get("Channel", "cnumb").split(",")
+    self.oname_list = self.config.get("Channel", "oname").split(",")
+    self.onumb_list = self.config.get("Channel", "onumb").split(",")
+
+    # Creating dictionaries
+    self.tdict = dict(zip([str(e) for e in self.tname_list], [int(e) for e in self.tnumb_list]))
+    self.cdict = dict(zip([str(e) for e in self.cname_list], [int(e) for e in self.cnumb_list]))
+    self.odict = dict(zip([str(e) for e in self.oname_list], [int(e) for e in self.onumb_list]))
+
 
 ###################################################################################################
 # Argument Parsing

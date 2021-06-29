@@ -112,14 +112,13 @@ class Preprocess():
 
     # Recalculate statistics
     if(recalculate_statistics):
-      new_contact_map.update_valid_chromosome_list()
       new_contact_map.calculate_all_statistics()
 
     # Return new contact map
     return new_contact_map
 
   def congrid(self, a, newdims, method = 'linear', centre = False, minusone = False): # TODO - Re-style
-    '''Arbitrary resampling of source array to new dimension sizes.
+    """Arbitrary resampling of source array to new dimension sizes.
     Currently only supports maintaining the same number of dimensions.
     To use 1-D arrays, first promote them to shape (x,1).
     
@@ -143,7 +142,8 @@ class Preprocess():
     False - inarray is resampled by factors of (i/x) * (j/y)
     True - inarray is resampled by(i-1)/(x-1) * (j-1)/(y-1)
     This prevents extrapolation one element beyond bounds of input array.
-    '''
+    """
+
     if not a.dtype in [np.float64, np.float32]:
       a = np.cast[float](a)
 
@@ -484,6 +484,9 @@ class Preprocess():
       brow = contact_map.bp_to_bin(key[0])
       bcol = contact_map.bp_to_bin(key[1])
 
+      # Heuristic rule of #bins away from diagonal == # contig bins lower threshold to remove
+      #if(abs(bcol - brow) <= self.min_contig_removed_bins): continue
+
       # Check if value is above threshold
       if(value > self.remove_threshold):
 
@@ -742,4 +745,5 @@ class Preprocess():
     # Placeholder
 
   """
+
 

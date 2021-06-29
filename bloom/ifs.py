@@ -89,7 +89,7 @@ class Ifs():
   # IFS
   #############################################################################
 
-  def main_calculate_ifs(self):
+  def main_calculate_ifs(self, min_to_zero = True):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -113,7 +113,7 @@ class Ifs():
 
     # Sort and write IFS list
     self.sort_ifs_list()
-    self.standardize_ifs_list(min_to_zero = True)
+    self.standardize_ifs_list(min_to_zero = min_to_zero)
     self.write_ifs()
 
   def calculate_ifs(self, chromosome):
@@ -133,9 +133,11 @@ class Ifs():
 
       # Check if contact is a peak star
       newvalue = self.contact_map.matrix[chromosome][key]
-      if(value.isupper() and value in self.goba_instance.sica_allowed):
+      if(value.isupper() and ((key[1] - key[0]) > self.sica_instance.avoid_distance)):
 
         # Check distance to diagonal
+        newvalue = newvalue + (random.uniform(0, 0.1) * newvalue)
+        newvalue = np.log2(newvalue)
         self.ifs_list.append([chromosome] + [key[0], key[1]] + [newvalue])
 
   def add_calculate_ifs(self, chromosome):
@@ -218,7 +220,7 @@ class Ifs():
     # Standardize list
     for v in self.ifs_list:
       v[3] = (float(v[3]) - minV) / (maxV - minV)
-      v[3] = max(1.0, v[3] + (random.uniform(0, 0.1) * v[3]))
+      v[3] = min(1.0, v[3])
 
   def write_ifs(self):
     """Returns TODO.
@@ -242,7 +244,7 @@ class Ifs():
       p12 = str(v[1] + self.contact_map.resolution)
       p21 = str(v[2])
       p22 = str(v[2] + self.contact_map.resolution)
-      value = '{:0.6e}'.format(v[3])
+      value = str(round(v[3], 6))
       output_loop_file.write("\t".join([chromosome, p11, p12, chromosome, p21, p22, value]) + "\n")
 
     # Closing file
