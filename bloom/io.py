@@ -76,7 +76,8 @@ class IO():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, input_contact_map_file_name, temporary_location, organism, ncpu, input_resolution = None, input_file_type = InputFileType.UNKNOWN):
+  def __init__(self, input_contact_map_file_name, temporary_location, organism, ncpu,
+               input_resolution = None, input_file_type = InputFileType.UNKNOWN, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -95,6 +96,7 @@ class IO():
     self.ncpu = ncpu
     self.input_resolution = input_resolution
     self.input_file_type = input_file_type
+    self.seed = seed
 
     # Utilitary objects
     self.error_handler = ErrorHandler()
@@ -132,7 +134,7 @@ class IO():
       self.detect_input_resolutions()
 
     # Create new contact map
-    contact_map = ContactMap(self.organism, self.input_resolution)
+    contact_map = ContactMap(self.organism, self.input_resolution, seed = self.seed)
 
     # Load contact map based on file type and resolution
 

@@ -18,12 +18,12 @@ import os
 import gc
 import sys
 import codecs
+import random
 import optparse
 import traceback
 import subprocess
 import configparser
 import multiprocessing
-import random
 
 # Internal
 from bloom.util import ErrorHandler, ChromosomeSizes, AuxiliaryFunctions
@@ -54,7 +54,7 @@ class ContactMap():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, organism, resolution, matrix = None):
+  def __init__(self, organism, resolution, matrix = None, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -66,10 +66,15 @@ class ContactMap():
       - return -- A return.
     """
 
+    # Seed
+    if(seed):
+      random.seed(seed)
+
     # Main objects
     self.organism = organism
     self.resolution = resolution
     self.matrix = matrix # per chromosome.
+    self.seed = seed
 
     # Auxiliary statistics value dictionaries
     self.min_value_diagonal = dict() # per chromosome = Minimum value (> 0) of diagonal.

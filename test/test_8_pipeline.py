@@ -61,7 +61,7 @@ class PipelineTest():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, input_location, temporary_location, output_location, input_test_number):
+  def __init__(self, input_location, temporary_location, output_location, input_test_number, seed):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -78,6 +78,7 @@ class PipelineTest():
     self.temporary_location = temporary_location
     self.output_location = output_location
     self.input_test_number = input_test_number
+    self.seed = seed
 
     # Creating folders
     for folder_name in [self.input_location, self.temporary_location, self.output_location]:
@@ -206,12 +207,12 @@ class PipelineTest():
 
     # Read bedgraph
     if(self.input_test_number == 1):
-      io = IO(input_file_name_bg, self.temporary_location, "mm9", 4, input_resolution = 100000, input_file_type = InputFileType.SPARSE)
+      io = IO(input_file_name_bg, self.temporary_location, "mm9", 4, input_resolution = 100000, input_file_type = InputFileType.SPARSE, seed = self.seed)
       contact_map = io.read()
       #contact_map.update_valid_chromosome_list()
       contact_map.valid_chromosome_list = ["chrX"] # Force to play only with chrX
     elif(self.input_test_number == 2):    
-      io = IO(input_file_name_bg, self.temporary_location, "mm9", 4, input_resolution = 25000, input_file_type = InputFileType.SPARSE)
+      io = IO(input_file_name_bg, self.temporary_location, "mm9", 4, input_resolution = 25000, input_file_type = InputFileType.SPARSE, seed = self.seed)
       contact_map = io.read()
       #contact_map.update_valid_chromosome_list()
       contact_map.valid_chromosome_list = ["chr14"] # Force to play only with chr14
@@ -222,19 +223,19 @@ class PipelineTest():
 
     # Convert to minimal resolution
     if(self.input_test_number == 1):
-      preprocess = Preprocess(4, contact_map, minimal_resolution = 50000, min_contig_removed_bins = 2, remove_threshold = 0)
+      preprocess = Preprocess(4, contact_map, minimal_resolution = 50000, min_contig_removed_bins = 2, remove_threshold = 0, seed = self.seed)
       minimal_res_contact_map = preprocess.convert_to_minimal_resolution(recalculate_statistics = True)
     elif(self.input_test_number == 2): 
-      preprocess = Preprocess(4, contact_map, minimal_resolution = 10000, min_contig_removed_bins = 10, remove_threshold = 0)
+      preprocess = Preprocess(4, contact_map, minimal_resolution = 10000, min_contig_removed_bins = 10, remove_threshold = 0, seed = self.seed)
       minimal_res_contact_map = preprocess.convert_to_minimal_resolution(recalculate_statistics = True)
 
     # Write bedgraph and hic
     if(self.input_test_number == 1):
-      io = IO(input_file_name_bg, self.temporary_location, "mm9", 4, input_resolution = 50000, input_file_type = InputFileType.SPARSE)
+      io = IO(input_file_name_bg, self.temporary_location, "mm9", 4, input_resolution = 50000, input_file_type = InputFileType.SPARSE, seed = self.seed)
       io.write(minimal_res_contact_map, output_minres_matrix_bg, InputFileType.SPARSE)
       io.write(minimal_res_contact_map, output_minres_matrix_hc, InputFileType.HIC)
     elif(self.input_test_number == 2): 
-      io = IO(input_file_name_bg, self.temporary_location, "mm9", 4, input_resolution = 10000, input_file_type = InputFileType.SPARSE)
+      io = IO(input_file_name_bg, self.temporary_location, "mm9", 4, input_resolution = 10000, input_file_type = InputFileType.SPARSE, seed = self.seed)
       io.write(minimal_res_contact_map, output_minres_matrix_bg, InputFileType.SPARSE)
       io.write(minimal_res_contact_map, output_minres_matrix_hc, InputFileType.HIC)
 
@@ -332,11 +333,11 @@ class PipelineTest():
     if(self.input_test_number == 1):
       sica = Sica(4, contact_map, avoid_distance = 100000, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.95, 
                  bottom_bin_ext_range = [2,4], left_bin_ext_range = [2,4], right_bin_ext_range = [0,0], top_bin_ext_range = [0,0],
-                 bonuscrosslb_range = [0.25, 0.3], bonuscross_range = [0.1, 0.25], bonuslb_range = [0.1, 0.25])
+                 bonuscrosslb_range = [0.25, 0.3], bonuscross_range = [0.1, 0.25], bonuslb_range = [0.1, 0.25], seed = self.seed)
     elif(self.input_test_number == 2):
       sica = Sica(4, contact_map, avoid_distance = 100000, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.95, 
                  bottom_bin_ext_range = [2,4], left_bin_ext_range = [2,4], right_bin_ext_range = [0,0], top_bin_ext_range = [0,0],
-                 bonuscrosslb_range = [0.25, 0.3], bonuscross_range = [0.1, 0.25], bonuslb_range = [0.1, 0.25])
+                 bonuscrosslb_range = [0.25, 0.3], bonuscross_range = [0.1, 0.25], bonuslb_range = [0.1, 0.25], seed = self.seed)
 
     # Calculating distributions and pvalues
     sica.main_calculate_distributions()
@@ -469,9 +470,15 @@ class PipelineTest():
 
     # Goba
     if(self.input_test_number == 1):
-      goba = Goba(contact_map, sica, vertical_multiplier = [0.5, 0.75], ortogonal_multiplier = [0.25, 0.5])
+      goba = Goba(contact_map, sica, vertical_multiplier = [0.5, 0.75], ortogonal_multiplier = [0.25, 0.5], 
+                  filling_frequency = 0.75, banding_value_mult_range = [0.4, 0.6], banding_further_range = [0.90, 0.99], banding_frequency = 0.5,
+                  outing_value_mult_range = [0.3, 0.5], outing_further_range = [0.90, 0.99], outing_frequency = 0.34,
+                  seed = self.seed)
     elif(self.input_test_number == 2):
-      goba = Goba(contact_map, sica, vertical_multiplier = [0.5, 0.75], ortogonal_multiplier = [0.25, 0.5])
+      goba = Goba(contact_map, sica, vertical_multiplier = [0.5, 0.75], ortogonal_multiplier = [0.25, 0.5], 
+                  filling_frequency = 0.75, banding_value_mult_range = [0.4, 0.6], banding_further_range = [0.90, 0.99], banding_frequency = 0.5,
+                  outing_value_mult_range = [0.3, 0.5], outing_further_range = [0.90, 0.99], outing_frequency = 0.34,
+                  seed = self.seed)
 
     # Performing fill
     goba.main_fill()
@@ -529,10 +536,10 @@ class PipelineTest():
     # Creating dpmm
     if(self.input_test_number == 1):
       dpmm = Dpmm(4, contact_map, sica, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
-                 half_length_bin_interval = [1, 4], value_range = [10e-4, 10e-3], random_range = [10e-4, 10e-3], iteration_multiplier = 1, seed = 123)
+                 half_length_bin_interval = [1, 4], value_range = [10e-4, 10e-3], random_range = [10e-4, 10e-3], iteration_multiplier = 1, seed = self.seed)
     elif(self.input_test_number == 2):
       dpmm = Dpmm(4, contact_map, sica, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
-                 half_length_bin_interval = [1, 4], value_range = [10e-4, 10e-3], random_range = [10e-4, 10e-3], iteration_multiplier = 1, seed = 123)
+                 half_length_bin_interval = [1, 4], value_range = [10e-4, 10e-3], random_range = [10e-4, 10e-3], iteration_multiplier = 1, seed = self.seed)
 
     # Performing diagonal degrade
     dpmm.main_diagonal_em()
@@ -577,7 +584,7 @@ class PipelineTest():
     matrix_output_format = InputFileType.HIC
 
     # Create Ifs
-    ifs = Ifs(contact_map, sica, goba, dpmm, io, output_loop_file_name, output_matrix_file_name, matrix_output_format)
+    ifs = Ifs(contact_map, sica, goba, dpmm, io, output_loop_file_name, output_matrix_file_name, matrix_output_format, seed = self.seed)
 
     # Calculate Ifs
     ifs.main_calculate_ifs()
@@ -597,9 +604,9 @@ class PipelineTest():
 
     # Calculate Ifs
     if(self.input_test_number == 1):
-      ifs.main_fix_matrix(multiplier = 10, min_matrix_threshold = 0)
+      ifs.main_fix_matrix(multiplier = 1000, min_matrix_threshold = 0)
     elif(self.input_test_number == 2):
-      ifs.main_fix_matrix(multiplier = 10, min_matrix_threshold = 0)
+      ifs.main_fix_matrix(multiplier = 1000, min_matrix_threshold = 0)
 
     # Writing
     io.write(contact_map, output_finalfix_matrix_bg, InputFileType.SPARSE)
@@ -622,10 +629,11 @@ if __name__ == "__main__":
   input_location = os.path.join(current_path, "input")
   temporary_location = os.path.join(current_path, "temp", current_name)
   output_location = os.path.join(current_path, "output", current_name)
-  
+  seed = 123
+
   # Creating test
   input_test_number = 2
-  test = PipelineTest(input_location, temporary_location, output_location, input_test_number)
+  test = PipelineTest(input_location, temporary_location, output_location, input_test_number, seed)
 
   # Preprocessing tests
   print("Preprocessing tests")

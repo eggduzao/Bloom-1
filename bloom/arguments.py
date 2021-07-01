@@ -16,6 +16,7 @@ Authors: Eduardo G. Gusmao.
 import os
 import sys
 import optparse
+import subprocess
 import multiprocessing
 
 # Internal
@@ -277,30 +278,50 @@ class ArgumentParser():
     goba_ortogonal_multiplier_help = None
     self.add_option("L", "goba_ortogonal_multiplier", "string", "STRING", "0.1,0.3", goba_ortogonal_multiplier_help)
 
+    goba_filling_frequency_help = None
+    self.add_option("M", "goba_filling_frequency", "float", "FLOAT", 0.75, goba_filling_frequency_help)
+
+    goba_banding_value_mult_range_help = None
+    self.add_option("N", "goba_banding_value_mult_range", "string", "STRING", "0.4,0.6", goba_banding_value_mult_range_help)
+
+    goba_banding_further_range_help = None
+    self.add_option("O", "goba_banding_further_range", "string", "STRING", "0.9,0.99", goba_banding_further_range_help)
+
+    goba_banding_frequency_help = None
+    self.add_option("P", "goba_banding_frequency", "float", "FLOAT", 0.5, goba_banding_frequency_help)
+
+    goba_outing_value_mult_range_help = None
+    self.add_option("Q", "goba_outing_value_mult_range", "string", "STRING", "0.3,0.5", goba_outing_value_mult_range_help)
+
+    goba_outing_further_range_help = None
+    self.add_option("R", "goba_outing_further_range", "string", "STRING", "0.9,0.99", goba_outing_further_range_help)
+
+    goba_outing_frequency_help = None
+    self.add_option("S", "goba_outing_frequency", "float", "FLOAT", 0.34, goba_outing_frequency_help)
+
     dpmm_random_degrade_range_help = None
-    self.add_option("M", "dpmm_random_degrade_range", "string", "STRING", "0.01,0.02", dpmm_random_degrade_range_help)
+    self.add_option("T", "dpmm_random_degrade_range", "string", "STRING", "0.01,0.02", dpmm_random_degrade_range_help)
 
     dpmm_degrade_multiplier_help = None
-    self.add_option("N", "dpmm_degrade_multiplier", "float", "FLOAT", 0.05, dpmm_degrade_multiplier_help)
+    self.add_option("U", "dpmm_degrade_multiplier", "float", "FLOAT", 0.05, dpmm_degrade_multiplier_help)
 
     dpmm_half_length_bin_interval_help = None
-    self.add_option("O", "dpmm_half_length_bin_interval", "string", "STRING", "1,5", dpmm_half_length_bin_interval_help)
+    self.add_option("V", "dpmm_half_length_bin_interval", "string", "STRING", "1,5", dpmm_half_length_bin_interval_help)
 
     dpmm_value_range_help = None
-    self.add_option("P", "dpmm_value_range", "string", "STRING", "0.0001,0.001", dpmm_value_range_help)
+    self.add_option("W", "dpmm_value_range", "string", "STRING", "0.0001,0.001", dpmm_value_range_help)
 
     dpmm_random_range_help = None
-    self.add_option("Q", "dpmm_random_range", "string", "STRING", "0.00001,0.0001", dpmm_random_range_help)
+    self.add_option("X", "dpmm_random_range", "string", "STRING", "0.00001,0.0001", dpmm_random_range_help)
 
     dpmm_iteration_multiplier_help = None
-    self.add_option("R", "dpmm_iteration_multiplier", "int", "INT", 1, dpmm_iteration_multiplier_help)
+    self.add_option("Y", "dpmm_iteration_multiplier", "int", "INT", 1, dpmm_iteration_multiplier_help)
 
     ifs_multiplier_help = None
-    self.add_option("S", "ifs_multiplier", "int", "INT", 1000, ifs_multiplier_help)
+    self.add_option("Z", "ifs_multiplier", "int", "INT", 1000, ifs_multiplier_help)
 
     ifs_min_matrix_threshold_help = None
-    self.add_option("T", "ifs_min_matrix_threshold", "int", "INT", 0, ifs_min_matrix_threshold_help)
-
+    self.add_option("b", "ifs_min_matrix_threshold", "int", "INT", 0, ifs_min_matrix_threshold_help)
 
     """
     # Examples:
@@ -414,7 +435,7 @@ class ArgumentParser():
       pass
       # self.error_handler.throw_error("TODO") # TODO
     else:
-      temporary_location = self.create_temporary_directory(temporary_location)
+      temporary_location = self.create_temporary_directory(input_matrix, temporary_location)
     if(output_type == "hic"):
       self.options.output_type = InputFileType.HIC
     elif(output_type == "cool"):
@@ -441,7 +462,7 @@ class ArgumentParser():
   # Auxiliary Operations
   #############################################################################
 
-  def create_temporary_directory(self, temporary_location):
+  def create_temporary_directory(self, input_file_name, temporary_location):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -454,7 +475,7 @@ class ArgumentParser():
     """
 
     # Creating temorary directory as: temporary folder / input file name
-    input_contact_matrix_name = os.path.splitext(os.path.basename(self.input_file_name))[0]
+    input_contact_matrix_name = os.path.splitext(os.path.basename(input_file_name))[0]
     temporary_directory = None
     try:
       temporary_directory = os.path.join(temporary_location, input_contact_matrix_name)

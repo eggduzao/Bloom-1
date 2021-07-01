@@ -50,7 +50,7 @@ class Barcode():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, ncpu, organism, contact_map, temporary_location):
+  def __init__(self, ncpu, organism, contact_map, temporary_location, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -67,6 +67,7 @@ class Barcode():
     self.organism = organism
     self.contact_map = contact_map
     self.temporary_location = temporary_location
+    self.seed = seed
 
     # Utilitary objects
     self.error_handler = ErrorHandler()
@@ -309,7 +310,7 @@ class Barcode():
     
     # Create contact map
     io_instance = IO(matrix_file_name, self.temporary_location, self.organism, self.ncpu, 
-                     input_resolution = resolution, input_file_type = InputFileType.SPARSE)
+                     input_resolution = resolution, input_file_type = InputFileType.SPARSE, seed = self.seed)
     contact_map = io_instance.read()
     contact_map.update_valid_chromosome_list()
 
@@ -335,7 +336,7 @@ class Barcode():
     
     # Create contact map
     io_instance = IO(barcode_file_name, self.temporary_location, self.organism, self.ncpu, 
-                     input_resolution = resolution, input_file_type = InputFileType.SPARSE)
+                     input_resolution = resolution, input_file_type = InputFileType.SPARSE, seed = self.seed)
     contact_map = io_instance.read()
     contact_map.update_valid_chromosome_list()
 

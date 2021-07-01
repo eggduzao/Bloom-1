@@ -52,7 +52,9 @@ class Goba():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, contact_map, sica_instance, vertical_multiplier = [0.5, 0.75], ortogonal_multiplier = [0.1, 0.3]):
+  def __init__(self, contact_map, sica_instance, vertical_multiplier = [0.5, 0.75], ortogonal_multiplier = [0.1, 0.3], 
+               filling_frequency = 0.5, banding_value_mult_range = [0.4, 0.6], banding_further_range = [0.90, 0.99], banding_frequency = 0.5,
+               outing_value_mult_range = [0.3, 0.5], outing_further_range = [0.90, 0.99], outing_frequency = 0.34, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -64,11 +66,25 @@ class Goba():
       - return -- A return.
     """
 
+    # Seed
+    if(seed):
+      random.seed(seed)
+
     # Class objects
     self.contact_map = contact_map
     self.sica_instance = sica_instance
+    self.seed = seed
+
+    # Auxiliary objects
     self.vertical_multiplier = vertical_multiplier
     self.ortogonal_multiplier = ortogonal_multiplier
+    self.filling_frequency = filling_frequency
+    self.banding_value_mult_range = banding_value_mult_range
+    self.banding_further_range = banding_further_range
+    self.banding_frequency = banding_frequency
+    self.outing_value_mult_range = outing_value_mult_range
+    self.outing_further_range = outing_further_range
+    self.outing_frequency = outing_frequency
 
     # Auxiliary parameters
     self.ncpu = self.sica_instance.ncpu
@@ -121,7 +137,8 @@ class Goba():
 
     # Allowed fill
     allowed_fill_dict = self.sica_instance.dist_handler.get_key_to_bin_dict(self.sica_instance.dist_handler.tbin_dist_dict, upper = True)
-    del allowed_fill_dict["T1"]
+    del allowed_fill_dict["T1"] # Check TODO
+    del allowed_fill_dict["T2"] # Check TODO
 
     # Iterating on matrix
     for key, value in self.contact_map.matrix[chromosome].items():
@@ -137,9 +154,9 @@ class Goba():
       except Exception:
         continue
 
-      # Temporary removal
-      r = random.random() ############ TODO
-      if(r < 0.75): continue ############ TODO
+      # Frequency check
+      freq_check = random.random()
+      if(freq_check > self.filling_frequency): continue
 
       # Check distance to diagonal
       try:
@@ -257,17 +274,53 @@ class Goba():
 
     # Allowed fill
     allowed_fill_dict = self.sica_instance.dist_handler.get_key_to_bin_dict(self.sica_instance.dist_handler.cbin_dist_dict, upper = True)
-    allowed_fill_dict["T1"] = True
+    allowed_fill_dict["T2"] = True
+
+    # Columns to fill
+    columns_to_fill = dict()
 
     # Iterating on matrix
     for key, value in self.contact_map.matrix[chromosome].items():
 
-      # Bin row and col
-      brow = self.contact_map.bp_to_bin(key[0])
-      bcol = self.contact_map.bp_to_bin(key[1])
+      # Check if contact is a peak star
+      try:
+        ann = self.sica_instance.annotation_dictionary[chromosome][key]
+        allowed_fill_dict[ann]
+      except Exception:
+        continue
 
-      # TODO - Optimization
+      # Adding column to dictionary
+      col = key[1]
+      try:
+        if(columns_to_fill[col] < value):
+          columns_to_fill[col] = value
+      except Exception:
+        columns_to_fill[col] = value
 
+    # Iterating on the column dictionary
+    for col, value in columns_to_fill.items():
+
+      # Value
+      newvalue = value * random.uniform(self.banding_value_mult_range[0], self.banding_value_mult_range[1])
+
+      # Iterating on rows
+      for row in range(0, col + 1, self.contact_map.resolution):
+
+        # Signal check
+        try:
+          self.contact_map.matrix[chromosome][(row, col)]
+          continue
+        except Exception:
+          pass
+
+        # Frequency check
+        freq_check = random.random()
+        if(freq_check > self.banding_frequency): continue
+
+        # Value
+        newvalue = newvalue * random.uniform(self.banding_further_range[0], self.banding_further_range[1])
+        elements_to_add.append((chromosome, row, col, newvalue))
+      
     # Adding elements
     for element in elements_to_add:
       self.contact_map.add(element[0], element[1], element[2], element[3])
@@ -354,15 +407,52 @@ class Goba():
 
     # Allowed fill
     allowed_fill_dict = self.sica_instance.dist_handler.get_key_to_bin_dict(self.sica_instance.dist_handler.obin_dist_dict, upper = True)
+    allowed_fill_dict["T1"] = True
+
+    # Columns to fill
+    rows_to_fill = dict()
 
     # Iterating on matrix
     for key, value in self.contact_map.matrix[chromosome].items():
 
-      # Bin row and col
-      brow = self.contact_map.bp_to_bin(key[0])
-      bcol = self.contact_map.bp_to_bin(key[1])
+      # Check if contact is a peak star
+      try:
+        ann = self.sica_instance.annotation_dictionary[chromosome][key]
+        allowed_fill_dict[ann]
+      except Exception:
+        continue
 
-      # TODO - Optimization
+      # Adding row to dictionary
+      row = key[0]
+      try:
+        if(rows_to_fill[row] < value):
+          rows_to_fill[row] = value
+      except Exception:
+        rows_to_fill[row] = value
+
+    # Iterating on the column dictionary
+    for row, value in rows_to_fill.items():
+
+      # Value
+      newvalue = value * random.uniform(self.outing_value_mult_range[0], self.outing_value_mult_range[1])
+
+      # Iterating on rows
+      for col in range(row, self.contact_map.chromosome_sizes.chromosome_sizes_dictionary[chromosome], self.contact_map.resolution):
+
+        # Signal check
+        try:
+          self.contact_map.matrix[chromosome][(row, col)]
+          continue
+        except Exception:
+          pass
+
+        # Frequency check
+        freq_check = random.random()
+        if(freq_check > self.outing_frequency): continue
+
+        # Value
+        newvalue = newvalue * random.uniform(self.outing_further_range[0], self.outing_further_range[1])
+        elements_to_add.append((chromosome, row, col, newvalue))
 
     # Adding elements
     for element in elements_to_add:

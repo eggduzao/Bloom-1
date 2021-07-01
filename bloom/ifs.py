@@ -52,7 +52,8 @@ class Ifs():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, contact_map, sica_instance, goba_instance, dpmm_instance, io_instance, output_loop_file_name, output_matrix_file_name, matrix_output_format):
+  def __init__(self, contact_map, sica_instance, goba_instance, dpmm_instance, io_instance,
+               output_loop_file_name, output_matrix_file_name, matrix_output_format, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -64,6 +65,10 @@ class Ifs():
       - return -- A return.
     """
 
+    # Seed
+    if(seed):
+      random.seed(seed)
+
     # Class objects
     self.contact_map = contact_map
     self.sica_instance = sica_instance
@@ -73,6 +78,7 @@ class Ifs():
     self.output_loop_file_name = output_loop_file_name
     self.output_matrix_file_name = output_matrix_file_name
     self.matrix_output_format = matrix_output_format
+    self.seed = seed
 
     # Auxiliary objects
     self.ifs_list = []
@@ -128,17 +134,29 @@ class Ifs():
       - return -- A return.
     """
 
+    # Allowed distances
+    convoluted_dict = self.sica_instance.dist_handler.get_key_to_bin_dict(self.sica_instance.dist_handler.tbin_dist_dict, upper = True)
+
     # Iterating on matrix
     for key, value in self.sica_instance.annotation_dictionary[chromosome].items():
 
-      # Check if contact is a peak star
-      newvalue = self.contact_map.matrix[chromosome][key]
-      if(value.isupper() and ((key[1] - key[0]) > self.sica_instance.avoid_distance)):
+      # Check if convoluted to t
+      try:
+        if(not convoluted_dict[value.upper()]):
+          continue
+      except Exception:
+        continue
 
-        # Check distance to diagonal
-        newvalue = newvalue + (random.uniform(0, 0.1) * newvalue)
-        newvalue = np.log2(newvalue)
-        self.ifs_list.append([chromosome] + [key[0], key[1]] + [newvalue])
+      # Check if value is real after convolution
+      try:
+        newvalue = self.contact_map.matrix[chromosome][key]
+      except Exception:
+        continue
+
+      # Check distance to diagonal
+      newvalue = newvalue + (random.uniform(0, 0.1) * newvalue)
+      newvalue = np.log2(newvalue)
+      self.ifs_list.append([chromosome] + [key[0], key[1]] + [newvalue])
 
   def add_calculate_ifs(self, chromosome):
     """Returns TODO.

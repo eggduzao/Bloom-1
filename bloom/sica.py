@@ -62,7 +62,7 @@ class SicaDist():
     
       - return -- A return.
     """
-    
+
     # Fetching distance in bins given resolution
     self.A = avoid_distance
     self.T5 = channel_handler.tdict["t5"]
@@ -174,7 +174,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
 
   def __init__(self, ncpu, contact_map, avoid_distance, removed_dict = None, pvalue_threshold = 0.95,
                bottom_bin_ext_range = [3,10], left_bin_ext_range = [3,10], right_bin_ext_range = [1,4], top_bin_ext_range = [1,4],
-               bonuscrosslb_range = [0.25, 0.3], bonuscross_range = [0.1, 0.25], bonuslb_range = [0.1, 0.25]):
+               bonuscrosslb_range = [0.25, 0.3], bonuscross_range = [0.1, 0.25], bonuslb_range = [0.1, 0.25], seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -185,12 +185,17 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
     
       - return -- A return.
     """
-    
+
+    # Seed
+    if(seed):
+      random.seed(seed)
+
     # Class objects
     self.contact_map = contact_map
     self.avoid_distance = avoid_distance
     self.pvalue_threshold = pvalue_threshold
     self.removed_dict = removed_dict
+    self.seed = seed
 
     # Auxiliary objects
     self.bottom_bin_ext_range = bottom_bin_ext_range
@@ -270,7 +275,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
 
     # Vector of elements to add
     elements_to_add = []
-    twice_avoid_distance = 2 * avoid_distance
+    twice_avoid_distance = 2 * self.avoid_distance
 
     # Iterating on matrix
     for key, value in self.contact_map.matrix[chromosome].items():

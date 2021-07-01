@@ -49,7 +49,7 @@ class Preprocess():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, ncpu, input_contact_map, minimal_resolution = 1000, min_contig_removed_bins = 5, remove_threshold = 1):
+  def __init__(self, ncpu, input_contact_map, minimal_resolution = 1000, min_contig_removed_bins = 5, remove_threshold = 1, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -66,6 +66,7 @@ class Preprocess():
     self.minimal_resolution = minimal_resolution
     self.min_contig_removed_bins = min_contig_removed_bins
     self.remove_threshold = remove_threshold
+    self.seed = seed
 
     # Statistics dictionaries
     self.removed_dict = dict() # Points removed because falls into a 0 contig or blacklist. For every chromosome -> for every row/col bin -> True or error.
@@ -97,7 +98,7 @@ class Preprocess():
     """
 
     # Create new contact map
-    new_contact_map = ContactMap(organism = self.input_contact_map.organism, resolution = self.minimal_resolution, matrix = None)
+    new_contact_map = ContactMap(organism = self.input_contact_map.organism, resolution = self.minimal_resolution, matrix = None, seed = self.seed)
     new_contact_map.valid_chromosome_list = [chromosome for chromosome in self.input_contact_map.valid_chromosome_list]
 
     # Iterating on valid chromosomes

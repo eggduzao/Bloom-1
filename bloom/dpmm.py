@@ -50,7 +50,7 @@ class Dpmm():
   """
 
   def __init__(self, ncpu, contact_map, sica_instance, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
-               half_length_bin_interval = [1, 5], value_range = [10e-4, 10e-3], random_range = [10e-8, 10e-7], iteration_multiplier = 1000, seed = 123):
+               half_length_bin_interval = [1, 5], value_range = [10e-4, 10e-3], random_range = [10e-8, 10e-7], iteration_multiplier = 1000, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -61,6 +61,10 @@ class Dpmm():
     
       - return -- A return.
     """
+
+    # Seed
+    if(seed):
+      random.seed(seed)
 
     # Main objects
     self.contact_map = contact_map
@@ -77,9 +81,9 @@ class Dpmm():
     self.iteration_multiplier = iteration_multiplier
 
     # Auxiliary parameters
+    self.seed = seed
     self.ncpu = ncpu
     self.process_queue = []
-    random.seed(seed)
 
     # Utilitary objects
     self.error_handler = ErrorHandler()
