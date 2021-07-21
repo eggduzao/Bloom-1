@@ -136,13 +136,14 @@ class Ifs():
 
     # Allowed distances
     convoluted_dict = self.sica_instance.dist_handler.get_key_to_bin_dict(self.sica_instance.dist_handler.tbin_dist_dict, upper = True)
+    del convoluted_dict["T1"] # Check TODO
 
     # Iterating on matrix
     for key, value in self.sica_instance.annotation_dictionary[chromosome].items():
 
       # Check if convoluted to t
       try:
-        if(not convoluted_dict[value.upper()]):
+        if(not convoluted_dict[value]):
           continue
       except Exception:
         continue
@@ -154,7 +155,7 @@ class Ifs():
         continue
 
       # Check distance to diagonal
-      newvalue = newvalue + (random.uniform(0, 0.1) * newvalue)
+      newvalue = newvalue + (random.uniform(0, 0.1) * newvalue) + 1
       newvalue = np.log2(newvalue)
       self.ifs_list.append([chromosome] + [key[0], key[1]] + [newvalue])
 
@@ -224,21 +225,46 @@ class Ifs():
     """
 
     # Calculate minimum and maximum
-    minV = np.inf
-    maxV = -np.inf
+    min_value = np.inf
+    max_value = -np.inf
     for v in self.ifs_list:
       value = float(v[3])
-      if(value < minV): minV = value
-      if(value > maxV): maxV = value
+      if(value < min_value):
+        min_value = value
+      if(value > max_value):
+        max_value = value
 
     # Minimum is 0
     if(min_to_zero):
-      minV = 0.0
+      min_value = 0.0
  
     # Standardize list
-    for v in self.ifs_list:
-      v[3] = (float(v[3]) - minV) / (maxV - minV)
-      v[3] = min(1.0, v[3])
+    index_max = 0
+    value_max = -1
+    index_min = 0
+    value_min = 9
+    for i in range(0, len(self.ifs_list)):
+      self.ifs_list[i][3] = (float(self.ifs_list[i][3]) - min_value) / (max_value - min_value)
+      self.ifs_list[i][3] = min(1.0, self.ifs_list[i][3])
+      if(self.ifs_list[i][3] > value_max):
+        value_max = self.ifs_list[i][3]
+        index_max = i
+      if(self.ifs_list[i][3] < value_min):
+        value_min = self.ifs_list[i][3]
+        index_min = i
+
+    # Reconvolution
+    value_conv_max = -1
+    value_conv_min = 9
+    for i in range(0, len(self.ifs_list)):
+      if(self.ifs_list[i][3] == value_max or self.ifs_list[i][3] == value_min):
+        continue
+      if(self.ifs_list[i][3] > value_conv_max):
+        value_conv_max = self.ifs_list[i][3]
+      if(self.ifs_list[i][3] < value_conv_min):
+        value_conv_min = self.ifs_list[i][3]
+    self.ifs_list[index_max][3] = (self.ifs_list[index_max][3] + value_conv_max) / 2
+    self.ifs_list[index_min][3] = (self.ifs_list[index_min][3] + value_conv_min) / 2
 
   def write_ifs(self):
     """Returns TODO.

@@ -102,12 +102,19 @@ def main():
   goba_outing_value_mult_range = [float(e) for e in opts.goba_outing_value_mult_range.split(",")]
   goba_outing_further_range = [float(e) for e in opts.goba_outing_further_range.split(",")]
   goba_outing_frequency = opts.goba_outing_frequency
+  goba_eppoch_resolution = opts.goba_eppoch_resolution
+  goba_eppoch_threshold = opts.goba_eppoch_threshold 
   dpmm_random_degrade_range = [float(e) for e in opts.dpmm_random_degrade_range.split(",")]
   dpmm_degrade_multiplier = opts.dpmm_degrade_multiplier
   dpmm_half_length_bin_interval = [int(e) for e in opts.dpmm_half_length_bin_interval.split(",")]
   dpmm_value_range = [float(e) for e in opts.dpmm_value_range.split(",")]
   dpmm_random_range = [float(e) for e in opts.dpmm_random_range.split(",")]
   dpmm_iteration_multiplier = opts.dpmm_iteration_multiplier
+  dpmm_em_significant_threshold = opts.dpmm_em_significant_threshold
+  dpmm_em_signal_threshold = opts.dpmm_em_signal_threshold
+  dpmm_em_avoid_distance = opts.dpmm_em_avoid_distance
+  dpmm_ur_square_size = opts.dpmm_ur_square_size
+  dpmm_ur_delete_size = opts.dpmm_ur_delete_size
   ifs_multiplier = opts.ifs_multiplier
   ifs_min_matrix_threshold = opts.ifs_min_matrix_threshold
 
@@ -148,7 +155,11 @@ def main():
   # Preprocess
   preprocess_instance = Preprocess(cores, contact_map, minimal_resolution = output_resolution,
                                    min_contig_removed_bins = pre_min_contig_removed_bins, remove_threshold = pre_remove_threshold, seed = seed)
-  contact_map = preprocess_instance.convert_to_minimal_resolution(recalculate_statistics = True)
+  if(output_resolution < resolution):
+    contact_map = preprocess_instance.convert_to_minimal_resolution(recalculate_statistics = True)
+  elif(resolution < output_resolution):
+    # TODO - Error
+    pass
   preprocess_instance.check_sparsity()
   preprocess_instance.main_remove_blacklist(contact_map)
   preprocess_instance.main_void_statistics(contact_map)
@@ -166,7 +177,7 @@ def main():
   sica_instance.main_existing_augmentation()
   sica_instance.main_calculate_distributions()
   sica_instance.main_diagonal_borderline()
-  sica_instance.main_star_contacts()
+  sica_instance.main_star_contacts(flag_first = True)
   contact_map.calculate_all_statistics()
 
 
@@ -179,7 +190,7 @@ def main():
                        filling_frequency = goba_filling_frequency, banding_value_mult_range = goba_banding_value_mult_range,
                        banding_further_range = goba_banding_further_range, banding_frequency = goba_banding_frequency,
                        outing_value_mult_range = goba_outing_value_mult_range, outing_further_range = goba_outing_further_range,
-                       outing_frequency = goba_outing_frequency, seed = seed)
+                       outing_frequency = goba_outing_frequency, eppoch_resolution = goba_eppoch_resolution, eppoch_threshold = goba_eppoch_threshold, seed = seed)
   goba_instance.main_fill()
   goba_instance.main_banding()
   goba_instance.main_outing()
@@ -193,7 +204,9 @@ def main():
   # DPMM
   dpmm_instance = Dpmm(cores, contact_map, sica_instance, random_degrade_range = dpmm_random_degrade_range,
                        degrade_multiplier = dpmm_degrade_multiplier, half_length_bin_interval = dpmm_half_length_bin_interval, 
-                       value_range = dpmm_value_range, random_range = dpmm_random_range, iteration_multiplier = dpmm_iteration_multiplier, seed = seed)
+                       value_range = dpmm_value_range, random_range = dpmm_random_range, iteration_multiplier = dpmm_iteration_multiplier,
+                       em_significant_threshold = dpmm_em_significant_threshold, em_signal_threshold = dpmm_em_signal_threshold, em_avoid_distance = dpmm_em_avoid_distance,
+                       ur_square_size = dpmm_ur_square_size, ur_delete_size = dpmm_ur_delete_size, seed = seed)
   dpmm_instance.main_diagonal_em()
   dpmm_instance.introduce_shapes()
   contact_map.calculate_all_statistics()

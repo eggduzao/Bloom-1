@@ -54,7 +54,8 @@ class Goba():
 
   def __init__(self, contact_map, sica_instance, vertical_multiplier = [0.5, 0.75], ortogonal_multiplier = [0.1, 0.3], 
                filling_frequency = 0.5, banding_value_mult_range = [0.4, 0.6], banding_further_range = [0.90, 0.99], banding_frequency = 0.5,
-               outing_value_mult_range = [0.3, 0.5], outing_further_range = [0.90, 0.99], outing_frequency = 0.34, seed = None):
+               outing_value_mult_range = [0.3, 0.5], outing_further_range = [0.90, 0.99], outing_frequency = 0.34,
+               eppoch_resolution = 100000, eppoch_threshold = 30, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -86,6 +87,11 @@ class Goba():
     self.outing_further_range = outing_further_range
     self.outing_frequency = outing_frequency
 
+    # Eppoch auxiliary objects
+    self.eppoch_resolution = eppoch_resolution
+    self.eppoch_threshold = eppoch_threshold
+    self.eppoch_contraint_dict = dict()
+
     # Auxiliary parameters
     self.ncpu = self.sica_instance.ncpu
     self.process_queue = []
@@ -113,12 +119,62 @@ class Goba():
     # Iterating on valid chromosomes - Calculate histograms
     for chromosome in self.contact_map.valid_chromosome_list:
 
+      # Add chromosome to eppoch list
+      self.eppoch_contraint_dict[chromosome] = dict()
+
       # Add histogram calculation job to queue
       #self.add_fill(chromosome)
       self.fill(chromosome)
 
     # Run histogram calculation jobs
     #self.run_fill()
+
+  def set_eppoch_constraint(self, chromosome, key):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Phasing
+    phase = int(AuxiliaryFunctions.floor_multiple(key[0], self.eppoch_resolution))
+
+    # Updating eppoch constraint dict and evaluating threshold
+    flag_eppoch = False
+    try:
+      self.eppoch_contraint_dict[chromosome][phase] += 1
+      if(self.eppoch_contraint_dict[chromosome][phase] > self.eppoch_threshold):
+        flag_eppoch = True
+    except Exception:
+      self.eppoch_contraint_dict[chromosome][phase] = 1
+
+    # Return objects
+    return flag_eppoch
+
+    """
+    # Phasing
+    mid_point = (key[0] + key[1]) / 2
+    start = AuxiliaryFunctions.floor_multiple(mid_point, self.eppoch_resolution)
+    end = AuxiliaryFunctions.ceil_multiple(mid_point, self.eppoch_resolution)
+
+    # Updating eppoch constraint dict and evaluating threshold
+    flag_eppoch = False
+    for i in range(start, end + 1, self.eppoch_resolution):
+      try:
+        self.eppoch_contraint_dict[chromosome][i] += 1
+        if(self.eppoch_contraint_dict[chromosome][i] > self.eppoch_threshold):
+          flag_eppoch = True
+      except Exception:
+        self.eppoch_contraint_dict[chromosome][i] = 1
+
+    # Return objects
+    return flag_eppoch
+    """
 
   def fill(self, chromosome):
     """Returns TODO.
@@ -156,7 +212,31 @@ class Goba():
 
       # Frequency check
       freq_check = random.random()
-      if(freq_check > self.filling_frequency): continue
+      if(freq_check > self.filling_frequency):
+        try:
+          self.sica_instance.annotation_dictionary[chromosome][key] = self.sica_instance.annotation_dictionary[chromosome][key].lower()
+        except Exception:
+          pass
+        try:
+          self.contact_map.set(chromosome, key[0], key[1], np.log(value))
+        except Exception:
+          pass
+        continue
+
+      # Eppoch check
+      if(self.set_eppoch_constraint(chromosome, key)):
+        try:
+          self.sica_instance.annotation_dictionary[chromosome][key] = self.sica_instance.annotation_dictionary[chromosome][key].lower()
+        except Exception:
+          pass
+        try:
+          self.contact_map.set(chromosome, key[0], key[1], np.log(value))
+        except Exception:
+          pass
+        continue
+
+      # Retrospect star algorithm # Flag-fist must be False to retrospect
+      self.sica_instance.simple_star(chromosome, key, value, elements_to_add, flag_first = False)
 
       # Check distance to diagonal
       try:
@@ -274,7 +354,6 @@ class Goba():
 
     # Allowed fill
     allowed_fill_dict = self.sica_instance.dist_handler.get_key_to_bin_dict(self.sica_instance.dist_handler.cbin_dist_dict, upper = True)
-    allowed_fill_dict["T2"] = True
 
     # Columns to fill
     columns_to_fill = dict()
@@ -287,6 +366,19 @@ class Goba():
         ann = self.sica_instance.annotation_dictionary[chromosome][key]
         allowed_fill_dict[ann]
       except Exception:
+        continue
+
+      # Frequency check
+      freq_check = random.random()
+      if(freq_check > self.banding_frequency):
+        try:
+          self.sica_instance.annotation_dictionary[chromosome][key] = self.sica_instance.annotation_dictionary[chromosome][key].lower()
+        except Exception:
+          pass
+        try:
+          self.contact_map.set(chromosome, key[0], key[1], np.log(value))
+        except Exception:
+          pass
         continue
 
       # Adding column to dictionary
@@ -312,10 +404,6 @@ class Goba():
           continue
         except Exception:
           pass
-
-        # Frequency check
-        freq_check = random.random()
-        if(freq_check > self.banding_frequency): continue
 
         # Value
         newvalue = newvalue * random.uniform(self.banding_further_range[0], self.banding_further_range[1])
@@ -407,7 +495,6 @@ class Goba():
 
     # Allowed fill
     allowed_fill_dict = self.sica_instance.dist_handler.get_key_to_bin_dict(self.sica_instance.dist_handler.obin_dist_dict, upper = True)
-    allowed_fill_dict["T1"] = True
 
     # Columns to fill
     rows_to_fill = dict()
@@ -420,6 +507,19 @@ class Goba():
         ann = self.sica_instance.annotation_dictionary[chromosome][key]
         allowed_fill_dict[ann]
       except Exception:
+        continue
+
+      # Frequency check
+      freq_check = random.random()
+      if(freq_check > self.outing_frequency):
+        try:
+          self.sica_instance.annotation_dictionary[chromosome][key] = self.sica_instance.annotation_dictionary[chromosome][key].lower()
+        except Exception:
+          pass
+        try:
+          self.contact_map.set(chromosome, key[0], key[1], np.log(value))
+        except Exception:
+          pass
         continue
 
       # Adding row to dictionary
@@ -445,10 +545,6 @@ class Goba():
           continue
         except Exception:
           pass
-
-        # Frequency check
-        freq_check = random.random()
-        if(freq_check > self.outing_frequency): continue
 
         # Value
         newvalue = newvalue * random.uniform(self.outing_further_range[0], self.outing_further_range[1])

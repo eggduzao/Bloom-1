@@ -8,15 +8,11 @@ Authors: Eduardo G. Gusmao.
 
 # Issues:
 
-1. Verify the formulas for Preprocessing. Add matrix size / resolution / distance to diagonal. OK
+- expectation-maximization
 
-2. Verify the formulas for Sica. Add matrix size / resolution / distance to diagonal. OK
+- thresholds: test for best for ds
 
-3. Verify the formulas for Goba. Add matrix size / resolution / distance to diagonal. OK
-
-4. Verify the formulas for Dpmm. Add matrix size / resolution / distance to diagonal. OK
-
-5. Verify the formulas for Ifs. Add matrix size / resolution / distance to diagonal. OK
+/usr/users/vvaramo/PROJECTS/Papantonis_BLOOM/Data/
 
 """
 
@@ -197,6 +193,8 @@ class PipelineTest():
       input_file_name_bg = os.path.join(self.input_location, "test_matrix/test1", "MESC_100000_chrX_first5M_1.bg")
     elif(self.input_test_number == 2):
       input_file_name_bg = os.path.join(self.input_location, "test_matrix/test2", "MESC_25000_chr14_10Mtest.bg")
+    elif(self.input_test_number == 3):
+      input_file_name_bg = os.path.join(self.input_location, "test_matrix/test3", "Mariano_Sim_3M.bg")
 
     # Output file
     output_initial_matrix_bg = os.path.join(self.output_location, "1_initial_matrix.bg")
@@ -216,6 +214,11 @@ class PipelineTest():
       contact_map = io.read()
       #contact_map.update_valid_chromosome_list()
       contact_map.valid_chromosome_list = ["chr14"] # Force to play only with chr14
+    elif(self.input_test_number == 3):    
+      io = IO(input_file_name_bg, self.temporary_location, "hg19", 4, input_resolution = 3000, input_file_type = InputFileType.SPARSE, seed = self.seed)
+      contact_map = io.read()
+      #contact_map.update_valid_chromosome_list()
+      contact_map.valid_chromosome_list = ["chr14"] # Force to play only with chr14
 
     # Write bedgraph and hic
     io.write(contact_map, output_initial_matrix_bg, InputFileType.SPARSE)
@@ -228,6 +231,9 @@ class PipelineTest():
     elif(self.input_test_number == 2): 
       preprocess = Preprocess(4, contact_map, minimal_resolution = 10000, min_contig_removed_bins = 10, remove_threshold = 0, seed = self.seed)
       minimal_res_contact_map = preprocess.convert_to_minimal_resolution(recalculate_statistics = True)
+    elif(self.input_test_number == 3): 
+      preprocess = Preprocess(4, contact_map, minimal_resolution = 3000, min_contig_removed_bins = 10, remove_threshold = 0, seed = self.seed)
+      minimal_res_contact_map = preprocess.convert_to_minimal_resolution(recalculate_statistics = True)
 
     # Write bedgraph and hic
     if(self.input_test_number == 1):
@@ -236,6 +242,10 @@ class PipelineTest():
       io.write(minimal_res_contact_map, output_minres_matrix_hc, InputFileType.HIC)
     elif(self.input_test_number == 2): 
       io = IO(input_file_name_bg, self.temporary_location, "mm9", 4, input_resolution = 10000, input_file_type = InputFileType.SPARSE, seed = self.seed)
+      io.write(minimal_res_contact_map, output_minres_matrix_bg, InputFileType.SPARSE)
+      io.write(minimal_res_contact_map, output_minres_matrix_hc, InputFileType.HIC)
+    elif(self.input_test_number == 3): 
+      io = IO(input_file_name_bg, self.temporary_location, "hg19", 4, input_resolution = 3000, input_file_type = InputFileType.SPARSE, seed = self.seed)
       io.write(minimal_res_contact_map, output_minres_matrix_bg, InputFileType.SPARSE)
       io.write(minimal_res_contact_map, output_minres_matrix_hc, InputFileType.HIC)
 
@@ -338,6 +348,10 @@ class PipelineTest():
       sica = Sica(4, contact_map, avoid_distance = 100000, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.95, 
                  bottom_bin_ext_range = [2,4], left_bin_ext_range = [2,4], right_bin_ext_range = [0,0], top_bin_ext_range = [0,0],
                  bonuscrosslb_range = [0.25, 0.3], bonuscross_range = [0.1, 0.25], bonuslb_range = [0.1, 0.25], seed = self.seed)
+    elif(self.input_test_number == 3):
+      sica = Sica(4, contact_map, avoid_distance = 6000, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.99, 
+                 bottom_bin_ext_range = [3,10], left_bin_ext_range = [3,10], right_bin_ext_range = [1,4], top_bin_ext_range = [1,4],
+                 bonuscrosslb_range = [0.0, 0.05], bonuscross_range = [0.0, 0.05], bonuslb_range = [0.0, 0.05], seed = self.seed)
 
     # Calculating distributions and pvalues
     sica.main_calculate_distributions()
@@ -352,6 +366,8 @@ class PipelineTest():
       self.write_coord_dict_as_full_matrix(".", "chrX", 100, 50000, sica.annotation_dictionary, annotmat_output_file)
     elif(self.input_test_number == 2):
       self.write_coord_dict_as_full_matrix(".", "chr14", 1000, 10000, sica.annotation_dictionary, annotmat_output_file)
+    #elif(self.input_test_number == 3):
+    #  self.write_coord_dict_as_full_matrix(".", "chr14", xxxx, xxxx, sica.annotation_dictionary, annotmat_output_file)
 
     # Termination
     annotdict_output_file.close()
@@ -395,6 +411,8 @@ class PipelineTest():
       self.write_coord_dict_as_full_matrix(".", "chrX", 100, 50000, sica.annotation_dictionary, annotmat_output_file)
     elif(self.input_test_number == 2):
       self.write_coord_dict_as_full_matrix(".", "chr14", 1000, 10000, sica.annotation_dictionary, annotmat_output_file)
+    #elif(self.input_test_number == 3):
+    #  self.write_coord_dict_as_full_matrix(".", "chr14", xxx, xxx, sica.annotation_dictionary, annotmat_output_file)
 
     # Termination
     annotdict_output_file.close()
@@ -426,9 +444,11 @@ class PipelineTest():
 
     # Star significant interactions
     if(self.input_test_number == 1):
-      sica.main_star_contacts()
+      sica.main_star_contacts(flag_first = True)
     elif(self.input_test_number == 2):
-      sica.main_star_contacts()
+      sica.main_star_contacts(flag_first = True)
+    elif(self.input_test_number == 3):
+      sica.main_star_contacts(flag_first = True)
 
     # Writing
     io.write(contact_map, output_star_matrix_bg, InputFileType.SPARSE)
@@ -445,6 +465,9 @@ class PipelineTest():
     elif(self.input_test_number == 2):
       self.write_coord_dict_as_full_matrix(".", "chr14", 1000, 10000, sica.annotation_dictionary, annotmat_output_file)
       self.write_coord_dict_as_full_matrix("0", "chr14", 1100, 10000, contact_map.matrix, matrix_output_file)
+    #elif(self.input_test_number == 3):
+    #  self.write_coord_dict_as_full_matrix(".", "chr14", xxxx, xxxx, sica.annotation_dictionary, annotmat_output_file)
+    #  self.write_coord_dict_as_full_matrix("0", "chr14", xxxx, xxxx, contact_map.matrix, matrix_output_file)
 
     # Termination
     annotdict_output_file.close()
@@ -472,13 +495,18 @@ class PipelineTest():
     if(self.input_test_number == 1):
       goba = Goba(contact_map, sica, vertical_multiplier = [0.5, 0.75], ortogonal_multiplier = [0.25, 0.5], 
                   filling_frequency = 0.75, banding_value_mult_range = [0.4, 0.6], banding_further_range = [0.90, 0.99], banding_frequency = 0.5,
-                  outing_value_mult_range = [0.3, 0.5], outing_further_range = [0.90, 0.99], outing_frequency = 0.34,
-                  seed = self.seed)
+                  outing_value_mult_range = [0.3, 0.5], outing_further_range = [0.90, 0.99], outing_frequency = 0.34, 
+                  eppoch_resolution = 100000, eppoch_threshold = 30, seed = self.seed)
     elif(self.input_test_number == 2):
       goba = Goba(contact_map, sica, vertical_multiplier = [0.5, 0.75], ortogonal_multiplier = [0.25, 0.5], 
                   filling_frequency = 0.75, banding_value_mult_range = [0.4, 0.6], banding_further_range = [0.90, 0.99], banding_frequency = 0.5,
                   outing_value_mult_range = [0.3, 0.5], outing_further_range = [0.90, 0.99], outing_frequency = 0.34,
-                  seed = self.seed)
+                  eppoch_resolution = 100000, eppoch_threshold = 30, seed = self.seed)
+    elif(self.input_test_number == 3):
+      goba = Goba(contact_map, sica, vertical_multiplier = [0.5, 1.0], ortogonal_multiplier = [0.25, 0.75], 
+                  filling_frequency = 0.75, banding_value_mult_range = [0.4, 0.6], banding_further_range = [0.90, 0.99], banding_frequency = 0.5,
+                  outing_value_mult_range = [0.3, 0.5], outing_further_range = [0.90, 0.99], outing_frequency = 0.34,
+                  eppoch_resolution = 100000, eppoch_threshold = 10, seed = self.seed)
 
     # Performing fill
     goba.main_fill()
@@ -527,22 +555,53 @@ class PipelineTest():
   # 11. DPMM
   ###################################################################################################
 
-  def diagonal_degrade(self, io, preprocess, sica, goba, contact_map):
+  def main_em(self, io, preprocess, sica, goba, contact_map):
 
     # Output file
-    output_degrade_matrix_bg = os.path.join(self.output_location, "12_DPMM_degrade_matrix.bg")
-    output_degrade_matrix_hc = os.path.join(self.output_location, "12_DPMM_degrade_matrix.hic")
+    output_em_matrix_bg = os.path.join(self.output_location, "12_DPMM_EM_matrix.bg")
+    output_em_matrix_hc = os.path.join(self.output_location, "12_DPMM_EM_matrix.hic")
+    output_em_dict_file_name = os.path.join(self.output_location, "12_em_dict.txt")
+    output_em_dict_file = open(output_em_dict_file_name, "w")
 
     # Creating dpmm
     if(self.input_test_number == 1):
       dpmm = Dpmm(4, contact_map, sica, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
-                 half_length_bin_interval = [1, 4], value_range = [10e-4, 10e-3], random_range = [10e-4, 10e-3], iteration_multiplier = 1, seed = self.seed)
+                  half_length_bin_interval = [1, 4], value_range = [10e-4, 10e-3], random_range = [10e-4, 10e-3], iteration_multiplier = 1, 
+                  em_significant_threshold = 10, em_signal_threshold = 1.0, em_avoid_distance = 5, ur_square_size = 1000000,
+                  ur_delete_size = 10000000, seed = self.seed)
     elif(self.input_test_number == 2):
       dpmm = Dpmm(4, contact_map, sica, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
-                 half_length_bin_interval = [1, 4], value_range = [10e-4, 10e-3], random_range = [10e-4, 10e-3], iteration_multiplier = 1, seed = self.seed)
+                  half_length_bin_interval = [1, 4], value_range = [10e-4, 10e-3], random_range = [10e-4, 10e-3], iteration_multiplier = 1,
+                  em_significant_threshold = 10, em_signal_threshold = 1.0, em_avoid_distance = 5, ur_square_size = 1000000,
+                  ur_delete_size = 10000000, seed = self.seed)
+    elif(self.input_test_number == 3):
+      dpmm = Dpmm(4, contact_map, sica, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
+                  half_length_bin_interval = [1, 4], value_range = [10e-5, 10e-4], random_range = [10e-6, 10e-5], iteration_multiplier = 1,
+                  em_significant_threshold = 10, em_signal_threshold = 1.0, em_avoid_distance = 5, ur_square_size = 1000000,
+                  ur_delete_size = 10000000, seed = self.seed)
 
     # Performing diagonal degrade
-    dpmm.main_diagonal_em()
+    dpmm.main_em()
+
+    # Write removed dictionary
+    self.write_dict_of_dict("em_dictionary", dpmm.em_dictionary, output_em_dict_file)
+
+    # Writing
+    io.write(contact_map, output_em_matrix_bg, InputFileType.SPARSE)
+    io.write(contact_map, output_em_matrix_hc, InputFileType.HIC)
+
+    # Termination
+    output_em_dict_file.close()
+    return io, preprocess, sica, goba, dpmm, contact_map
+
+  def diagonal_degrade(self, io, preprocess, sica, goba, dpmm, contact_map):
+
+    # Output file
+    output_degrade_matrix_bg = os.path.join(self.output_location, "13_DPMM_degrade_matrix.bg")
+    output_degrade_matrix_hc = os.path.join(self.output_location, "13_DPMM_degrade_matrix.hic")
+
+    # Performing diagonal degrade
+    #dpmm.main_diagonal_em()
 
     # Writing
     io.write(contact_map, output_degrade_matrix_bg, InputFileType.SPARSE)
@@ -555,8 +614,8 @@ class PipelineTest():
   def introduce_shapes(self, io, preprocess, sica, goba, dpmm, contact_map):
 
     # Output file
-    output_shape_matrix_bg = os.path.join(self.output_location, "13_DPMM_shape_matrix.bg")
-    output_shape_matrix_hc = os.path.join(self.output_location, "13_DPMM_shape_matrix.hic")
+    output_shape_matrix_bg = os.path.join(self.output_location, "14_DPMM_shape_matrix.bg")
+    output_shape_matrix_hc = os.path.join(self.output_location, "14_DPMM_shape_matrix.hic")
 
     # Performing shapes
     dpmm.introduce_shapes()
@@ -577,10 +636,10 @@ class PipelineTest():
   def main_calculate_ifs(self, io, preprocess, sica, goba, dpmm, contact_map):
 
     # Output file
-    output_ifs_matrix_bg = os.path.join(self.output_location, "14_IFS_calcifs_matrix.bg")
-    output_ifs_matrix_hc = os.path.join(self.output_location, "14_IFS_calcifs_matrix.hic")
-    output_loop_file_name = os.path.join(self.output_location, "16_IFS_loop_file_name.bg")
-    output_matrix_file_name = os.path.join(self.output_location, "16_IFS_matrix_file_name.hic")
+    output_ifs_matrix_bg = os.path.join(self.output_location, "15_IFS_calcifs_matrix.bg")
+    output_ifs_matrix_hc = os.path.join(self.output_location, "15_IFS_calcifs_matrix.hic")
+    output_loop_file_name = os.path.join(self.output_location, "17_IFS_loop_file_name.bg")
+    output_matrix_file_name = os.path.join(self.output_location, "17_IFS_matrix_file_name.hic")
     matrix_output_format = InputFileType.HIC
 
     # Create Ifs
@@ -599,13 +658,15 @@ class PipelineTest():
   def main_fix_matrix(self, io, preprocess, sica, goba, dpmm, ifs, contact_map):
 
     # Output file
-    output_finalfix_matrix_bg = os.path.join(self.output_location, "15_IFS_finalfix_matrix.bg")
-    output_finalfix_matrix_hc = os.path.join(self.output_location, "15_IFS_finalfix_matrix.hic")
+    output_finalfix_matrix_bg = os.path.join(self.output_location, "16_IFS_finalfix_matrix.bg")
+    output_finalfix_matrix_hc = os.path.join(self.output_location, "16_IFS_finalfix_matrix.hic")
 
     # Calculate Ifs
     if(self.input_test_number == 1):
       ifs.main_fix_matrix(multiplier = 1000, min_matrix_threshold = 0)
     elif(self.input_test_number == 2):
+      ifs.main_fix_matrix(multiplier = 1000, min_matrix_threshold = 0)
+    elif(self.input_test_number == 3):
       ifs.main_fix_matrix(multiplier = 1000, min_matrix_threshold = 0)
 
     # Writing
@@ -632,7 +693,7 @@ if __name__ == "__main__":
   seed = 123
 
   # Creating test
-  input_test_number = 2
+  input_test_number = 3
   test = PipelineTest(input_location, temporary_location, output_location, input_test_number, seed)
 
   # Preprocessing tests
@@ -687,14 +748,18 @@ if __name__ == "__main__":
   # Dpmm tests
   print("Dpmm tests")
   pt1 = time()
-  print("Runing diagonal_degrade")
-  io, preprocess, sica, goba, dpmm, contact_map = test.diagonal_degrade(io, preprocess, sica, goba, contact_map)
+  print("Runing main EM")
+  io, preprocess, sica, goba, dpmm, contact_map = test.main_em(io, preprocess, sica, goba, contact_map)
   pt2 = time()
   print("Finished - Time = " + str(round((pt2 - pt1)/60, 4)) + "m")
+  print("Runing diagonal_degrade")
+  io, preprocess, sica, goba, dpmm, contact_map = test.diagonal_degrade(io, preprocess, sica, goba, dpmm, contact_map)
+  pt3 = time()
+  print("Finished - Time = " + str(round((pt3 - pt2)/60, 4)) + "m")
   print("Runing introduce_shapes")
   io, preprocess, sica, goba, dpmm, contact_map = test.introduce_shapes(io, preprocess, sica, goba, dpmm, contact_map)
-  pt3 = time()
-  print("Finished - Time = " + str(round((pt3 - pt2)/60, 4)) + "m\n")
+  pt4 = time()
+  print("Finished - Time = " + str(round((pt4 - pt3)/60, 4)) + "m\n")
 
   # Ifs tests
   print("Ifs tests")

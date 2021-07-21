@@ -50,7 +50,8 @@ class Dpmm():
   """
 
   def __init__(self, ncpu, contact_map, sica_instance, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
-               half_length_bin_interval = [1, 5], value_range = [10e-4, 10e-3], random_range = [10e-8, 10e-7], iteration_multiplier = 1000, seed = None):
+               half_length_bin_interval = [1, 5], value_range = [10e-4, 10e-3], random_range = [10e-8, 10e-7], iteration_multiplier = 1000,
+               em_significant_threshold = 10, em_signal_threshold = 1.0, em_avoid_distance = 5, ur_square_size = 1000000, ur_delete_size = 10000000, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -80,6 +81,14 @@ class Dpmm():
     self.random_range = random_range
     self.iteration_multiplier = iteration_multiplier
 
+    # E-M objects
+    self.em_significant_threshold = em_significant_threshold
+    self.em_signal_threshold = em_signal_threshold
+    self.em_avoid_distance = em_avoid_distance * self.contact_map.resolution
+    self.ur_square_size = ur_square_size
+    self.ur_delete_size = ur_delete_size
+    self.em_dictionary = dict() # per chromosome / per regular key -> average of upper-right square
+
     # Auxiliary parameters
     self.seed = seed
     self.ncpu = ncpu
@@ -88,6 +97,243 @@ class Dpmm():
     # Utilitary objects
     self.error_handler = ErrorHandler()
     self.sica_dist_handler = self.sica_instance.dist_handler
+
+  #############################################################################
+  # Expectation Maximization
+  #############################################################################
+
+  def main_em(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Get valid chromosome list
+    valid_chromosome_list = self.contact_map.valid_chromosome_list
+
+    # Iterating on valid chromosomes
+    for chromosome in valid_chromosome_list:
+
+      self.em_dictionary[chromosome] = dict()
+
+      # Add introduce_squares to the queue
+      #self.add_expectation(chromosome)
+      self.expectation(chromosome)
+
+    # Run introduce squares
+    #self.run_expectation()
+
+    # Iterating on valid chromosomes
+    for chromosome in valid_chromosome_list:
+
+      # Add introduce_squares to the queue
+      #self.add_maximization(chromosome)
+      self.maximization(chromosome)
+
+    # Run introduce squares
+    #self.run_maximization()
+
+  def expectation(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Iterating on matrix
+    for key, value in self.sica_instance.annotation_dictionary[chromosome].items():
+
+      # Coordinates
+      row_bp = key[0]
+      col_bp = key[1]
+
+      # Check if diagonal and significant
+      if(row_bp == col_bp and value == "A"):
+
+        # Initialization of parameters
+        total_significant = 0
+        value_summation = 0.0
+        total_values = 0
+
+        # New coordinates
+        new_row_bp = row_bp - self.em_avoid_distance
+        new_col_bp = col_bp + self.em_avoid_distance
+
+        # Iteration on UR square rows
+        for row in range(new_row_bp, new_row_bp - self.ur_square_size, -self.contact_map.resolution):
+
+          # Limit check
+          if(row < 0): break
+
+          # Iteration on UR square cols
+          for col in range(new_col_bp, new_col_bp + self.ur_square_size, self.contact_map.resolution):
+
+            # Try to fetch contact value to summation
+            try:
+              contact_value = self.contact_map.matrix[chromosome][(row, col)]
+              value_summation += contact_value
+            except Exception:
+              pass
+
+            # Try to fetch significance
+            try:
+              sig_value = self.sica_instance.annotation_dictionary[chromosome][(row, col)]
+              if(sig_value.isupper()):
+                total_significant += 1
+            except Exception:
+              pass
+
+            total_values += 1
+
+        # Calculate average value
+        try:
+          average_value = value_summation / total_values
+        except Exception:
+          average_value = 0.0
+        self.em_dictionary[chromosome][key] = [average_value, total_significant]
+
+  def maximization(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Iterating on the EM dictionary
+    for key, value in self.em_dictionary[chromosome].items():
+
+      # Coordinates and values
+      row_bp = key[0]
+      col_bp = key[1]
+      average_value = value[0]
+      total_significant = value[1]
+
+      # Check threshold
+      if(average_value > self.em_signal_threshold or total_significant > self.em_significant_threshold):
+        continue
+
+      # New coordinates
+      new_row_bp = row_bp - self.em_avoid_distance
+      new_col_bp = col_bp + self.em_avoid_distance
+
+      # Iteration on UR square rows
+      for row in range(new_row_bp, new_row_bp - self.ur_delete_size, -self.contact_map.resolution):
+
+        # Limit check
+        if(row < 0): break
+
+        # Iteration on UR square cols
+        for col in range(new_col_bp, new_col_bp + self.ur_delete_size, self.contact_map.resolution):
+      
+          # Try assuaging
+          try:
+            self.contact_map.matrix[chromosome][(row, col)] = np.log2(self.contact_map.matrix[chromosome][(row, col)] + 1)
+            if(self.contact_map.matrix[chromosome][(row, col)] <= 0):
+              del self.contact_map.matrix[chromosome][(row, col)]
+          except Exception:
+            try:
+              del self.contact_map.matrix[chromosome][(row, col)]
+            except Exception:
+              continue
+
+          # Try assuaging
+          try:
+            self.sica_instance.annotation_dictionary[chromosome][(row, col)] = self.sica_instance.annotation_dictionary[chromosome][(row, col)].lower()
+          except Exception:
+            continue
+
+  def add_expectation(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Append job to queue
+    self.process_queue.append((chromosome))
+
+  def add_maximization(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Append job to queue
+    self.process_queue.append((chromosome))
+
+  def run_expectation(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    
+    # Execute job queue
+    pool = multiprocessing.Pool(self.ncpu)
+    pool.starmap(self.expectation, [arguments for arguments in self.process_queue])
+    pool.close()
+    pool.join()
+
+    # Clean queue
+    pool = None
+    self.process_queue = []
+    gc.collect()
+
+  def run_maximization(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    
+    # Execute job queue
+    pool = multiprocessing.Pool(self.ncpu)
+    pool.starmap(self.maximization, [arguments for arguments in self.process_queue])
+    pool.close()
+    pool.join()
+
+    # Clean queue
+    pool = None
+    self.process_queue = []
+    gc.collect()
+
 
   #############################################################################
   # Diagonal Degrade
@@ -142,7 +388,7 @@ class Dpmm():
 
       # Calculate row's random multiplier and exponential multiplier
       row_random_r = (random.uniform(self.random_degrade_range[0] * average_avoided_value, self.random_degrade_range[1] * average_avoided_value) + average_avoided_value)
-      row_expone_l = self.degrade_multiplier * average_avoided_value # TODO - Decide this formula as a random range based also on the sparsity level and the avoid_distance
+      row_expone_l = self.degrade_multiplier * average_avoided_value
 
       # Iterate on columns backwards
       counter = 1
@@ -248,19 +494,23 @@ class Dpmm():
     for key, value in self.contact_map.matrix[chromosome].items():
 
       # Expectation
-      if(value > 1):
-        newvalue = np.log2(value)
-      elif(value > 0):
-        newvalue = np.exp(value)
+      #if(value > 1):
+      #  newvalue = np.log2(value)
+      #elif(value > 0):
+      #  newvalue = np.exp(value)
+      #else:
+      #  newvalue = random.uniform(self.random_degrade_range[0], self.random_degrade_range[1])
+      if(value > 0):
+        newvalue = np.log2(value + 1)
       else:
-        newvalue = random.uniform(self.random_degrade_range[0], self.random_degrade_range[1])
+        continue
 
       # Fix calculus
       elements_to_add.append((chromosome, key[0], key[1], newvalue))
 
     # Maximization
     for element in elements_to_add:
-      self.contact_map.add(element[0], element[1], element[2], element[3])
+      self.contact_map.set(element[0], element[1], element[2], element[3])
 
   def add_diagonal_em(self, contact_map, chromosome):
     """Returns TODO.
@@ -319,12 +569,12 @@ class Dpmm():
 
     # Get valid chromosome list
     valid_chromosome_list = self.contact_map.valid_chromosome_list
-    
+
     # Iterating on valid chromosomes
     for chromosome in valid_chromosome_list:
 
       # Get number of iterations based on the size of the matrix
-      iterations = self.contact_map.total_bins_triangle[chromosome] * self.iteration_multiplier
+      iterations = int(self.contact_map.total_bins_triangle[chromosome] * self.iteration_multiplier)
 
       # Add introduce_squares to the queue
       #self.add_introduce_squares(self.contact_map, chromosome, iterations)
@@ -337,7 +587,7 @@ class Dpmm():
     for chromosome in valid_chromosome_list:
 
       # Get number of iterations based on the size of the matrix
-      iterations = self.contact_map.total_bins_triangle[chromosome] * self.iteration_multiplier
+      iterations = int(self.contact_map.total_bins_triangle[chromosome] * self.iteration_multiplier)
 
       # Add introduce_circles to the queue
       #self.add_introduce_circles(self.contact_map, chromosome, iterations)

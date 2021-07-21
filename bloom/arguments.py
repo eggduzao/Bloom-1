@@ -246,10 +246,10 @@ class ArgumentParser():
     self.add_option("A", "pre_min_contig_removed_bins", "int", "INT", 5, pre_min_contig_removed_bins_help)
 
     pre_remove_threshold_help = None
-    self.add_option("B", "pre_remove_threshold", "float", "FLOAT", 1.0, pre_remove_threshold_help)
+    self.add_option("B", "pre_remove_threshold", "float", "FLOAT", 0.0, pre_remove_threshold_help)
 
     sica_pvalue_threshold_help = None
-    self.add_option("C", "sica_pvalue_threshold", "float", "FLOAT", 0.95, sica_pvalue_threshold_help)
+    self.add_option("C", "sica_pvalue_threshold", "float", "FLOAT", 0.99, sica_pvalue_threshold_help)
 
     sica_bottom_bin_ext_range_help = None
     self.add_option("D", "sica_bottom_bin_ext_range", "string", "STRING", "3,10", sica_bottom_bin_ext_range_help)
@@ -264,22 +264,22 @@ class ArgumentParser():
     self.add_option("G", "sica_top_bin_ext_range", "string", "STRING", "1,4", sica_top_bin_ext_range_help)
 
     sica_bonuscrosslb_range_help = None
-    self.add_option("H", "sica_bonuscrosslb_range", "string", "STRING", "0.25,0.3", sica_bonuscrosslb_range_help)
+    self.add_option("H", "sica_bonuscrosslb_range", "string", "STRING", "0.0,0.05", sica_bonuscrosslb_range_help)
 
     sica_bonuscross_range_help = None
-    self.add_option("I", "sica_bonuscross_range", "string", "STRING", "0.1,0.25", sica_bonuscross_range_help)
+    self.add_option("I", "sica_bonuscross_range", "string", "STRING", "0.0,0.05", sica_bonuscross_range_help)
 
     sica_bonuslb_range_help = None
-    self.add_option("J", "sica_bonuslb_range", "string", "STRING", "0.1,0.25", sica_bonuslb_range_help)
+    self.add_option("J", "sica_bonuslb_range", "string", "STRING", "0.0,0.05", sica_bonuslb_range_help)
 
     goba_vertical_multiplier_help = None
-    self.add_option("K", "goba_vertical_multiplier", "string", "STRING", "0.5,0.75", goba_vertical_multiplier_help)
+    self.add_option("K", "goba_vertical_multiplier", "string", "STRING", "0.5,1.0", goba_vertical_multiplier_help)
 
     goba_ortogonal_multiplier_help = None
-    self.add_option("L", "goba_ortogonal_multiplier", "string", "STRING", "0.1,0.3", goba_ortogonal_multiplier_help)
+    self.add_option("L", "goba_ortogonal_multiplier", "string", "STRING", "0.25,0.75", goba_ortogonal_multiplier_help)
 
     goba_filling_frequency_help = None
-    self.add_option("M", "goba_filling_frequency", "float", "FLOAT", 0.75, goba_filling_frequency_help)
+    self.add_option("M", "goba_filling_frequency", "float", "FLOAT", 1.0, goba_filling_frequency_help)
 
     goba_banding_value_mult_range_help = None
     self.add_option("N", "goba_banding_value_mult_range", "string", "STRING", "0.4,0.6", goba_banding_value_mult_range_help)
@@ -299,29 +299,51 @@ class ArgumentParser():
     goba_outing_frequency_help = None
     self.add_option("S", "goba_outing_frequency", "float", "FLOAT", 0.34, goba_outing_frequency_help)
 
+    goba_eppoch_resolution_help = None
+    self.add_option("T", "goba_eppoch_resolution", "int", "INT", 100000, goba_eppoch_resolution_help)
+
+    goba_eppoch_threshold_help = None
+    self.add_option("U", "goba_eppoch_threshold", "int", "INT", 10, goba_eppoch_threshold_help)
+
     dpmm_random_degrade_range_help = None
-    self.add_option("T", "dpmm_random_degrade_range", "string", "STRING", "0.01,0.02", dpmm_random_degrade_range_help)
+    self.add_option("V", "dpmm_random_degrade_range", "string", "STRING", "0.01,0.02", dpmm_random_degrade_range_help)
 
     dpmm_degrade_multiplier_help = None
-    self.add_option("U", "dpmm_degrade_multiplier", "float", "FLOAT", 0.05, dpmm_degrade_multiplier_help)
+    self.add_option("W", "dpmm_degrade_multiplier", "float", "FLOAT", 0.05, dpmm_degrade_multiplier_help)
 
     dpmm_half_length_bin_interval_help = None
-    self.add_option("V", "dpmm_half_length_bin_interval", "string", "STRING", "1,5", dpmm_half_length_bin_interval_help)
+    self.add_option("X", "dpmm_half_length_bin_interval", "string", "STRING", "1,4", dpmm_half_length_bin_interval_help)
 
     dpmm_value_range_help = None
-    self.add_option("W", "dpmm_value_range", "string", "STRING", "0.0001,0.001", dpmm_value_range_help)
+    self.add_option("Y", "dpmm_value_range", "string", "STRING", "0.00001,0.0001", dpmm_value_range_help)
 
     dpmm_random_range_help = None
-    self.add_option("X", "dpmm_random_range", "string", "STRING", "0.00001,0.0001", dpmm_random_range_help)
+    self.add_option("Z", "dpmm_random_range", "string", "STRING", "0.000001,0.00001", dpmm_random_range_help)
 
     dpmm_iteration_multiplier_help = None
-    self.add_option("Y", "dpmm_iteration_multiplier", "int", "INT", 1, dpmm_iteration_multiplier_help)
+    self.add_option("b", "dpmm_iteration_multiplier", "float", "FLOAT", 1.0, dpmm_iteration_multiplier_help)
+
+    dpmm_em_significant_threshold_help = None
+    self.add_option("d", "dpmm_em_significant_threshold", "int", "INT", 10, dpmm_em_significant_threshold_help)
+
+    dpmm_em_signal_threshold_help = None
+    self.add_option("f", "dpmm_em_signal_threshold", "float", "FLOAT", 1.0, dpmm_em_signal_threshold_help)
+
+    dpmm_em_avoid_distance_help = None
+    self.add_option("g", "dpmm_em_avoid_distance", "float", "FLOAT", 5, dpmm_em_avoid_distance_help)
+
+    dpmm_ur_square_size_help = None
+    self.add_option("j", "dpmm_ur_square_size", "int", "INT", 1000000, dpmm_ur_square_size_help)
+
+    dpmm_ur_delete_size_help = None
+    self.add_option("k", "dpmm_ur_delete_size", "int", "INT", 10000000, dpmm_ur_delete_size_help)
 
     ifs_multiplier_help = None
-    self.add_option("Z", "ifs_multiplier", "int", "INT", 1000, ifs_multiplier_help)
+    self.add_option("l", "ifs_multiplier", "int", "INT", 1000, ifs_multiplier_help)
 
     ifs_min_matrix_threshold_help = None
-    self.add_option("b", "ifs_min_matrix_threshold", "int", "INT", 0, ifs_min_matrix_threshold_help)
+    self.add_option("m", "ifs_min_matrix_threshold", "int", "INT", 0, ifs_min_matrix_threshold_help)
+
 
     """
     # Examples:

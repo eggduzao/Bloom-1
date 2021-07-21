@@ -12,9 +12,14 @@ Install Command: pip3.9 install --user .
 
 # Python
 import os
+import io
+import re
 import sys
+import pwd
 import shutil
+import optparse
 import setuptools
+
 
 ###################################################################################################
 # TODO Big Unsolved TODOs TODO
@@ -67,11 +72,79 @@ tools_dictionary = {
 # Auxiliary Functions/Classes
 ###################################################################################################
 
-# TODO
+# PassThroughOptionParser Class
+class PassThroughOptionParser(optparse.OptionParser):
+  """
+  An 'unknown option' pass-through implementation of OptionParser.
+  When unknown arguments are encountered, bundle with largs and try again,
+  until rargs is depleted.
+  sys.exit(status) will still be called if a known argument is passed
+  incorrectly (e.g. missing arguments or bad argument types, etc.)
+  """
+
+  def _process_args(self, largs, rargs, values):
+    while rargs:
+      try:
+        optparse.OptionParser._process_args(self, largs, rargs, values)
+      except (optparse.BadOptionError, optparse.AmbiguousOptionError) as err:
+        largs.append(err.opt_str)
+
+# recursive_chown_chmod Function
+def recursive_chown_chmod(path_to_walk, uid, gid, file_permission, path_permission):
+  """
+  Recursively applies chown from path.
+  """
+  for root_dir, directory_list, file_list in os.walk(path_to_walk):
+    os.chown(root_dir, uid, gid)
+    os.chmod(root_dir, path_permission)
+    for f in file_list:
+      current_complete_file = os.path.join(root_dir, f)
+      os.chown(current_complete_file, uid, gid)
+      os.chmod(current_complete_file, file_permission)
+
+def read(*names, **kwargs):
+  with io.open(
+    os.path.join(os.path.dirname(__file__), *names),
+    encoding=kwargs.get("encoding", "utf8")
+  ) as fp:
+    return fp.read()
+
+def find_version(*file_paths):
+  version_file = read(*file_paths)
+  version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
+  if version_match:
+    return version_match.group(1)
+  raise RuntimeError("Unable to find version string.")
+
 
 ###################################################################################################
 # Processing Input Arguments
 ###################################################################################################
+
+# Parameters
+current_version = find_version("bloom", "__version__.py")
+usage_message = "python setup.py install [python options] [Bloom options]"
+version_message = "Bloom. Version: " + str(current_version)
+
+# Initializing Option Parser
+parser = PassThroughOptionParser(usage = usage_message, version = version_message)
+
+# Parameter: Copy bloom data folder
+param_copy_bloom_data_name = "--copy-bloom-data"
+param_copy_bloom_data_help = "Explain here."
+parser.add_option(param_copy_bloom_data_name, dest="param_copy_bloom_data", action="store_true", default=False, help=param_copy_bloom_data_help)
+
+# Processing Options
+options, arguments = parser.parse_args()
+param_copy_bloom_data = options.param_copy_bloom_data
+
+# Manually Removing Additional Options from sys.argv
+new_sys_argv = []
+for e in sys.argv:
+  if param_copy_bloom_data_name == e[:len(param_copy_bloom_data_name)]:
+    continue
+  new_sys_argv.append(e)
+sys.argv = new_sys_argv
 
 # Defining entry points
 current_entry_points = {"console_scripts": []}
@@ -92,9 +165,11 @@ for tool_option in tools_dictionary.keys():
 current_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bloom_data")
 bloom_data_path = os.path.join(os.path.expanduser("~"), "bloom_data")
 
-# if os.path.exists(bloom_data_path): # TODO
-#  shutil.rmtree(bloom_data_path)
-# shutil.copytree(current_path, bloom_data_path)
+# Creating data path # TODO
+if(param_copy_bloom_data):
+  if(os.path.exists(bloom_data_path)):
+    shutil.rmtree(bloom_data_path)
+  shutil.copytree(current_path, bloom_data_path)
 
 
 ###################################################################################################
@@ -103,7 +178,7 @@ bloom_data_path = os.path.join(os.path.expanduser("~"), "bloom_data")
 
 # Parameters
 package_name = "Bloom"
-package_version = "0.0.1"
+package_version = str(current_version)
 short_description = "Computational Framework to reveal occult patterns in 3C contact matrices"
 classifiers_list = ["Topic :: Scientific/Engineering :: Bio-Informatics",
                     "Topic :: Scientific/Engineering :: Artificial Intelligence"]
@@ -140,7 +215,19 @@ setuptools.setup(name = package_name,
 # Termination
 ###################################################################################################
 
-# TODO
+# Modifying Permissions when Running Superuser/Admin
+if(param_copy_bloom_data):
 
+  # Get current user and set default permissions for files to be visible and binaries executable
+  current_user = os.getenv("SUDO_USER")
+  default_file_permission = 0o644
+  default_path_permission = 0o755
+
+  # Setting the permissions
+  if current_user:
+    current_user_uid = pwd.getpwnam(current_user).pw_uid
+    current_user_gid = pwd.getpwnam(current_user).pw_gid
+    recursive_chown_chmod(bloom_data_path, current_user_uid, current_user_gid, default_file_permission,
+                          default_path_permission)
 
 

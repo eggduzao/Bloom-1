@@ -211,8 +211,9 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
     # R = Points removed because they fall into a 0 contig or blacklist.
     # A = Points to avoid because they fall in 0-avoid_distance
     # T1, T2, T3, T4, T5 = Tad hierarchy levels depending on point's distance to diagonal.
-    # C1, C2, C3 = Compartment hierarchy levels depending on point's distance to diagonal.
-    # O = Points farther from diagonal than the biggest compartment length (C1)
+    # C1, C2, C3, C4, C5 = Compartment hierarchy levels depending on point's distance to diagonal.
+    # O1, O2, O3, O4, O5 = Outter significant points not related to larger compartments.
+    # S = Points farther from diagonal than the biggest compartment length (C1)
     # Upper case letters are important points. Lower case letters are less important points.
 
     # Auxiliary dictionaries
@@ -288,16 +289,16 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
       if(abs(key_col_bp - key_row_bp) >= twice_avoid_distance and abs(key_col_bp - key_row_bp) <= self.dist_handler.C5):
 
         # Try to fetch row diagonal
-        row_diag_count = 0
+        row_diag_count = 1
         try:
-          row_diag_count = self.contact_map.matrix[chromosome][(key_row_bp, key_row_bp)]
+          row_diag_count = self.contact_map.matrix[chromosome][(key_row_bp, key_row_bp)] + 1
         except Exception:
           pass
 
         # Try to fetch col diagonal
-        col_diag_count = 0
+        col_diag_count = 1
         try:
-          col_diag_count = self.contact_map.matrix[chromosome][(key_col_bp, key_col_bp)]
+          col_diag_count = self.contact_map.matrix[chromosome][(key_col_bp, key_col_bp)] + 1
         except Exception:
           pass
 
@@ -307,7 +308,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
 
     # Adding elements
     for element in elements_to_add:
-      self.contact_map.add(element[0], element[1], element[2], element[3])
+      self.contact_map.set(element[0], element[1], element[2], element[3])
       
   def add_existing_augmentation(self, chromosome):
     """Returns TODO.
@@ -756,12 +757,12 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
               value_2 = self.contact_map.matrix[chromosome][(dkey_col_bp, dkey_col_bp)]
             except Exception:
               pass
-            value = ((value_1 + value_2) / 2) / distance_to_diag
+            value = ((value_1 + value_2) / 2) / np.sqrt(distance_to_diag)
             elements_to_add.append((chromosome, bp_key[0], bp_key[1], value))
 
     # Adding elements
     for element in elements_to_add:
-      self.contact_map.add(element[0], element[1], element[2], element[3])
+      self.contact_map.set(element[0], element[1], element[2], element[3])
 
   """
   def diagonal_borderline(self, chromosome, dist_dict): # Linear version
@@ -896,7 +897,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
   # Star Dictionaries
   #############################################################################
 
-  def main_star_contacts(self):
+  def main_star_contacts(self, flag_first = True):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -913,12 +914,12 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
 
       # Add histogram calculation job to queue
       #self.add_star_contacts(chromosome)
-      self.star_contacts(chromosome)
+      self.star_contacts(chromosome, flag_first)
 
     # Run histogram calculation jobs
     #self.run_star_contacts()
 
-  def star_contacts(self, chromosome):
+  def star_contacts(self, chromosome, flag_first):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -936,60 +937,84 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
     # Iterating on matrix
     for key, value in self.contact_map.matrix[chromosome].items():
 
-      # Bin is a valid peak
-      if(self.annotation_dictionary[chromosome][key].isupper() and self.annotation_dictionary[chromosome][key] not in ["A", "S"]):
+      # Performing star algorithm
+      self.simple_star(chromosome, key, value, elements_to_add, flag_first = flag_first)
 
-        # Key point
-        key_row = key[0]
-        key_col = key[1]
+    # Adding elements
+    for element in elements_to_add:
+      self.contact_map.add(element[0], element[1], element[2], element[3])
 
-        # Selecting lengths
+  def simple_star(self, chromosome, key, value, elements_to_add, flag_first = True):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Bin is a valid peak
+    if(self.annotation_dictionary[chromosome][key].isupper() and self.annotation_dictionary[chromosome][key] not in ["A", "S"]):
+
+      # Key point
+      key_row = key[0]
+      key_col = key[1]
+
+      # Selecting lengths
+      if(flag_first):
+        bottom = 0
+        left = 0
+        right = 0
+        top = 0
+      else:
         bottom = random.randint(self.bottom_bin_ext_range[0], self.bottom_bin_ext_range[1])
         left = random.randint(self.left_bin_ext_range[0], self.left_bin_ext_range[1])
         right = random.randint(self.right_bin_ext_range[0], self.right_bin_ext_range[1])
         top = random.randint(self.top_bin_ext_range[0], self.top_bin_ext_range[1])
 
-        # Iterating on point
-        for i in range(-top, bottom + 1):
-          for j in range(-left, right + 1):
+      # Iterating on point
+      for i in range(-top, bottom + 1):
+        for j in range(-left, right + 1):
 
-            # Absolute i and j
-            absi = abs(i)
-            absj = abs(j)
+          # Absolute i and j
+          absi = abs(i)
+          absj = abs(j)
 
-            # If point is valid to be modified
-            if(((i <= 0) and (j <= 0) and ((absi + absj) <= min(left, top))) or
-               ((i <= 0) and (j >= 0) and ((absi + absj) <= min(right, top))) or
-               ((i >= 0) and (j <= 0) and ((absi + absj) <= min(left, bottom))) or
-               ((i >= 0) and (j >= 0) and ((absi + absj) <= min(right, bottom)))):
+          # If point is valid to be modified
+          if(((i <= 0) and (j <= 0) and ((absi + absj) <= min(left, top))) or
+             ((i <= 0) and (j >= 0) and ((absi + absj) <= min(right, top))) or
+             ((i >= 0) and (j <= 0) and ((absi + absj) <= min(left, bottom))) or
+             ((i >= 0) and (j >= 0) and ((absi + absj) <= min(right, bottom)))):
 
-              # Decrease
-              base_value = float(value) / float(2**(absi + absj))
+            # Decrease
+            if(flag_first):
+              base_value = float(value) # / float(1 + absi + absj)
+            else:
+              base_value = float(value) / float(2**(1 + np.e + absi + absj))
 
-              # Bonuscrosslb
-              bonuscrosslb = 0
-              if(((i == 0) and (j <= 0)) or ((j == 0) and (i >= 0))):
-                bonuscrosslb = random.uniform(self.bonuscrosslb_range[0], self.bonuscrosslb_range[1]) * value
+            # Bonuscrosslb
+            bonuscrosslb = 0
+            if(((i == 0) and (j <= 0)) or ((j == 0) and (i >= 0))):
+              bonuscrosslb = random.uniform(self.bonuscrosslb_range[0], self.bonuscrosslb_range[1]) * value
 
-              # Bonuscross
-              bonuscross = 0
-              if((i == 0) or (j == 0)):
-                bonuscross = random.uniform(self.bonuscross_range[0], self.bonuscross_range[1]) * value
+            # Bonuscross
+            bonuscross = 0
+            if((i == 0) or (j == 0)):
+              bonuscross = random.uniform(self.bonuscross_range[0], self.bonuscross_range[1]) * value
 
-              # Bonuslb
-              bonuslb = 0
-              if((i >= 0) and (j <= 0)):
-                bonuslb = random.uniform(self.bonuslb_range[0], self.bonuslb_range[1]) * value
+            # Bonuslb
+            bonuslb = 0
+            if((i >= 0) and (j <= 0)):
+              bonuslb = random.uniform(self.bonuslb_range[0], self.bonuslb_range[1]) * value
 
-              # Final score
-              final_score = base_value + bonuscrosslb + bonuscross + bonuslb
-              bpi = self.contact_map.bin_to_bp(i)
-              bpj = self.contact_map.bin_to_bp(j)
-              elements_to_add.append((chromosome, key_row + bpi, key_col + bpj, final_score))
-
-    # Adding elements
-    for element in elements_to_add:
-      self.contact_map.add(element[0], element[1], element[2], element[3])
+            # Final score
+            final_score = base_value + bonuscrosslb + bonuscross + bonuslb
+            bpi = self.contact_map.bin_to_bp(i)
+            bpj = self.contact_map.bin_to_bp(j)
+            elements_to_add.append((chromosome, key_row + bpi, key_col + bpj, final_score))
 
   def add_star_contacts(self, chromosome):
     """Returns TODO.

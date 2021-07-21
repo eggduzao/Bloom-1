@@ -116,10 +116,18 @@ class Barcode():
       if(flag_found):
 
         # Decompress barcode
-        barcode_contact_map = self.create_contact_map_from_binary_barcode(compbin_barcode_file_name, resolution = self.contact_map.resolution)
+        try:
+          barcode_contact_map = self.create_contact_map_from_binary_barcode(compbin_barcode_file_name, resolution = self.contact_map.resolution)
+        except Exception:
+          continue
+          #TODO - Error
 
         # Compare barcode and current input contact map
-        match = self.match_barcode(barcode_contact_map)
+        try:
+          match = self.match_barcode(barcode_contact_map)
+        except Exception:
+          continue
+          #TODO - Error
 
         # Check match
         if(match):
