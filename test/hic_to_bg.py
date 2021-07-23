@@ -18,10 +18,10 @@ organism = "hg19"
 resolution = 3000
 
 # Reading
-io = IO(bg_file_name, temporary_location, organism, 4, resolution, input_file_type = InputFileType.SPARSE)
+io = IO(hic_file_name, temporary_location, organism, 4, resolution, input_file_type = InputFileType.HIC)
 contact_map = io.read()
 contact_map.valid_chromosome_list = [chromosome]
 
 #Writing
-io.write(contact_map, hic_file_name, InputFileType.HIC)
+io.write(contact_map, bg_file_name, InputFileType.SPARSE)
 

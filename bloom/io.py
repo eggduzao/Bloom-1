@@ -289,7 +289,7 @@ class IO():
       # Regions
       chrom_wo_chr = chrom.split("chr")[-1]
       start = "1"
-      end = str(contact_map.total_1d_bp[chrom])
+      end = str(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
       region = ":".join([chrom_wo_chr, start, end])
 
       # Temporary bedgraph file
@@ -340,7 +340,7 @@ class IO():
 
       # Regions
       start = "1"
-      end = '{:,}'.format(contact_map.total_1d_bp[chrom])
+      end = '{:,}'.format(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
       region = chrom + ":" + start + "-" + end
 
       # Temporary bedgraph file
@@ -391,7 +391,7 @@ class IO():
 
       # Regions
       start = "1"
-      end = '{:,}'.format(contact_map.total_1d_bp[chrom])
+      end = '{:,}'.format(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
       region = chrom + ":" + start + "-" + end
 
       # Temporary bedgraph file
