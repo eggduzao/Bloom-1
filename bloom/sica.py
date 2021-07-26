@@ -571,14 +571,29 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
       - return -- A return.
     """
 
+    # Parameters
+    minimum_data_size = 30
+    histogram_maximum_bins = 100
+    histogram_below_factor = 0.2
+
     # Calculating best p-value given the current distribution
     try:
       data = self.distribution_dictionary[chromosome][sica_dist]
     except Exception:
       return 0
-    curr_bins = min(int(len(data)/5),100)
-    best_distribution, best_params, best_pvalue = self.best_fit_distribution(data, bins = curr_bins)
-    self.pvalue_dictionary[chromosome][sica_dist] = [best_distribution, best_params, best_pvalue]
+    #curr_bins = min(int(len(data)/5),100)
+    #best_distribution, best_params, best_pvalue = self.best_fit_distribution(data, bins = curr_bins)
+    #self.pvalue_dictionary[chromosome][sica_dist] = [best_distribution, best_params, best_pvalue]
+
+    if(len(data) > minimum_data_size):
+      curr_bins = min(int(len(data) * histogram_below_factor), histogram_maximum_bins)
+      best_distribution, best_params, best_pvalue = self.best_fit_distribution(data, bins = curr_bins)
+      self.pvalue_dictionary[chromosome][sica_dist] = [best_distribution, best_params, best_pvalue]
+    else:
+      best_distribution = None
+      best_params = None
+      best_pvalue = 1
+      self.pvalue_dictionary[chromosome][sica_dist] = [best_distribution, best_params, best_pvalue]
 
     # Do not calculate best p values for avoided
     #if(sica_dist == self.dist_handler.sica_dist_dict["a"]): return

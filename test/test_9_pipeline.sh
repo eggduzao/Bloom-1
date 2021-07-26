@@ -1,9 +1,12 @@
 #!/bin/bash
 
+# Create temporary folder if it does not already exist
+mkdir -p temp
+
 # Arguments
-input_matrix="/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/test/input/test_matrix/test2/MESC_25000_chr14_10Mtest.bg" # Change to your path
-output_matrix="/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/test/output/test_9_pipeline/output_matrix.bg" # Change to your path (created)
-output_contacts="/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/test/output/test_9_pipeline/output_contacts.bg" # Change to your path (created)
+input_matrix="/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/test/input/test_matrix/test2/MESC_25000_chr14_10Mtest.bg"
+output_matrix="/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/test/output/test_9_pipeline/output_matrix.bg"
+output_contacts="/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/test/output/test_9_pipeline/output_contacts.bg"
 
 # Options
 chromosome="--chromosome=chr14"
