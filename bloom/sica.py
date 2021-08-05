@@ -220,7 +220,12 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
     self.distribution_dictionary = dict() # per chromosome / per SicaDist -> Contains all the matrix's signal within that specific SicaDist
     self.dist_to_diag_dictionary = dict() # per chromosome / per regular matrix key -> Manhattan distance to the diagonal
     self.pvalue_dictionary = dict() # per chromosome / per SicaDist -> Contains [name of the fitted distribution (FD), parameters of FD, value at pvalue_threshold (given FD)]
-    self.significant_values_dictionary = dict() # per chromosome -> All significant (peaks) values of the matrix, i.e. >= value at pvalue_threshold (given FD)
+
+    # Keys of annotation dictionary based on contact_map's crescent value order
+    self.annotation_dictionary_pvalue_order = dict() # per chromosome -> list of annotation dictionary keys (tuples) = [(a,b), (c,d)] ; where self.contact_map[chrom][(a,b)] < self.contact_map[chrom][(c,d)]
+    
+    # Dictionary with total number of each annotation mark (caps sensitive)
+    self.annotation_dictionary_count = dict() # per chromosome / per annotation mark (r, R, a, A, t1, T1, etc.) -> total count
 
     # Auxiliary distributions
     self.distribution_list = [st.alpha, st.beta, st.burr, st.dgamma, st.dweibull, st.erlang, st.expon, st.exponpow, st.genexpon,
@@ -611,12 +616,6 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
         if(value >= best_pvalue):
           self.annotation_dictionary[chromosome][key] = self.annotation_dictionary[chromosome][key].upper()
 
-          # This dictionary is deprecated
-          #try:
-          #  self.significant_values_dictionary[chromosome].append(value)
-          #except Exception:
-          #  self.significant_values_dictionary[chromosome] = [value]
-
   def add_calculate_pvalues(self, chromosome, sica_dist):
     """Returns TODO.
     
@@ -899,6 +898,117 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
     # Execute job queue
     pool = multiprocessing.Pool(self.ncpu)
     pool.starmap(self.diagonal_borderline, [arguments for arguments in self.process_queue])
+    pool.close()
+    pool.join()
+
+    # Clean queue
+    pool = None
+    self.process_queue = []
+    gc.collect()
+
+
+  #############################################################################
+  # Order Annotation by Contact Intensity
+  #############################################################################
+
+  def main_annotation_order(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Iterating on valid chromosomes - Starring contacts
+    for chromosome in self.contact_map.valid_chromosome_list:
+
+      # Add histogram calculation job to queue
+      #self.add_annotation_order(chromosome)
+      self.annotation_order(chromosome)
+
+    # Run histogram calculation jobs
+    #self.run_annotation_order()
+
+
+  def annotation_order(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Initializing chromosome for annotation dict key list
+    self.annotation_dictionary_pvalue_order[chromosome] = []
+    self.annotation_dictionary_count[chromosome] = dict()
+
+    # Iterating on original annotation dictionary
+    for key, value in self.annotation_dictionary[chromosome].items():
+
+      # Add key and contact value to annotation dict key list
+      contact_value = self.contact_map.matrix[chromosome][key]
+      self.annotation_dictionary_pvalue_order[chromosome].append(list(key) + [contact_value])
+
+      # Counting total annotation marks of each type
+      try:
+        self.annotation_dictionary_count[chromosome][value] += 1
+      except Exception:
+        self.annotation_dictionary_count[chromosome][value] = 1
+
+    # Sort the whole annotation dict key list in descending order by contact values
+    self.annotation_dictionary_pvalue_order[chromosome] = sorted(self.annotation_dictionary_pvalue_order[chromosome], key = lambda x: x[2], reverse = True)
+
+
+
+    #print("annotation_dictionary_pvalue_order ##################################################################")
+    #for vec in self.annotation_dictionary_pvalue_order[chromosome]:
+    #  print("Key " + ", ".join([str(e) for e in vec[:-1]]) + " / Value = " + str(vec[-1]))
+
+    #print("/n annotation_dictionary_count ##################################################################")
+    #for key, value in self.annotation_dictionary_count[chromosome].items():
+    #  print("Key " + str(key) + " / Value = " + str(value))
+
+
+
+
+  def add_annotation_order(self, chromosome):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Append job to queue
+    self.process_queue.append((chromosome))
+
+  def run_annotation_order(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Execute job queue
+    pool = multiprocessing.Pool(self.ncpu)
+    pool.starmap(self.annotation_order, [arguments for arguments in self.process_queue])
     pool.close()
     pool.join()
 

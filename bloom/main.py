@@ -124,7 +124,12 @@ def main():
   ###############################################################################
 
   # Create contact map with input file
-  io_instance = IO(input_matrix, temporary_location, organism, cores, input_resolution = resolution, input_file_type = input_type, seed = seed)
+  if(not chromosome):
+    io_allowed_chromosomes = None
+  else:
+    io_allowed_chromosomes = [chromosome]
+  io_instance = IO(input_matrix, temporary_location, organism, cores, input_resolution = resolution, allowed_chromosomes = io_allowed_chromosomes,
+                   input_file_type = input_type, seed = seed)
   contact_map = io_instance.read()
   if(not chromosome):
     contact_map.update_valid_chromosome_list()
@@ -177,6 +182,7 @@ def main():
   sica_instance.main_existing_augmentation()
   sica_instance.main_calculate_distributions()
   sica_instance.main_diagonal_borderline()
+  sica_instance.main_annotation_order()
   sica_instance.main_star_contacts(flag_first = True)
   contact_map.calculate_all_statistics()
 
@@ -207,6 +213,7 @@ def main():
                        value_range = dpmm_value_range, random_range = dpmm_random_range, iteration_multiplier = dpmm_iteration_multiplier,
                        em_significant_threshold = dpmm_em_significant_threshold, em_signal_threshold = dpmm_em_signal_threshold, em_avoid_distance = dpmm_em_avoid_distance,
                        ur_square_size = dpmm_ur_square_size, ur_delete_size = dpmm_ur_delete_size, seed = seed)
+  dpmm_instance.main_em()
   dpmm_instance.main_diagonal_em()
   dpmm_instance.introduce_shapes()
   contact_map.calculate_all_statistics()

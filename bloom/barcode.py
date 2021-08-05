@@ -19,6 +19,7 @@ import os
 import gc
 import sys
 import lzma
+import random
 import codecs
 import traceback
 import subprocess
@@ -61,6 +62,10 @@ class Barcode():
     
       - return -- A return.
     """
+
+    # Seed
+    if(seed):
+      random.seed(seed)
 
     # Initialization
     self.ncpu = ncpu

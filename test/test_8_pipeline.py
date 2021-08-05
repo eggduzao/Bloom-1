@@ -194,7 +194,9 @@ class PipelineTest():
     elif(self.input_test_number == 2):
       input_file_name_bg = os.path.join(self.input_location, "test_matrix/test2", "MESC_25000_chr14_10Mtest.bg")
     elif(self.input_test_number == 3):
-      input_file_name_bg = os.path.join(self.input_location, "test_matrix/test3", "Mariano_Sim_3M.bg")
+      input_file_name_bg = os.path.join(self.input_location, "test_matrix/test3/wrong_matriano_matrix", "Mariano_Sim_3M.bg")
+    elif(self.input_test_number == 4):
+      input_file_name_bg = os.path.join(self.input_location, "test_matrix/test3", "Mariano_long100-500mod_56_3M.bg")
 
     # Output file
     output_initial_matrix_bg = os.path.join(self.output_location, "1_initial_matrix.bg")
@@ -219,6 +221,11 @@ class PipelineTest():
       contact_map = io.read()
       #contact_map.update_valid_chromosome_list()
       contact_map.valid_chromosome_list = ["chr14"] # Force to play only with chr14
+    elif(self.input_test_number == 4):    
+      io = IO(input_file_name_bg, self.temporary_location, "hg19", 4, input_resolution = 3000, input_file_type = InputFileType.SPARSE, seed = self.seed)
+      contact_map = io.read()
+      #contact_map.update_valid_chromosome_list()
+      contact_map.valid_chromosome_list = ["chr14"] # Force to play only with chr14
 
     # Write bedgraph and hic
     io.write(contact_map, output_initial_matrix_bg, InputFileType.SPARSE)
@@ -232,7 +239,10 @@ class PipelineTest():
       preprocess = Preprocess(4, contact_map, minimal_resolution = 10000, min_contig_removed_bins = 10, remove_threshold = 0, seed = self.seed)
       minimal_res_contact_map = preprocess.convert_to_minimal_resolution(recalculate_statistics = True)
     elif(self.input_test_number == 3): 
-      preprocess = Preprocess(4, contact_map, minimal_resolution = 3000, min_contig_removed_bins = 10, remove_threshold = 0, seed = self.seed)
+      preprocess = Preprocess(4, contact_map, minimal_resolution = 3000, min_contig_removed_bins = 5, remove_threshold = 0, seed = self.seed)
+      minimal_res_contact_map = preprocess.convert_to_minimal_resolution(recalculate_statistics = True)
+    elif(self.input_test_number == 4): 
+      preprocess = Preprocess(4, contact_map, minimal_resolution = 3000, min_contig_removed_bins = 5, remove_threshold = 0, seed = self.seed)
       minimal_res_contact_map = preprocess.convert_to_minimal_resolution(recalculate_statistics = True)
 
     # Write bedgraph and hic
@@ -245,6 +255,10 @@ class PipelineTest():
       io.write(minimal_res_contact_map, output_minres_matrix_bg, InputFileType.SPARSE)
       io.write(minimal_res_contact_map, output_minres_matrix_hc, InputFileType.HIC)
     elif(self.input_test_number == 3): 
+      io = IO(input_file_name_bg, self.temporary_location, "hg19", 4, input_resolution = 3000, input_file_type = InputFileType.SPARSE, seed = self.seed)
+      io.write(minimal_res_contact_map, output_minres_matrix_bg, InputFileType.SPARSE)
+      io.write(minimal_res_contact_map, output_minres_matrix_hc, InputFileType.HIC)
+    elif(self.input_test_number == 4): 
       io = IO(input_file_name_bg, self.temporary_location, "hg19", 4, input_resolution = 3000, input_file_type = InputFileType.SPARSE, seed = self.seed)
       io.write(minimal_res_contact_map, output_minres_matrix_bg, InputFileType.SPARSE)
       io.write(minimal_res_contact_map, output_minres_matrix_hc, InputFileType.HIC)
@@ -352,6 +366,10 @@ class PipelineTest():
       sica = Sica(4, contact_map, avoid_distance = 6000, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.99, 
                  bottom_bin_ext_range = [3,10], left_bin_ext_range = [3,10], right_bin_ext_range = [1,4], top_bin_ext_range = [1,4],
                  bonuscrosslb_range = [0.0, 0.05], bonuscross_range = [0.0, 0.05], bonuslb_range = [0.0, 0.05], seed = self.seed)
+    elif(self.input_test_number == 4):
+      sica = Sica(4, contact_map, avoid_distance = 6000, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.99, 
+                 bottom_bin_ext_range = [3,10], left_bin_ext_range = [3,10], right_bin_ext_range = [1,4], top_bin_ext_range = [1,4],
+                 bonuscrosslb_range = [0.0, 0.05], bonuscross_range = [0.0, 0.05], bonuslb_range = [0.0, 0.05], seed = self.seed)
 
     # Calculating distributions and pvalues
     sica.main_calculate_distributions()
@@ -367,6 +385,8 @@ class PipelineTest():
     elif(self.input_test_number == 2):
       self.write_coord_dict_as_full_matrix(".", "chr14", 1000, 10000, sica.annotation_dictionary, annotmat_output_file)
     #elif(self.input_test_number == 3):
+    #  self.write_coord_dict_as_full_matrix(".", "chr14", xxxx, xxxx, sica.annotation_dictionary, annotmat_output_file)
+    #elif(self.input_test_number == 4):
     #  self.write_coord_dict_as_full_matrix(".", "chr14", xxxx, xxxx, sica.annotation_dictionary, annotmat_output_file)
 
     # Termination
@@ -403,6 +423,7 @@ class PipelineTest():
 
     # Calculating diagonal borderline
     sica.main_diagonal_borderline()
+    sica.main_annotation_order()
 
     # Writing
     self.write_dict_of_dict("annotation_dictionary", sica.annotation_dictionary, annotdict_output_file)
@@ -412,6 +433,8 @@ class PipelineTest():
     elif(self.input_test_number == 2):
       self.write_coord_dict_as_full_matrix(".", "chr14", 1000, 10000, sica.annotation_dictionary, annotmat_output_file)
     #elif(self.input_test_number == 3):
+    #  self.write_coord_dict_as_full_matrix(".", "chr14", xxx, xxx, sica.annotation_dictionary, annotmat_output_file)
+    #elif(self.input_test_number == 4):
     #  self.write_coord_dict_as_full_matrix(".", "chr14", xxx, xxx, sica.annotation_dictionary, annotmat_output_file)
 
     # Termination
@@ -449,6 +472,8 @@ class PipelineTest():
       sica.main_star_contacts(flag_first = True)
     elif(self.input_test_number == 3):
       sica.main_star_contacts(flag_first = True)
+    elif(self.input_test_number == 4):
+      sica.main_star_contacts(flag_first = True)
 
     # Writing
     io.write(contact_map, output_star_matrix_bg, InputFileType.SPARSE)
@@ -466,6 +491,9 @@ class PipelineTest():
       self.write_coord_dict_as_full_matrix(".", "chr14", 1000, 10000, sica.annotation_dictionary, annotmat_output_file)
       self.write_coord_dict_as_full_matrix("0", "chr14", 1100, 10000, contact_map.matrix, matrix_output_file)
     #elif(self.input_test_number == 3):
+    #  self.write_coord_dict_as_full_matrix(".", "chr14", xxxx, xxxx, sica.annotation_dictionary, annotmat_output_file)
+    #  self.write_coord_dict_as_full_matrix("0", "chr14", xxxx, xxxx, contact_map.matrix, matrix_output_file)
+    #elif(self.input_test_number == 4):
     #  self.write_coord_dict_as_full_matrix(".", "chr14", xxxx, xxxx, sica.annotation_dictionary, annotmat_output_file)
     #  self.write_coord_dict_as_full_matrix("0", "chr14", xxxx, xxxx, contact_map.matrix, matrix_output_file)
 
@@ -504,9 +532,14 @@ class PipelineTest():
                   eppoch_resolution = 100000, eppoch_threshold = 30, seed = self.seed)
     elif(self.input_test_number == 3):
       goba = Goba(contact_map, sica, vertical_multiplier = [0.5, 1.0], ortogonal_multiplier = [0.25, 0.75], 
-                  filling_frequency = 0.75, banding_value_mult_range = [0.4, 0.6], banding_further_range = [0.90, 0.99], banding_frequency = 0.5,
+                  filling_frequency = 1.0, banding_value_mult_range = [0.4, 0.6], banding_further_range = [0.90, 0.99], banding_frequency = 0.5,
                   outing_value_mult_range = [0.3, 0.5], outing_further_range = [0.90, 0.99], outing_frequency = 0.34,
-                  eppoch_resolution = 100000, eppoch_threshold = 10, seed = self.seed)
+                  eppoch_resolution = 100000, eppoch_threshold = 5, seed = self.seed)
+    elif(self.input_test_number == 4):
+      goba = Goba(contact_map, sica, vertical_multiplier = [0.5, 1.0], ortogonal_multiplier = [0.25, 0.75], 
+                  filling_frequency = 1.0, banding_value_mult_range = [0.4, 0.6], banding_further_range = [0.90, 0.99], banding_frequency = 0.5,
+                  outing_value_mult_range = [0.3, 0.5], outing_further_range = [0.90, 0.99], outing_frequency = 0.34,
+                  eppoch_resolution = 100000, eppoch_threshold = 5, seed = self.seed)
 
     # Performing fill
     goba.main_fill()
@@ -575,6 +608,11 @@ class PipelineTest():
                   em_significant_threshold = 10, em_signal_threshold = 1.0, em_avoid_distance = 5, ur_square_size = 1000000,
                   ur_delete_size = 10000000, seed = self.seed)
     elif(self.input_test_number == 3):
+      dpmm = Dpmm(4, contact_map, sica, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
+                  half_length_bin_interval = [1, 4], value_range = [10e-5, 10e-4], random_range = [10e-6, 10e-5], iteration_multiplier = 1,
+                  em_significant_threshold = 10, em_signal_threshold = 1.0, em_avoid_distance = 5, ur_square_size = 1000000,
+                  ur_delete_size = 10000000, seed = self.seed)
+    elif(self.input_test_number == 4):
       dpmm = Dpmm(4, contact_map, sica, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
                   half_length_bin_interval = [1, 4], value_range = [10e-5, 10e-4], random_range = [10e-6, 10e-5], iteration_multiplier = 1,
                   em_significant_threshold = 10, em_signal_threshold = 1.0, em_avoid_distance = 5, ur_square_size = 1000000,
@@ -667,6 +705,8 @@ class PipelineTest():
     elif(self.input_test_number == 2):
       ifs.main_fix_matrix(multiplier = 1000, min_matrix_threshold = 0)
     elif(self.input_test_number == 3):
+      ifs.main_fix_matrix(multiplier = 1000, min_matrix_threshold = 0)
+    elif(self.input_test_number == 4):
       ifs.main_fix_matrix(multiplier = 1000, min_matrix_threshold = 0)
 
     # Writing

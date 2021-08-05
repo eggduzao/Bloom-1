@@ -16,6 +16,7 @@ Authors: Eduardo G. Gusmao.
 import os
 import gc
 import sys
+import random
 import codecs
 import traceback
 import subprocess
@@ -76,8 +77,8 @@ class IO():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, input_contact_map_file_name, temporary_location, organism, ncpu,
-               input_resolution = None, input_file_type = InputFileType.UNKNOWN, seed = None):
+  def __init__(self, input_contact_map_file_name, temporary_location, organism, ncpu, input_resolution = None,
+               input_file_type = InputFileType.UNKNOWN, allowed_chromosomes = None, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -89,6 +90,10 @@ class IO():
       - return -- A return.
     """
 
+    # Seed
+    if(seed):
+      random.seed(seed)
+
     # Main objects
     self.input_file_name = input_contact_map_file_name
     self.temporary_location = temporary_location
@@ -96,6 +101,7 @@ class IO():
     self.ncpu = ncpu
     self.input_resolution = input_resolution
     self.input_file_type = input_file_type
+    self.allowed_chromosomes = allowed_chromosomes
     self.seed = seed
 
     # Utilitary objects
@@ -286,6 +292,11 @@ class IO():
     # Iterating on chromosomes
     for chrom in self.chromosome_sizes.chromosome_sizes_list:
 
+      # Allowed chromosome check
+      if(self.allowed_chromosomes):
+        if(chrom not in self.allowed_chromosomes):
+          continue
+
       # Regions
       chrom_wo_chr = chrom.split("chr")[-1]
       start = "1"
@@ -338,6 +349,11 @@ class IO():
     # Iterating on chromosomes
     for chrom in self.chromosome_sizes.chromosome_sizes_list:
 
+      # Allowed chromosome check
+      if(self.allowed_chromosomes):
+        if(chrom not in self.allowed_chromosomes):
+          continue
+
       # Regions
       start = "1"
       end = '{:,}'.format(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
@@ -389,6 +405,11 @@ class IO():
     # Iterating on chromosomes
     for chrom in self.chromosome_sizes.chromosome_sizes_list:
 
+      # Allowed chromosome check
+      if(self.allowed_chromosomes):
+        if(chrom not in self.allowed_chromosomes):
+          continue
+
       # Regions
       start = "1"
       end = '{:,}'.format(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
@@ -436,6 +457,11 @@ class IO():
 
     # Iterating on chromosomes
     for chrom in self.chromosome_sizes.chromosome_sizes_list:
+
+      # Allowed chromosome check
+      if(self.allowed_chromosomes):
+        if(chrom not in self.allowed_chromosomes):
+          continue
 
       # Adding chromosome dump job
       self.bedgraph_handler.dump(chrom, self.input_file_name, contact_map)

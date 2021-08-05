@@ -15,6 +15,7 @@ Authors: Eduardo G. Gusmao.
 import os
 import gc
 import sys
+import random
 import codecs
 import optparse
 import traceback
@@ -60,6 +61,10 @@ class Preprocess():
     
       - return -- A return.
     """
+
+    # Seed
+    if(seed):
+      random.seed(seed)
 
     # Main objects
     self.input_contact_map = input_contact_map
