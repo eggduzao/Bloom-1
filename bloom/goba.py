@@ -146,11 +146,13 @@ class Goba():
     counter = 1
     for annotation in ["T4", "T5"]:
       self.eppoch_threshold_dict[chromosome][annotation] = int(round(self.eppoch_threshold * (2**counter)))
+      counter += 1
 
     # Set values at T2 and T1
     counter = 1
     for annotation in ["T2", "T1"]:
       self.eppoch_threshold_dict[chromosome][annotation] = int(round(self.eppoch_threshold / (2**counter)))
+      counter += 1
 
 
   #############################################################################
@@ -253,6 +255,7 @@ class Goba():
       # Initialization
       key = tuple(keyv[:-1])
       value = keyv[-1]
+      log_value = np.log(value + 1)
 
       # Bin row and col
       brow = self.contact_map.bp_to_bin(key[0])
@@ -261,6 +264,8 @@ class Goba():
       # Check if contact is a peak star
       try:
         ann = self.sica_instance.annotation_dictionary[chromosome][key]
+        if(ann in ["T2", "T1"] and log_value > 0):
+          self.contact_map.set(chromosome, key[0], key[1], log_value)
         allowed_fill_dict[ann]
         frequency_flag_curr_count += 1
       except Exception:
@@ -274,7 +279,8 @@ class Goba():
         except Exception:
           pass
         try:
-          self.contact_map.set(chromosome, key[0], key[1], np.log(value))
+          if(log_value > 0):
+            self.contact_map.set(chromosome, key[0], key[1], log_value)
         except Exception:
           pass
         continue
@@ -287,7 +293,8 @@ class Goba():
       #  except Exception:
       #    pass
       #  try:
-      #    self.contact_map.set(chromosome, key[0], key[1], np.log(value))
+      #    if(log_value > 0):
+      #      self.contact_map.set(chromosome, key[0], key[1], log_value)
       #  except Exception:
       #    pass
       #  continue
@@ -300,7 +307,8 @@ class Goba():
         except Exception:
           pass
         try:
-          self.contact_map.set(chromosome, key[0], key[1], np.log(value))
+          if(log_value > 0):
+            self.contact_map.set(chromosome, key[0], key[1], log_value)
         except Exception:
           pass
         continue
@@ -340,7 +348,8 @@ class Goba():
 
     # Adding elements
     for element in elements_to_add:
-      self.contact_map.add(element[0], element[1], element[2], element[3])
+      if(element[3] > 0):
+        self.contact_map.add(element[0], element[1], element[2], element[3])
 
   def add_fill(self, chromosome):
     """Returns TODO.
@@ -461,7 +470,9 @@ class Goba():
         except Exception:
           pass
         try:
-          self.contact_map.set(chromosome, key[0], key[1], np.log(value))
+          log_value = np.log(value + 1)
+          if(log_value > 0):
+            self.contact_map.set(chromosome, key[0], key[1], log_value)
         except Exception:
           pass
         continue
@@ -474,7 +485,9 @@ class Goba():
       #  except Exception:
       #    pass
       #  try:
-      #    self.contact_map.set(chromosome, key[0], key[1], np.log(value))
+      #    log_value = np.log(value + 1)
+      #    if(log_value > 0):
+      #      self.contact_map.set(chromosome, key[0], key[1], log_value)
       #  except Exception:
       #    pass
       #  continue
@@ -509,7 +522,8 @@ class Goba():
       
     # Adding elements
     for element in elements_to_add:
-      self.contact_map.add(element[0], element[1], element[2], element[3])
+      if(element[3] > 0):
+        self.contact_map.add(element[0], element[1], element[2], element[3])
 
   def add_banding(self, chromosome):
     """Returns TODO.
@@ -630,7 +644,9 @@ class Goba():
         except Exception:
           pass
         try:
-          self.contact_map.set(chromosome, key[0], key[1], np.log(value))
+          log_value = np.log(value + 1)
+          if(log_value > 0):
+            self.contact_map.set(chromosome, key[0], key[1], log_value)
         except Exception:
           pass
         continue
@@ -643,7 +659,9 @@ class Goba():
       #  except Exception:
       #    pass
       #  try:
-      #    self.contact_map.set(chromosome, key[0], key[1], np.log(value))
+      #    log_value = np.log(value + 1)
+      #    if(log_value > 0):
+      #      self.contact_map.set(chromosome, key[0], key[1], log_value)
       #  except Exception:
       #    pass
       #  continue
@@ -678,7 +696,8 @@ class Goba():
 
     # Adding elements
     for element in elements_to_add:
-      self.contact_map.add(element[0], element[1], element[2], element[3])
+      if(element[3] > 0):
+        self.contact_map.add(element[0], element[1], element[2], element[3])
 
   def add_outing(self, chromosome):
     """Returns TODO.

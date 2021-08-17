@@ -235,10 +235,14 @@ class ArgumentParser():
                            "setup and organism, it is advised to be between 10000 to 150000 bps.")
     self.add_option("a", "avoid_distance", "int", "INT", 50000, avoid_distance_help)
 
+    fitting_method_help = ("Method in which SICA distributions will be fit. It can be: 'pvalue' or "
+                           "'percentile'. This flag will affect the hidden variable sica_pvalue_threshold. "
+                           "When 'percentile' is selected, the <sica_pvalue_threshold> * 100 is considered.")
+    self.add_option("f", "fitting_method", "string", "STRING", "pvalue", fitting_method_help)
+
     seed_help = ("Select the same pseudo-random number generator seed to be able to"
                  "replicate an experiment (same output is guaranteed for the same seed).")
     self.add_option("s", "seed", "int", "INT", 123, seed_help)
-
 
     # Hidden Options
 
@@ -303,7 +307,7 @@ class ArgumentParser():
     self.add_option("T", "goba_eppoch_resolution", "int", "INT", 100000, goba_eppoch_resolution_help)
 
     goba_eppoch_threshold_help = None
-    self.add_option("U", "goba_eppoch_threshold", "int", "INT", 10, goba_eppoch_threshold_help)
+    self.add_option("U", "goba_eppoch_threshold", "int", "INT", 5, goba_eppoch_threshold_help)
 
     dpmm_random_degrade_range_help = None
     self.add_option("V", "dpmm_random_degrade_range", "string", "STRING", "0.01,0.02", dpmm_random_degrade_range_help)
@@ -327,22 +331,22 @@ class ArgumentParser():
     self.add_option("d", "dpmm_em_significant_threshold", "int", "INT", 10, dpmm_em_significant_threshold_help)
 
     dpmm_em_signal_threshold_help = None
-    self.add_option("f", "dpmm_em_signal_threshold", "float", "FLOAT", 1.0, dpmm_em_signal_threshold_help)
+    self.add_option("g", "dpmm_em_signal_threshold", "float", "FLOAT", 1.0, dpmm_em_signal_threshold_help)
 
     dpmm_em_avoid_distance_help = None
-    self.add_option("g", "dpmm_em_avoid_distance", "float", "FLOAT", 5, dpmm_em_avoid_distance_help)
+    self.add_option("j", "dpmm_em_avoid_distance", "int", "INT", 5, dpmm_em_avoid_distance_help)
 
     dpmm_ur_square_size_help = None
-    self.add_option("j", "dpmm_ur_square_size", "int", "INT", 1000000, dpmm_ur_square_size_help)
+    self.add_option("k", "dpmm_ur_square_size", "int", "INT", 1000000, dpmm_ur_square_size_help)
 
     dpmm_ur_delete_size_help = None
-    self.add_option("k", "dpmm_ur_delete_size", "int", "INT", 10000000, dpmm_ur_delete_size_help)
+    self.add_option("l", "dpmm_ur_delete_size", "int", "INT", 10000000, dpmm_ur_delete_size_help)
 
     ifs_multiplier_help = None
-    self.add_option("l", "ifs_multiplier", "int", "INT", 1000, ifs_multiplier_help)
+    self.add_option("m", "ifs_multiplier", "int", "INT", 1000, ifs_multiplier_help)
 
     ifs_min_matrix_threshold_help = None
-    self.add_option("m", "ifs_min_matrix_threshold", "int", "INT", 0, ifs_min_matrix_threshold_help)
+    self.add_option("n", "ifs_min_matrix_threshold", "int", "INT", 0, ifs_min_matrix_threshold_help)
 
 
     """

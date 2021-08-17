@@ -108,6 +108,22 @@ class PipelineTest():
       output_file.write("None\n")
     output_file.write("\n")
 
+  def write_diag_dict(self, name, dict_to_write, output_file):
+    """Write dict_to_write to output_file
+    """
+    output_file.write("### " + name + "\n")
+    if(dict_to_write):
+      keys = sorted(dict_to_write.keys())
+      if(keys):
+        for k in keys:
+          for i in range(0, len(dict_to_write[k])):
+            output_file.write(str(i) + "\t" + str(dict_to_write[k][i]) + "\n")
+      else:
+        output_file.write("None\n")
+    else:
+      output_file.write("None\n")
+    output_file.write("\n")
+
   def write_dict_of_dict(self, name, dict_to_write, output_file):
     """Write dict_to_write to output_file
     """
@@ -169,6 +185,27 @@ class PipelineTest():
       matrix[bcol][brow] = str(value)
     for i in range(0, len(matrix)):
       output_file.write("\t".join(matrix[i]) + "\n")
+
+  def write_diag_sum_ann_dict(self, chrom, resolution, avoid_dist, contact_matrix, colsum_dict, annotation_matrix, output_file):
+    """Write dict_to_write to output_file
+    """
+    for i in range(0, len(colsum_dict[chrom])):
+      row = i * resolution
+      summ = colsum_dict[chrom][i]
+      vec = [summ]
+      k = (row, row)
+      try:
+        vec.append(contact_matrix.matrix[chrom][k])
+      except Exception:
+        vec.append("Z")
+      for col in range(row, row + avoid_dist, resolution):
+        try:
+          key = (row, col)
+          ann = annotation_matrix[chrom][key]
+          vec.append(ann)
+        except Exception:
+          vec.append(".")
+      output_file.write("\t".join([str(e) for e in vec]) + "\n")
 
 
 
@@ -233,16 +270,16 @@ class PipelineTest():
 
     # Convert to minimal resolution
     if(self.input_test_number == 1):
-      preprocess = Preprocess(4, contact_map, minimal_resolution = 50000, min_contig_removed_bins = 2, remove_threshold = 0, seed = self.seed)
+      preprocess = Preprocess(4, contact_map, avoid_distance = 100000, minimal_resolution = 50000, min_contig_removed_bins = 2, remove_threshold = 0, seed = self.seed)
       minimal_res_contact_map = preprocess.convert_to_minimal_resolution(recalculate_statistics = True)
     elif(self.input_test_number == 2): 
-      preprocess = Preprocess(4, contact_map, minimal_resolution = 10000, min_contig_removed_bins = 10, remove_threshold = 0, seed = self.seed)
+      preprocess = Preprocess(4, contact_map, avoid_distance = 100000, minimal_resolution = 10000, min_contig_removed_bins = 10, remove_threshold = 0, seed = self.seed)
       minimal_res_contact_map = preprocess.convert_to_minimal_resolution(recalculate_statistics = True)
     elif(self.input_test_number == 3): 
-      preprocess = Preprocess(4, contact_map, minimal_resolution = 3000, min_contig_removed_bins = 5, remove_threshold = 0, seed = self.seed)
+      preprocess = Preprocess(4, contact_map, avoid_distance = 6000, minimal_resolution = 3000, min_contig_removed_bins = 5, remove_threshold = 0, seed = self.seed)
       minimal_res_contact_map = preprocess.convert_to_minimal_resolution(recalculate_statistics = True)
     elif(self.input_test_number == 4): 
-      preprocess = Preprocess(4, contact_map, minimal_resolution = 3000, min_contig_removed_bins = 5, remove_threshold = 0, seed = self.seed)
+      preprocess = Preprocess(4, contact_map, avoid_distance = 6000, minimal_resolution = 3000, min_contig_removed_bins = 5, remove_threshold = 0, seed = self.seed)
       minimal_res_contact_map = preprocess.convert_to_minimal_resolution(recalculate_statistics = True)
 
     # Write bedgraph and hic
@@ -316,9 +353,12 @@ class PipelineTest():
     output_voidrem_matrix_hc = os.path.join(self.output_location, "4_PRE_voidrem_matrix.hic")
     output_voidrem_file_name = os.path.join(self.output_location, "4_PRE_voidrem_file_name.txt")
     output_voidrem_file = open(output_voidrem_file_name, "w")
+    output_colsumdict_file_name = os.path.join(self.output_location, "4_PRE_colsum_file_name.txt")
+    output_colsumdict_file = open(output_colsumdict_file_name, "w")
 
     # Removing void spaces
     preprocess.main_void_statistics(contact_map)
+    preprocess.main_diagonal_homogeneic(contact_map)
 
     # Write bedgraph and hic
     io.write(contact_map, output_voidrem_matrix_bg, InputFileType.SPARSE)
@@ -326,9 +366,11 @@ class PipelineTest():
 
     # Write removed dictionary
     self.write_dict_of_dict("output_voidrem_file", preprocess.removed_dict, output_voidrem_file)
+    self.write_diag_dict("colsum_dict", preprocess.colsum_dict, output_colsumdict_file)
 
     # Termination
     output_voidrem_file.close()
+    output_colsumdict_file.close()
     return io, preprocess, contact_map
 
 
@@ -355,23 +397,24 @@ class PipelineTest():
 
     # Create SICA object
     if(self.input_test_number == 1):
-      sica = Sica(4, contact_map, avoid_distance = 100000, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.95, 
+      sica = Sica(4, contact_map, avoid_distance = preprocess.avoid_distance, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.95, fitting_method = "pvalue",
                  bottom_bin_ext_range = [2,4], left_bin_ext_range = [2,4], right_bin_ext_range = [0,0], top_bin_ext_range = [0,0],
                  bonuscrosslb_range = [0.25, 0.3], bonuscross_range = [0.1, 0.25], bonuslb_range = [0.1, 0.25], seed = self.seed)
     elif(self.input_test_number == 2):
-      sica = Sica(4, contact_map, avoid_distance = 100000, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.95, 
+      sica = Sica(4, contact_map, avoid_distance = preprocess.avoid_distance, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.95, fitting_method = "pvalue",
                  bottom_bin_ext_range = [2,4], left_bin_ext_range = [2,4], right_bin_ext_range = [0,0], top_bin_ext_range = [0,0],
                  bonuscrosslb_range = [0.25, 0.3], bonuscross_range = [0.1, 0.25], bonuslb_range = [0.1, 0.25], seed = self.seed)
     elif(self.input_test_number == 3):
-      sica = Sica(4, contact_map, avoid_distance = 6000, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.99, 
+      sica = Sica(4, contact_map, avoid_distance = preprocess.avoid_distance, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.99, fitting_method = "percentile",
                  bottom_bin_ext_range = [3,10], left_bin_ext_range = [3,10], right_bin_ext_range = [1,4], top_bin_ext_range = [1,4],
                  bonuscrosslb_range = [0.0, 0.05], bonuscross_range = [0.0, 0.05], bonuslb_range = [0.0, 0.05], seed = self.seed)
     elif(self.input_test_number == 4):
-      sica = Sica(4, contact_map, avoid_distance = 6000, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.99, 
+      sica = Sica(4, contact_map, avoid_distance = preprocess.avoid_distance, removed_dict = preprocess.removed_dict, pvalue_threshold = 0.99, fitting_method = "pvalue",
                  bottom_bin_ext_range = [3,10], left_bin_ext_range = [3,10], right_bin_ext_range = [1,4], top_bin_ext_range = [1,4],
                  bonuscrosslb_range = [0.0, 0.05], bonuscross_range = [0.0, 0.05], bonuslb_range = [0.0, 0.05], seed = self.seed)
 
     # Calculating distributions and pvalues
+    sica.main_existing_augmentation()
     sica.main_calculate_distributions()
 
     # Writing
@@ -457,6 +500,7 @@ class PipelineTest():
     #sigvalue_output_file_name = os.path.join(self.output_location, "7_5_SICA_sigvalue.txt")
     annotmat_output_file_name = os.path.join(self.output_location, "7_5_SICA_annotdict_matrix.tsv")
     matrix_output_file_name = os.path.join(self.output_location, "7_6_SICA_contact_matrix.tsv")
+    output_colsumdict_file_name = os.path.join(self.output_location, "7_7_SICA_colsum_ann.txt")
     annotdict_output_file = open(annotdict_output_file_name, "w")
     distdict_output_file = open(distdict_output_file_name, "w")
     distdiag_output_file = open(distdiag_output_file_name, "w")
@@ -464,6 +508,7 @@ class PipelineTest():
     #sigvalue_output_file = open(sigvalue_output_file_name, "w")
     annotmat_output_file = open(annotmat_output_file_name, "w")
     matrix_output_file = open(matrix_output_file_name, "w")
+    output_colsumdict_file = open(output_colsumdict_file_name, "w")
 
     # Star significant interactions
     if(self.input_test_number == 1):
@@ -483,6 +528,7 @@ class PipelineTest():
     self.write_dict_of_dict("distdiag_output_file", sica.dist_to_diag_dictionary, distdiag_output_file)
     self.write_dict_of_dict("pvalue_output_file", sica.pvalue_dictionary, pvalue_output_file)
     #self.write_dict("sigvalue_output_file", sica.significant_values_dictionary, sigvalue_output_file)
+    self.write_diag_sum_ann_dict("chr14", contact_map.resolution, 250000, contact_map, preprocess.colsum_dict, sica.annotation_dictionary, output_colsumdict_file)
 
     if(self.input_test_number == 1):
       self.write_coord_dict_as_full_matrix(".", "chrX", 100, 50000, sica.annotation_dictionary, annotmat_output_file)
@@ -505,6 +551,7 @@ class PipelineTest():
     #sigvalue_output_file.close()
     annotmat_output_file.close()
     matrix_output_file.close()
+    output_colsumdict_file.close()
     return io, preprocess, sica, contact_map
 
 

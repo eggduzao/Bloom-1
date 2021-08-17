@@ -80,6 +80,7 @@ def main():
   output_type = opts.output_type
   output_resolution = opts.output_resolution
   avoid_distance = opts.avoid_distance
+  fitting_method = opts.fitting_method
   seed = opts.seed
 
   # Hidden Options
@@ -158,7 +159,7 @@ def main():
   ###############################################################################
 
   # Preprocess
-  preprocess_instance = Preprocess(cores, contact_map, minimal_resolution = output_resolution,
+  preprocess_instance = Preprocess(cores, contact_map, avoid_distance = avoid_distance, minimal_resolution = output_resolution,
                                    min_contig_removed_bins = pre_min_contig_removed_bins, remove_threshold = pre_remove_threshold, seed = seed)
   if(output_resolution < resolution):
     contact_map = preprocess_instance.convert_to_minimal_resolution(recalculate_statistics = True)
@@ -168,6 +169,7 @@ def main():
   preprocess_instance.check_sparsity()
   preprocess_instance.main_remove_blacklist(contact_map)
   preprocess_instance.main_void_statistics(contact_map)
+  preprocess_instance.main_diagonal_homogeneic(contact_map)
   contact_map.calculate_all_statistics()
 
 
@@ -176,7 +178,7 @@ def main():
   ###############################################################################
 
   # SICA
-  sica_instance = Sica(cores, contact_map, avoid_distance, removed_dict = preprocess_instance.removed_dict, pvalue_threshold = sica_pvalue_threshold,
+  sica_instance = Sica(cores, contact_map, avoid_distance, removed_dict = preprocess_instance.removed_dict, pvalue_threshold = sica_pvalue_threshold, fitting_method = fitting_method,
                        bottom_bin_ext_range = sica_bottom_bin_ext_range, left_bin_ext_range = sica_left_bin_ext_range, right_bin_ext_range = sica_right_bin_ext_range, top_bin_ext_range = sica_top_bin_ext_range,
                        bonuscrosslb_range = sica_bonuscrosslb_range, bonuscross_range = sica_bonuscross_range, bonuslb_range = sica_bonuslb_range, seed = seed)
   sica_instance.main_existing_augmentation()
@@ -214,7 +216,7 @@ def main():
                        em_significant_threshold = dpmm_em_significant_threshold, em_signal_threshold = dpmm_em_signal_threshold, em_avoid_distance = dpmm_em_avoid_distance,
                        ur_square_size = dpmm_ur_square_size, ur_delete_size = dpmm_ur_delete_size, seed = seed)
   dpmm_instance.main_em()
-  dpmm_instance.main_diagonal_em()
+  #dpmm_instance.main_diagonal_em()
   dpmm_instance.introduce_shapes()
   contact_map.calculate_all_statistics()
 
@@ -240,6 +242,5 @@ def main():
   # Write final matrix and loop list
   # io_instance.write(contact_map, output_matrix, output_format = output_type)
   # io_instance.write_loop_list(loop_list, output_contacts)
-
 
 

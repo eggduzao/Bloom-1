@@ -172,7 +172,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, ncpu, contact_map, avoid_distance, removed_dict = None, pvalue_threshold = 0.95,
+  def __init__(self, ncpu, contact_map, avoid_distance, removed_dict = None, pvalue_threshold = 0.95, fitting_method = "pvalue",
                bottom_bin_ext_range = [3,10], left_bin_ext_range = [3,10], right_bin_ext_range = [1,4], top_bin_ext_range = [1,4],
                bonuscrosslb_range = [0.25, 0.3], bonuscross_range = [0.1, 0.25], bonuslb_range = [0.1, 0.25], seed = None):
     """Returns TODO.
@@ -194,6 +194,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
     self.contact_map = contact_map
     self.avoid_distance = avoid_distance
     self.pvalue_threshold = pvalue_threshold
+    self.fitting_method = fitting_method
     self.removed_dict = removed_dict
     self.seed = seed
 
@@ -308,12 +309,13 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
           pass
 
         # Calculating additional value
-        newvalue = value + (value * np.log((row_diag_count + col_diag_count)/2))
+        newvalue = value + (value * np.log(1 + (row_diag_count + col_diag_count)/2))
         elements_to_add.append((chromosome, key_row_bp, key_col_bp, newvalue))
 
     # Adding elements
     for element in elements_to_add:
-      self.contact_map.set(element[0], element[1], element[2], element[3])
+      if(element[3] > 0):
+        self.contact_map.set(element[0], element[1], element[2], element[3])
       
   def add_existing_augmentation(self, chromosome):
     """Returns TODO.
@@ -404,8 +406,8 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
       for skey, svalue in dist_dict.items():
 
         # Add p-value calculation job to queue
-        #self.add_calculate_pvalues(chromosome, svalue)
-        self.calculate_pvalues(chromosome, svalue)
+        #self.add_calculate_pvalues(chromosome, svalue, mode_of_fit = self.fitting_method)
+        self.calculate_pvalues(chromosome, svalue, mode_of_fit = self.fitting_method)
 
     # Run p-value calculation jobs
     #self.run_calculate_pvalues()
@@ -506,7 +508,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
     self.process_queue = []
     gc.collect()
 
-  def best_fit_distribution(self, data, bins = 100):
+  def best_fit_distribution(self, data, bins = 100, mode_of_fit = "pvalue", outlier_std_multiplier = 5):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -518,53 +520,76 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
       - return -- A return.
     """
 
-    # Histogram from original data
-    y, x = np.histogram(data, bins=bins, density=True)
-    x = (x + np.roll(x, -1))[:-1] / 2.0
-
     # Best parameters initialization
-    best_distribution = st.norm
+    best_distribution = st.norm.name
     best_params = (0.0, 1.0)
     best_sse = np.inf
-    best_pvalue = 0.9
+    best_pvalue = 2.58
 
-    # Estimate distribution parameters from data
-    for distribution in self.distribution_list:
+    # Removing outliers
+    if(outlier_std_multiplier > 0):
+      data_to_fit = list(AuxiliaryFunctions.remove_outliers(np.array(data), std_multiplier = outlier_std_multiplier))
 
-      # Try to fit the distribution
-      try:
+    # Best value at p-value
+    if(mode_of_fit == "pvalue"):
 
-        # Ignore warnings from data that can't be fit
-        with warnings.catch_warnings():
-          warnings.filterwarnings('ignore')
+      # Histogram from original data_to_fit
+      y, x = np.histogram(data_to_fit, bins=bins, density=True)
+      x = (x + np.roll(x, -1))[:-1] / 2.0
 
-          # Fit distribution to data
-          params = distribution.fit(data)
+      # Estimate distribution parameters from data_to_fit
+      for distribution in self.distribution_list:
 
-          # Separate parts of parameters
-          arg = params[:-2]
-          loc = params[-2]
-          scale = params[-1]
+        # Try to fit the distribution
+        try:
 
-          # Calculate fitted PDF, error with fit in distribution and value at pvalue_threshold
-          pdf = distribution.pdf(x, loc=loc, scale=scale, *arg)
-          sse = np.sum(np.power(y - pdf, 2.0))
-          value_at_pvalue = distribution.ppf(self.pvalue_threshold, *arg, loc=loc, scale=scale) if arg else distribution.ppf(self.pvalue_threshold, loc=loc, scale=scale)
+          # Ignore warnings from data_to_fit that can't be fit
+          with warnings.catch_warnings():
+            warnings.filterwarnings('ignore')
 
-          # Update best distribution
-          if(best_sse > sse > 0):
-            best_distribution = distribution
-            best_params = params
-            best_sse = sse
-            best_pvalue = value_at_pvalue
+            # Fit distribution to data_to_fit
+            params = distribution.fit(data_to_fit)
 
-      except Exception as e:
-        # PASS - TODO WARNING - IF NO DIST CAN BE FIT, SEND ERROR
-        pass
+            # Separate parts of parameters
+            arg = params[:-2]
+            loc = params[-2]
+            scale = params[-1]
 
-    return best_distribution.name, best_params, best_pvalue
+            # Calculate fitted PDF, error with fit in distribution and value at pvalue_threshold
+            pdf = distribution.pdf(x, loc=loc, scale=scale, *arg)
+            sse = np.sum(np.power(y - pdf, 2.0))
+            value_at_pvalue = distribution.ppf(self.pvalue_threshold, *arg, loc=loc, scale=scale) if arg else distribution.ppf(self.pvalue_threshold, loc=loc, scale=scale)
 
-  def calculate_pvalues(self, chromosome, sica_dist):
+            # Update best distribution
+            if(best_sse > sse > 0):
+              best_distribution = distribution
+              best_params = params
+              best_sse = sse
+              best_pvalue = value_at_pvalue
+
+        except Exception as e:
+          # PASS - TODO WARNING - IF NO DIST CAN BE FIT, SEND ERROR
+          pass
+
+      # Naming
+      best_distribution = best_distribution.name
+
+    # Best value at percentile
+    if(mode_of_fit == "percentile"):
+
+      # Evaluate value at percentile
+      percentile = min(max(100 * self.pvalue_threshold, 0), 100)
+      numpy_data = np.array(data_to_fit)
+      best_pvalue = np.percentile(numpy_data, percentile, interpolation="linear")
+
+      # Naming
+      best_distribution = "percentile"
+      best_params = percentile
+
+    # Return objects
+    return best_distribution, best_params, best_pvalue
+
+  def calculate_pvalues(self, chromosome, sica_dist, mode_of_fit = "pvalue"):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -580,6 +605,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
     minimum_data_size = 30
     histogram_maximum_bins = 100
     histogram_below_factor = 0.2
+    outlier_std_multiplier = 5
 
     # Calculating best p-value given the current distribution
     try:
@@ -590,9 +616,11 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
     #best_distribution, best_params, best_pvalue = self.best_fit_distribution(data, bins = curr_bins)
     #self.pvalue_dictionary[chromosome][sica_dist] = [best_distribution, best_params, best_pvalue]
 
+    # Get the best fit distribution given mode of fitting
     if(len(data) > minimum_data_size):
       curr_bins = min(int(len(data) * histogram_below_factor), histogram_maximum_bins)
-      best_distribution, best_params, best_pvalue = self.best_fit_distribution(data, bins = curr_bins)
+      best_distribution, best_params, best_pvalue = self.best_fit_distribution(data, bins = curr_bins, mode_of_fit = mode_of_fit, 
+                                                                               outlier_std_multiplier = outlier_std_multiplier)
       self.pvalue_dictionary[chromosome][sica_dist] = [best_distribution, best_params, best_pvalue]
     else:
       best_distribution = None
@@ -616,7 +644,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
         if(value >= best_pvalue):
           self.annotation_dictionary[chromosome][key] = self.annotation_dictionary[chromosome][key].upper()
 
-  def add_calculate_pvalues(self, chromosome, sica_dist):
+  def add_calculate_pvalues(self, chromosome, sica_dist, mode_of_fit = "pvalue"):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -629,7 +657,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
     """
 
     # Append job to queue
-    self.process_queue.append((chromosome, sica_dist))
+    self.process_queue.append((chromosome, sica_dist, mode_of_fit))
 
   def run_calculate_pvalues(self):
     """Returns TODO.
@@ -776,7 +804,8 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
 
     # Adding elements
     for element in elements_to_add:
-      self.contact_map.set(element[0], element[1], element[2], element[3])
+      if(element[3] > 0):
+        self.contact_map.set(element[0], element[1], element[2], element[3])
 
   """
   def diagonal_borderline(self, chromosome, dist_dict): # Linear version
@@ -865,7 +894,8 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
 
     # Adding elements
     for element in elements_to_add:
-      self.contact_map.add(element[0], element[1], element[2], element[3])
+      if(element[3] > 0):
+        self.contact_map.add(element[0], element[1], element[2], element[3])
   """
 
   def add_diagonal_borderline(self, chromosome, dist_dict):
@@ -1067,7 +1097,8 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
 
     # Adding elements
     for element in elements_to_add:
-      self.contact_map.add(element[0], element[1], element[2], element[3])
+      if(element[3] > 0):
+        self.contact_map.add(element[0], element[1], element[2], element[3])
 
   def simple_star(self, chromosome, key, value, elements_to_add, flag_first = True):
     """Returns TODO.

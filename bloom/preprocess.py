@@ -50,7 +50,7 @@ class Preprocess():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, ncpu, input_contact_map, minimal_resolution = 1000, min_contig_removed_bins = 5, remove_threshold = 1, seed = None):
+  def __init__(self, ncpu, input_contact_map, avoid_distance, minimal_resolution = 1000, min_contig_removed_bins = 5, remove_threshold = 1, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -68,6 +68,7 @@ class Preprocess():
 
     # Main objects
     self.input_contact_map = input_contact_map
+    self.avoid_distance = avoid_distance
     self.minimal_resolution = minimal_resolution
     self.min_contig_removed_bins = min_contig_removed_bins
     self.remove_threshold = remove_threshold
@@ -704,6 +705,125 @@ class Preprocess():
     self.process_queue = []
     gc.collect()
 
+  #############################################################################
+  # Diagonal homogeneic
+  #############################################################################
+
+  def main_diagonal_homogeneic(self, contact_map):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Get valid chromosome list
+    valid_chromosome_list = contact_map.valid_chromosome_list
+
+    # Iterating on valid chromosomes
+    for chromosome in valid_chromosome_list:
+
+      # Add remove_from_map job to the queue
+      self.diagonal_homogeneic(chromosome, contact_map)
+      # self.add_diagonal_homogeneic(chromosome, contact_map)
+
+    # Run remove_from_map
+    # self.run_diagonal_homogeneic()
+
+  def diagonal_homogeneic(self, chromosome, contact_map):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Vector of elements to add
+    elements_to_add = []
+
+    # Iterate on diagonal
+    for row_bin in range(0, len(self.colsum_dict[chromosome])):
+
+      # Initialize homogeneity
+      row_bp = contact_map.bin_to_bp(row_bin)
+      homogeneity = 2 # contact_map.bp_to_bin(self.avoid_distance)
+
+      # Verify if row is removed
+      #try:
+      #  if(self.removed_dict[chromosome][row_bin]):
+      #    continue
+      #except Exception:
+      #  pass
+
+      # Verify if summation exists
+      try:
+        summ = self.colsum_dict[chromosome][row_bin]
+      except Exception:
+        summ = 0
+
+      # Iterate on columns
+      for col_bp in range(row_bp, row_bp + self.avoid_distance, contact_map.resolution):
+
+        # Binary columns
+        col_bin = contact_map.bp_to_bin(col_bp)
+
+        # Heterogenic value
+        new_value = summ ** (1 / homogeneity)
+
+        # Binary columns
+        elements_to_add.append([chromosome, row_bp, col_bp, new_value])
+        homogeneity += 1
+
+    # Adding elements
+    for element in elements_to_add:
+      if(element[3] > 0):
+        contact_map.add(element[0], element[1], element[2], element[3])
+
+  def add_diagonal_homogeneic(self, chromosome, contact_map):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Append job to queue
+    self.process_queue.append((chromosome, contact_map))
+
+  def run_diagonal_homogeneic(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    
+    # Execute job queue
+    pool = multiprocessing.Pool(self.ncpu)
+    pool.starmap(self.diagonal_homogeneic, [arguments for arguments in self.process_queue])
+    pool.close()
+    pool.join()
+
+    # Clean queue
+    pool = None
+    self.process_queue = []
+    gc.collect()
 
   #############################################################################
   # OLD

@@ -27,7 +27,7 @@ import multiprocessing
 # Internal
 
 # External
-
+import numpy as np
 
 ###################################################################################################
 # Configuration File Handling
@@ -650,4 +650,18 @@ class AuxiliaryFunctions:
       for nlines, l in enumerate(f):
         pass
     return nlines + 1
+
+  @staticmethod
+  def remove_outliers(numpy_array, std_multiplier = 3):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+    return numpy_array[abs(numpy_array - np.mean(numpy_array)) < std_multiplier * np.std(numpy_array)]
 

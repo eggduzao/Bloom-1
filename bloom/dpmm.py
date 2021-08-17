@@ -84,7 +84,7 @@ class Dpmm():
     # E-M objects
     self.em_significant_threshold = em_significant_threshold
     self.em_signal_threshold = em_signal_threshold
-    self.em_avoid_distance = em_avoid_distance * self.contact_map.resolution
+    self.em_avoid_distance = int(em_avoid_distance * self.contact_map.resolution)
     self.ur_square_size = ur_square_size
     self.ur_delete_size = ur_delete_size
     self.em_dictionary = dict() # per chromosome / per regular key -> average of upper-right square
@@ -151,6 +151,9 @@ class Dpmm():
       - return -- A return.
     """
 
+    # Allowed range
+    allowed_dict = ["A", "T5"]
+
     # Iterating on matrix
     for key, value in self.sica_instance.annotation_dictionary[chromosome].items():
 
@@ -159,7 +162,7 @@ class Dpmm():
       col_bp = key[1]
 
       # Check if diagonal and significant
-      if(row_bp == col_bp and value == "A"):
+      if(value in allowed_dict):
 
         # Initialization of parameters
         total_significant = 0
@@ -182,7 +185,9 @@ class Dpmm():
             # Try to fetch contact value to summation
             try:
               contact_value = self.contact_map.matrix[chromosome][(row, col)]
-              value_summation += contact_value
+              if(contact_value > 0):
+                value_summation += contact_value
+                total_values += 1
             except Exception:
               pass
 
@@ -194,14 +199,12 @@ class Dpmm():
             except Exception:
               pass
 
-            total_values += 1
-
         # Calculate average value
         try:
           average_value = value_summation / total_values
         except Exception:
           average_value = 0.0
-        self.em_dictionary[chromosome][key] = [average_value, total_significant]
+        self.em_dictionary[chromosome][key] = [average_value, total_significant, value]
 
   def maximization(self, chromosome):
     """Returns TODO.
@@ -240,17 +243,21 @@ class Dpmm():
 
         # Iteration on UR square cols
         for col in range(new_col_bp, new_col_bp + self.ur_delete_size, self.contact_map.resolution):
+
+          # Speed check
+          try:
+            new_value = np.log2(self.contact_map.matrix[chromosome][(row, col)] + 1)
+          except Exception:
+            continue
       
           # Try assuaging
           try:
-            self.contact_map.matrix[chromosome][(row, col)] = np.log2(self.contact_map.matrix[chromosome][(row, col)] + 1)
-            if(self.contact_map.matrix[chromosome][(row, col)] <= 0):
+            if(new_value <= 0):
               del self.contact_map.matrix[chromosome][(row, col)]
+            else:
+              self.contact_map.matrix[chromosome][(row, col)] = new_value
           except Exception:
-            try:
-              del self.contact_map.matrix[chromosome][(row, col)]
-            except Exception:
-              continue
+            continue
 
           # Try assuaging
           try:
@@ -406,7 +413,8 @@ class Dpmm():
 
     # Adding elements
     for element in elements_to_add:
-      self.contact_map.add(element[0], element[1], element[2], element[3])
+      if(element[3] > 0):
+        self.contact_map.add(element[0], element[1], element[2], element[3])
 
   def add_degrade(self, contact_map, chromosome):
     """Returns TODO.
@@ -510,7 +518,8 @@ class Dpmm():
 
     # Maximization
     for element in elements_to_add:
-      self.contact_map.set(element[0], element[1], element[2], element[3])
+      if(element[3] > 0):
+        self.contact_map.set(element[0], element[1], element[2], element[3])
 
   def add_diagonal_em(self, contact_map, chromosome):
     """Returns TODO.
@@ -632,7 +641,8 @@ class Dpmm():
 
           # Value to add
           value_to_add = base_value + random.uniform(self.random_range[0], self.random_range[1])
-          contact_map.add(chromosome, row, col, value_to_add)
+          if(value_to_add > 0):
+            contact_map.add(chromosome, row, col, value_to_add)
 
   def add_introduce_squares(self, contact_map, chromosome, iterations):
     """Returns TODO.
@@ -715,7 +725,8 @@ class Dpmm():
 
           # Value to add
           value_to_add = base_value + random.uniform(self.random_range[0], self.random_range[1])
-          contact_map.add(chromosome, row, col, value_to_add)
+          if(value_to_add > 0):
+            contact_map.add(chromosome, row, col, value_to_add)
 
           # Updating counter j
           counterJ += 1

@@ -106,10 +106,11 @@ class Bedgraph(ConfigurationFile):
       count = float(ll[6])
 
       # Value or log to write
-      if(logit): count = numpy.log10(count) + pseudocount
+      if(logit): count = numpy.log(count + 1) + pseudocount
 
       # Updating matrix
-      contact_map.add(chromosome, min(pos11, pos21), max(pos11, pos21), count)
+      if(count > 0):
+        contact_map.add(chromosome, min(pos11, pos21), max(pos11, pos21), count)
 
     # Close bedgraph
     input_file.close()
