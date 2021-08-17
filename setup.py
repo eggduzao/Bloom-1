@@ -4,7 +4,7 @@ Setup Module
 ===================
 Placeholder.
 
-Authors: Eduardo G. Gusmao.
+Authors: Eduardo G. Gusmao. 
 
 Install Command: pip3.9 install --user .
                  pip3.9 install --user . --upgrade
