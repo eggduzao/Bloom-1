@@ -26,6 +26,8 @@ import setuptools
 ###################################################################################################
 
 # Make chromosomes general based on the name provided by the user.
+# Optimization at cpu level.
+# Optimization at gpu level.
 
 ###################################################################################################
 # Unsupported Platforms
