@@ -136,7 +136,8 @@ class Ifs():
 
     # Allowed distances
     convoluted_dict = self.sica_instance.dist_handler.get_key_to_bin_dict(self.sica_instance.dist_handler.tbin_dist_dict, upper = True)
-    del convoluted_dict["T1"] # Check TODO
+    del convoluted_dict["T1"]
+    del convoluted_dict["T2"]
 
     # Iterating on matrix
     for key, value in self.sica_instance.annotation_dictionary[chromosome].items():

@@ -12,7 +12,7 @@ resolution="--resolution=3000"
 input_type="--input-type=sparse"
 cores="--cores=4"
 temporary_location="--temporary-location=/usr/users/egadegu/Projects/Papantonis_Bloom/Bloom/test/temp/test_10_pipeline/" # Change to your path (created)
-output_type="--output-type=sparse"
+output_type="--output-type=hic"
 output_resolution="--output-resolution=3000"
 avoid_distance="--avoid-distance=6000"
 fitting_method="--fitting-method=pvalue" # percentile
