@@ -13,18 +13,12 @@ Authors: Eduardo G. Gusmao.
 ###################################################################################################
 
 # Python
-import os
 import gc
-import sys
 import codecs
-import traceback
-import subprocess
-import configparser
 import multiprocessing
 
 # Internal
-from bloom.contact_map import ContactMap
-from bloom.util import ConfigurationFile, ChromosomeSizes, ErrorHandler, AuxiliaryFunctions
+from bloom.util import AuxiliaryFunctions
 
 # External
 import numpy
@@ -34,7 +28,7 @@ import numpy
 # Bedgraph Class
 ###################################################################################################
 
-class Bedgraph(ConfigurationFile):
+class Bedgraph():
   """This class represents TODO.
 
   *Keyword arguments:*
@@ -48,7 +42,7 @@ class Bedgraph(ConfigurationFile):
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, organism, ncpu):
+  def __init__(self, organism, ncpu, chromosome_sizes, error_handler):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -60,19 +54,16 @@ class Bedgraph(ConfigurationFile):
       - return -- A return.
     """
 
-    # Configuration file initialization
-    ConfigurationFile.__init__(self)
-
     # Auxiliary Parameters
     self.ncpu = ncpu
     self.organism = organism
     self.process_queue = []
 
     # Chromosome sizes
-    self.chromosome_sizes = ChromosomeSizes(self.organism)
+    self.chromosome_sizes = chromosome_sizes
 
     # Error handler
-    self.error_handler = ErrorHandler()
+    self.error_handler = error_handler
 
   #############################################################################
   # Read: Bedgraph (.bg) -> Contact Map

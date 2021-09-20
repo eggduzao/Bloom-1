@@ -12,23 +12,15 @@ Authors: Eduardo G. Gusmao.
 ###################################################################################################
 
 # Python
-import os
 import gc
-import sys
 import random
-import codecs
-import optparse
-import traceback
-import subprocess
-import configparser
 import multiprocessing
 
 # Internal
 from bloom.contact_map import ContactMap
-from bloom.util import ErrorHandler, ExcList, AuxiliaryFunctions
 
 # External
-import numpy as np
+import numpy
 import scipy.interpolate
 import scipy.ndimage
 
@@ -50,7 +42,8 @@ class Preprocess():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, ncpu, input_contact_map, avoid_distance, minimal_resolution = 1000, min_contig_removed_bins = 5, remove_threshold = 1, seed = None):
+  def __init__(self, ncpu, input_contact_map, avoid_distance, error_handler, chromosome_sizes, exc_list,
+               minimal_resolution = 1000, min_contig_removed_bins = 5, remove_threshold = 1, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -83,8 +76,9 @@ class Preprocess():
     self.process_queue = []
 
     # Utilitary objects
-    self.error_handler = ErrorHandler()
-    self.exclist_handler = ExcList(self.input_contact_map.organism, self.minimal_resolution)
+    self.error_handler = error_handler
+    self.chromosome_sizes = chromosome_sizes
+    self.exclist_handler = exc_list
 
 
   #############################################################################
@@ -104,7 +98,8 @@ class Preprocess():
     """
 
     # Create new contact map
-    new_contact_map = ContactMap(organism = self.input_contact_map.organism, resolution = self.minimal_resolution, matrix = None, seed = self.seed)
+    new_contact_map = ContactMap(organism = self.input_contact_map.organism, resolution = self.minimal_resolution,
+                                 error_handler = self.error_handler, chromosome_sizes = self.chromosome_sizes, matrix = None, seed = self.seed)
     new_contact_map.valid_chromosome_list = [chromosome for chromosome in self.input_contact_map.valid_chromosome_list]
 
     # Iterating on valid chromosomes
@@ -151,35 +146,35 @@ class Preprocess():
     This prevents extrapolation one element beyond bounds of input array.
     """
 
-    if not a.dtype in [np.float64, np.float32]:
-      a = np.cast[float](a)
+    if not a.dtype in [numpy.float64, numpy.float32]:
+      a = numpy.cast[float](a)
 
-    m1 = np.cast[int](minusone)
-    ofs = np.cast[int](centre) * 0.5
-    old = np.array( a.shape )
+    m1 = numpy.cast[int](minusone)
+    ofs = numpy.cast[int](centre) * 0.5
+    old = numpy.array( a.shape )
     ndims = len( a.shape )
     if len( newdims ) != ndims:
       print("[congrid] dimensions error. This routine currently only support rebinning to the same number of dimensions.")
       return None
-    newdims = np.asarray( newdims, dtype=int )
+    newdims = numpy.asarray( newdims, dtype=int )
     dimlist = []
 
     if method == 'neighbour':
       for i in range( ndims ):
-        base = np.indices(newdims)[i]
+        base = numpy.indices(newdims)[i]
         dimlist.append( (old[i] - m1) / (newdims[i] - m1) * (base + ofs) - ofs )
-      cd = np.array( dimlist ).round().astype(int)
+      cd = numpy.array( dimlist ).round().astype(int)
       newa = a[tuple( cd )]
       return newa
 
     elif method in ['nearest','linear']:
       # calculate new dims
       for i in range( ndims ):
-        base = np.arange( newdims[i] )
+        base = numpy.arange( newdims[i] )
         dimlist.append( (old[i] - m1) / (newdims[i] - m1) * (base + ofs) - ofs )
 
       # specify old dims
-      olddims = [np.arange(i, dtype = np.float) for i in list( a.shape )]
+      olddims = [numpy.arange(i, dtype = numpy.float) for i in list( a.shape )]
 
       # first interpolation - for ndims = any
       mint = scipy.interpolate.interp1d( olddims[-1], a, kind=method, fill_value="extrapolate" )
@@ -198,9 +193,9 @@ class Preprocess():
       return newa
     elif method in ['spline']:
       oslices = [ slice(0,j) for j in old ]
-      oldcoords = np.ogrid[oslices]
+      oldcoords = numpy.ogrid[oslices]
       nslices = [ slice(0,j) for j in list(newdims) ]
-      newcoords = np.mgrid[nslices]
+      newcoords = numpy.mgrid[nslices]
 
       newcoords_dims = list(range(newcoords.ndim))
       #make first index last
@@ -210,7 +205,7 @@ class Preprocess():
 
       newcoords_tr = newcoords_tr + ofs
 
-      deltas = (np.asarray(old) - m1) / (newdims - m1)
+      deltas = (numpy.asarray(old) - m1) / (newdims - m1)
       newcoords_tr = newcoords_tr * deltas
 
       newcoords_tr = newcoords_tr - ofs

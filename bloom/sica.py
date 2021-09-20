@@ -13,25 +13,18 @@ Authors: Eduardo G. Gusmao.
 ###################################################################################################
 
 # Python
-import os
 import gc
-import sys
 import random
-import codecs
 import warnings
-import traceback
-import subprocess
-import configparser
 import multiprocessing
 
 # Internal
-from bloom.contact_map import ContactMap
-from bloom.util import ErrorHandler, AuxiliaryFunctions, Channel
+from bloom.util import AuxiliaryFunctions
 
 # External
-import numpy as np
+import numpy
 import scipy
-import scipy.stats as st
+import scipy.stats
 
 ###################################################################################################
 # Sica Class
@@ -172,7 +165,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, ncpu, contact_map, avoid_distance, removed_dict = None, pvalue_threshold = 0.95, fitting_method = "pvalue",
+  def __init__(self, ncpu, contact_map, avoid_distance, error_handler, channel, removed_dict = None, pvalue_threshold = 0.95, fitting_method = "pvalue",
                bottom_bin_ext_range = [3,10], left_bin_ext_range = [3,10], right_bin_ext_range = [1,4], top_bin_ext_range = [1,4],
                bonuscrosslb_range = [0.25, 0.3], bonuscross_range = [0.1, 0.25], bonuslb_range = [0.1, 0.25], seed = None):
     """Returns TODO.
@@ -229,16 +222,17 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
     self.annotation_dictionary_count = dict() # per chromosome / per annotation mark (r, R, a, A, t1, T1, etc.) -> total count
 
     # Auxiliary distributions
-    self.distribution_list = [st.alpha, st.beta, st.burr, st.dgamma, st.dweibull, st.erlang, st.expon, st.exponpow, st.genexpon,
-                              st.gilbrat, st.gumbel_r, st.invweibull, st.kstwobign, st.levy, st.ncx2, st.wald, st.weibull_min]
+    self.distribution_list = [scipy.stats.alpha, scipy.stats.beta, scipy.stats.burr, scipy.stats.dgamma, scipy.stats.dweibull, scipy.stats.erlang,
+                              scipy.stats.expon, scipy.stats.exponpow, scipy.stats.genexpon, scipy.stats.gilbrat, scipy.stats.gumbel_r, scipy.stats.invweibull,
+                              scipy.stats.kstwobign, scipy.stats.levy, scipy.stats.ncx2, scipy.stats.wald, scipy.stats.weibull_min]
 
     # Auxiliary parameters
     self.ncpu = ncpu
     self.process_queue = []
 
     # Utilitary objects
-    self.error_handler = ErrorHandler()
-    self.channel_handler = Channel()
+    self.error_handler = error_handler
+    self.channel_handler = channel
     self.dist_handler = SicaDist(contact_map, avoid_distance, self.channel_handler)
 
 
@@ -309,7 +303,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
           pass
 
         # Calculating additional value
-        newvalue = value + (value * np.log(1 + (row_diag_count + col_diag_count)/2))
+        newvalue = value + (value * numpy.log(1 + (row_diag_count + col_diag_count)/2))
         elements_to_add.append((chromosome, key_row_bp, key_col_bp, newvalue))
 
     # Adding elements
@@ -521,21 +515,21 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
     """
 
     # Best parameters initialization
-    best_distribution = st.norm.name
+    best_distribution = scipy.stats.norm.name
     best_params = (0.0, 1.0)
-    best_sse = np.inf
+    best_sse = numpy.inf
     best_pvalue = 2.58
 
     # Removing outliers
     if(outlier_std_multiplier > 0):
-      data_to_fit = list(AuxiliaryFunctions.remove_outliers(np.array(data), std_multiplier = outlier_std_multiplier))
+      data_to_fit = list(AuxiliaryFunctions.remove_outliers(numpy.array(data), std_multiplier = outlier_std_multiplier))
 
     # Best value at p-value
     if(mode_of_fit == "pvalue"):
 
       # Histogram from original data_to_fit
-      y, x = np.histogram(data_to_fit, bins=bins, density=True)
-      x = (x + np.roll(x, -1))[:-1] / 2.0
+      y, x = numpy.histogram(data_to_fit, bins=bins, density=True)
+      x = (x + numpy.roll(x, -1))[:-1] / 2.0
 
       # Estimate distribution parameters from data_to_fit
       for distribution in self.distribution_list:
@@ -557,7 +551,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
 
             # Calculate fitted PDF, error with fit in distribution and value at pvalue_threshold
             pdf = distribution.pdf(x, loc=loc, scale=scale, *arg)
-            sse = np.sum(np.power(y - pdf, 2.0))
+            sse = numpy.sum(numpy.power(y - pdf, 2.0))
             value_at_pvalue = distribution.ppf(self.pvalue_threshold, *arg, loc=loc, scale=scale) if arg else distribution.ppf(self.pvalue_threshold, loc=loc, scale=scale)
 
             # Update best distribution
@@ -579,8 +573,8 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
 
       # Evaluate value at percentile
       percentile = min(max(100 * self.pvalue_threshold, 0), 100)
-      numpy_data = np.array(data_to_fit)
-      best_pvalue = np.percentile(numpy_data, percentile, interpolation="linear")
+      numpy_data = numpy.array(data_to_fit)
+      best_pvalue = numpy.percentile(numpy_data, percentile, interpolation="linear")
 
       # Naming
       best_distribution = "percentile"
@@ -799,7 +793,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
               value_2 = self.contact_map.matrix[chromosome][(dkey_col_bp, dkey_col_bp)]
             except Exception:
               pass
-            value = ((value_1 + value_2) / 2) / np.sqrt(distance_to_diag)
+            value = ((value_1 + value_2) / 2) / numpy.sqrt(distance_to_diag)
             elements_to_add.append((chromosome, bp_key[0], bp_key[1], value))
 
     # Adding elements
@@ -1149,7 +1143,7 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
             if(flag_first):
               base_value = float(value) # / float(1 + absi + absj)
             else:
-              base_value = float(value) / float(2**(1 + np.e + absi + absj))
+              base_value = float(value) / float(2**(1 + numpy.e + absi + absj))
 
             # Bonuscrosslb
             bonuscrosslb = 0

@@ -15,16 +15,12 @@ Authors: Eduardo G. Gusmao.
 # Python
 import os
 import gc
-import sys
 import codecs
-import traceback
 import subprocess
-import configparser
 import multiprocessing
 
 # Internal
-from bloom.contact_map import ContactMap
-from bloom.util import ConfigurationFile, ChromosomeSizes, ErrorHandler
+
 
 # External
 
@@ -33,7 +29,7 @@ from bloom.util import ConfigurationFile, ChromosomeSizes, ErrorHandler
 # Juicer Class
 ###################################################################################################
 
-class Juicer(ConfigurationFile):
+class Juicer():
   """This class represents TODO.
 
   *Keyword arguments:*
@@ -47,7 +43,7 @@ class Juicer(ConfigurationFile):
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, ncpu):
+  def __init__(self, ncpu, juicer_command, error_handler):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -59,11 +55,10 @@ class Juicer(ConfigurationFile):
       - return -- A return.
     """
 
-    # Configuration file initialization
-    ConfigurationFile.__init__(self)
-    self.juicer_command = self.config.get("Juicer", "command")
-    self.juicer_options = self.config.get("Juicer", "options")
-    self.juicer_jar_location = os.path.join(self.bloom_data_path, self.config.get("Juicer", "jar"))
+    # Command initialization
+    self.juicer_command = juicer_command.juicer_command
+    self.juicer_options = juicer_command.juicer_options
+    self.juicer_jar_location = juicer_command.juicer_jar_location
 
     # Auxiliary parameters
     self.ncpu = ncpu
@@ -74,7 +69,7 @@ class Juicer(ConfigurationFile):
     self.juicer_resolution_list = [str(i*1000) for i in [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500]]
 
     # Error handler
-    self.error_handler = ErrorHandler()
+    self.error_handler = error_handler
 
   #############################################################################
   # Read: Juicer (.hic) -> Bedgraph (.bg) or Juicer Pre (.pre)

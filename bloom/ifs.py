@@ -13,26 +13,16 @@ Authors: Eduardo G. Gusmao.
 ###################################################################################################
 
 # Python
-import os
 import gc
-import sys
 import random
-import codecs
-import warnings
-import traceback
-import subprocess
-import configparser
 import multiprocessing
 
 # Internal
-from bloom.contact_map import ContactMap
-from bloom.sica import Sica, SicaDist
-from bloom.util import ErrorHandler, AuxiliaryFunctions
+
 
 # External
-import numpy as np
-import scipy
-import scipy.stats as st
+import numpy
+
 
 ###################################################################################################
 # Ifs Class
@@ -53,7 +43,7 @@ class Ifs():
   """
 
   def __init__(self, contact_map, sica_instance, goba_instance, dpmm_instance, io_instance,
-               output_loop_file_name, output_matrix_file_name, matrix_output_format, seed = None):
+               output_loop_file_name, output_matrix_file_name, matrix_output_format, error_handler, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -88,7 +78,7 @@ class Ifs():
     self.process_queue = []
 
     # Utilitary objects
-    self.error_handler = ErrorHandler()
+    self.error_handler = error_handler
 
 
   #############################################################################
@@ -120,7 +110,7 @@ class Ifs():
     # Sort and write IFS list
     self.sort_ifs_list()
     self.standardize_ifs_list(min_to_zero = min_to_zero)
-    self.write_ifs()
+    self.io_instance.write_ifs(self.contact_map.resolution, self.ifs_list, self.output_loop_file_name)
 
   def calculate_ifs(self, chromosome):
     """Returns TODO.
@@ -157,7 +147,7 @@ class Ifs():
 
       # Check distance to diagonal
       newvalue = newvalue + (random.uniform(0, 0.1) * newvalue) + 1
-      newvalue = np.log2(newvalue)
+      newvalue = numpy.log2(newvalue)
       self.ifs_list.append([chromosome] + [key[0], key[1]] + [newvalue])
 
   def add_calculate_ifs(self, chromosome):
@@ -226,8 +216,8 @@ class Ifs():
     """
 
     # Calculate minimum and maximum
-    min_value = np.inf
-    max_value = -np.inf
+    min_value = numpy.inf
+    max_value = -numpy.inf
     for v in self.ifs_list:
       value = float(v[3])
       if(value < min_value):
@@ -266,34 +256,6 @@ class Ifs():
         value_conv_min = self.ifs_list[i][3]
     self.ifs_list[index_max][3] = (self.ifs_list[index_max][3] + value_conv_max) / 2
     self.ifs_list[index_min][3] = (self.ifs_list[index_min][3] + value_conv_min) / 2
-
-  def write_ifs(self):
-    """Returns TODO.
-    
-    *Keyword arguments:*
-    
-      - argument -- An argument.
-    
-    *Return:*
-    
-      - return -- A return.
-    """
-
-    # Open output matrix file
-    output_loop_file = open(self.output_loop_file_name, "w")
-
-    # Write IFS list into bedgraph
-    for v in self.ifs_list:
-      chromosome = str(v[0])
-      p11 = str(v[1])
-      p12 = str(v[1] + self.contact_map.resolution)
-      p21 = str(v[2])
-      p22 = str(v[2] + self.contact_map.resolution)
-      value = str(round(v[3], 6))
-      output_loop_file.write("\t".join([chromosome, p11, p12, chromosome, p21, p22, value]) + "\n")
-
-    # Closing file
-    output_loop_file.close()
 
 
   #############################################################################
@@ -338,7 +300,7 @@ class Ifs():
     """
 
     # List of keys to remove from dictionary
-    maxV = -np.inf
+    maxV = -numpy.inf
     removed_keys = []
 
     # Iterating on matrix
@@ -512,7 +474,7 @@ class Prior():
     
       - return -- A return.
     """
-    return np.prod(self.like1(D, *args, **kwargs))
+    return numpy.prod(self.like1(D, *args, **kwargs))
 
   def lnlikelihood(self, D, *args, **kwargs):
     """Returns TODO.
@@ -525,7 +487,7 @@ class Prior():
     
       - return -- A return.
     """
-    return np.log(self.likelihood(D, *args, **kwargs))
+    return numpy.log(self.likelihood(D, *args, **kwargs))
 
   def __call__(self, *args):
     """Returns TODO.
@@ -612,8 +574,8 @@ class GaussianMeanKnownVariance(Prior):
     self.mu_0 = mu_0
     self.sigsqr_0 = sigsqr_0
     self.sigsqr = sigsqr
-    self._norm1 = np.sqrt(2*np.pi*self.sigsqr)
-    self._norm2 = np.sqrt(2*np.pi*self.sigsqr_0)
+    self._norm1 = numpy.sqrt(2*numpy.pi*self.sigsqr)
+    self._norm2 = numpy.sqrt(2*numpy.pi*self.sigsqr_0)
     super(GaussianMeanKnownVariance, self).__init__()
 
   def sample(self, size=None):
@@ -628,9 +590,9 @@ class GaussianMeanKnownVariance(Prior):
       - return -- A return.
     """
     if size is None:
-      return np.random.normal(self.mu_0, np.sqrt(self.sigsqr_0))
+      return numpy.random.normal(self.mu_0, numpy.sqrt(self.sigsqr_0))
     else:
-      return np.random.normal(self.mu_0, np.sqrt(self.sigsqr_0), size=size)
+      return numpy.random.normal(self.mu_0, numpy.sqrt(self.sigsqr_0), size=size)
 
   def like1(self, x, mu):
     """Returns TODO.
@@ -643,7 +605,7 @@ class GaussianMeanKnownVariance(Prior):
     
       - return -- A return.
     """
-    return np.exp(-0.5*(x-mu)**2/self.sigsqr) / self._norm1
+    return numpy.exp(-0.5*(x-mu)**2/self.sigsqr) / self._norm1
 
   def __call__(self, mu):
     """Returns TODO.
@@ -656,7 +618,7 @@ class GaussianMeanKnownVariance(Prior):
     
       - return -- A return.
     """
-    return np.exp(-0.5*(mu-self.mu_0)**2/self.sigsqr_0) / self._norm2
+    return numpy.exp(-0.5*(mu-self.mu_0)**2/self.sigsqr_0) / self._norm2
 
   def _post_params(self, D):
     """Returns TODO.
@@ -673,7 +635,7 @@ class GaussianMeanKnownVariance(Prior):
       n = len(D)
     except TypeError:
       n = 1
-    Dbar = np.mean(D)
+    Dbar = numpy.mean(D)
     sigsqr_n = 1./(n/self.sigsqr + 1./self.sigsqr_0)
     mu_n = sigsqr_n * (self.mu_0/self.sigsqr_0 + n*Dbar/self.sigsqr)
     return mu_n, sigsqr_n, self.sigsqr
@@ -690,7 +652,7 @@ class GaussianMeanKnownVariance(Prior):
       - return -- A return.
     """
     sigsqr = self.sigsqr + self.sigsqr_0
-    return np.exp(-0.5*(x-self.mu_0)**2/sigsqr) / np.sqrt(2*np.pi*sigsqr)
+    return numpy.exp(-0.5*(x-self.mu_0)**2/sigsqr) / numpy.sqrt(2*numpy.pi*sigsqr)
 
 
 ###################################################################################################
@@ -738,7 +700,7 @@ class InvGamma(Prior):
     
       - return -- A return.
     """
-    return 1./np.random.gamma(self.alpha, scale=self.beta, size=size)
+    return 1./numpy.random.gamma(self.alpha, scale=self.beta, size=size)
 
   def like1(self, x, var):
     """Returns TODO.
@@ -751,7 +713,7 @@ class InvGamma(Prior):
     
       - return -- A return.
     """
-    return np.exp(-0.5*(x-self.mu)**2/var) / np.sqrt(2*np.pi*var)
+    return numpy.exp(-0.5*(x-self.mu)**2/var) / numpy.sqrt(2*numpy.pi*var)
 
   def __call__(self, var):
     """Returns TODO.
@@ -765,7 +727,7 @@ class InvGamma(Prior):
       - return -- A return.
     """
     al, be = self.alpha, self.beta
-    return be**(-al)/gamma(al) * var**(-1.-al) * np.exp(-1./(be*var))
+    return be**(-al)/gamma(al) * var**(-1.-al) * numpy.exp(-1./(be*var))
 
   def _post_params(self, D):
     """Returns TODO.
@@ -783,7 +745,7 @@ class InvGamma(Prior):
     except TypeError:
       n = 1
     al_n = self.alpha + n/2.0
-    be_n = 1./(1./self.beta + 0.5*np.sum((np.array(D)-self.mu)**2))
+    be_n = 1./(1./self.beta + 0.5*numpy.sum((numpy.array(D)-self.mu)**2))
     return al_n, be_n, self.mu
 
   def pred(self, x):
@@ -844,7 +806,7 @@ class InvGamma2D(Prior):
     """
     self.alpha = alpha
     self.beta = beta
-    self.mu = np.array(mu)
+    self.mu = numpy.array(mu)
     assert len(mu) == 2
     super(InvGamma2D, self).__init__()
 
@@ -859,7 +821,7 @@ class InvGamma2D(Prior):
     
       - return -- A return.
     """
-    return 1./np.random.gamma(self.alpha, scale=self.beta, size=size)
+    return 1./numpy.random.gamma(self.alpha, scale=self.beta, size=size)
 
   def like1(self, x, var):
     """Returns TODO.
@@ -872,9 +834,9 @@ class InvGamma2D(Prior):
     
       - return -- A return.
     """
-    assert isinstance(x, np.ndarray)
+    assert isinstance(x, numpy.ndarray)
     assert x.shape[-1] == 2
-    return np.exp(-0.5*np.sum((x-self.mu)**2, axis=-1)/var) / (2*np.pi*var)
+    return numpy.exp(-0.5*numpy.sum((x-self.mu)**2, axis=-1)/var) / (2*numpy.pi*var)
 
   def lnlikelihood(self, D, var):
     """Returns TODO.
@@ -887,7 +849,7 @@ class InvGamma2D(Prior):
     
       - return -- A return.
     """
-    return -0.5*np.sum((D-self.mu)**2)/var - D.shape[0]*np.log(2*np.pi*var)
+    return -0.5*numpy.sum((D-self.mu)**2)/var - D.shape[0]*numpy.log(2*numpy.pi*var)
 
   def __call__(self, var):
     """Returns TODO.
@@ -901,7 +863,7 @@ class InvGamma2D(Prior):
       - return -- A return.
     """
     al, be = self.alpha, self.beta
-    return be**(-al)/gamma(al) * var**(-1.-al) * np.exp(-1./(be*var))
+    return be**(-al)/gamma(al) * var**(-1.-al) * numpy.exp(-1./(be*var))
 
   def _post_params(self, D):
     """Returns TODO.
@@ -919,7 +881,7 @@ class InvGamma2D(Prior):
     except TypeError:
       n = 1
     al_n = self.alpha + n
-    be_n = 1./(1./self.beta + 0.5*np.sum((np.array(D)-self.mu)**2))
+    be_n = 1./(1./self.beta + 0.5*numpy.sum((numpy.array(D)-self.mu)**2))
     return al_n, be_n, self.mu
 
   def pred(self, x):
@@ -933,9 +895,9 @@ class InvGamma2D(Prior):
     
       - return -- A return.
     """
-    assert isinstance(x, np.ndarray)
+    assert isinstance(x, numpy.ndarray)
     assert x.shape[-1] == 2
-    return multivariate_t_density(2*self.alpha, self.mu, 1./self.beta/self.alpha*np.eye(2), x)
+    return multivariate_t_density(2*self.alpha, self.mu, 1./self.beta/self.alpha*numpy.eye(2), x)
 
   def evidence(self, D):
     """Returns TODO.
@@ -985,7 +947,7 @@ class NormInvChi2(Prior):
     self.sigsqr_0 = float(sigsqr_0)
     self.nu_0 = float(nu_0)
     super(NormInvChi2, self).__init__()
-    model_dtype = np.dtype([('mu', float), ('var', float)])
+    model_dtype = numpy.dtype([('mu', float), ('var', float)])
 
   def sample(self, size=None):
     """Returns TODO.
@@ -999,15 +961,15 @@ class NormInvChi2(Prior):
       - return -- A return.
     """
     if size is None:
-      var = 1./np.random.chisquare(df=self.nu_0)*self.nu_0*self.sigsqr_0
-      ret = np.zeros(1, dtype=self.model_dtype)
-      ret['mu'] = np.random.normal(self.mu_0, np.sqrt(var/self.kappa_0))
+      var = 1./numpy.random.chisquare(df=self.nu_0)*self.nu_0*self.sigsqr_0
+      ret = numpy.zeros(1, dtype=self.model_dtype)
+      ret['mu'] = numpy.random.normal(self.mu_0, numpy.sqrt(var/self.kappa_0))
       ret['var'] = var
       return ret[0]
     else:
-      var = 1./np.random.chisquare(df=self.nu_0, size=size)*self.nu_0*self.sigsqr_0
-      ret = np.zeros(size, dtype=self.model_dtype)
-      ret['mu'] = (np.random.normal(self.mu_0, np.sqrt(1./self.kappa_0), size=size) * np.sqrt(var))
+      var = 1./numpy.random.chisquare(df=self.nu_0, size=size)*self.nu_0*self.sigsqr_0
+      ret = numpy.zeros(size, dtype=self.model_dtype)
+      ret['mu'] = (numpy.random.normal(self.mu_0, numpy.sqrt(1./self.kappa_0), size=size) * numpy.sqrt(var))
       ret['var'] = var
       return ret
 
@@ -1028,7 +990,7 @@ class NormInvChi2(Prior):
       x, theta = args
       mu = theta['mu']
       var = theta['var']
-    return np.exp(-0.5*(x-mu)**2/var) / np.sqrt(2*np.pi*var)
+    return numpy.exp(-0.5*(x-mu)**2/var) / numpy.sqrt(2*numpy.pi*var)
 
   def __call__(self, *args):
     """Returns TODO.
@@ -1063,11 +1025,11 @@ class NormInvChi2(Prior):
       n = len(D)
     except TypeError:
       n = 1
-    Dbar = np.mean(D)
+    Dbar = numpy.mean(D)
     kappa_n = self.kappa_0 + n
     mu_n = (self.kappa_0*self.mu_0 + n*Dbar)/kappa_n
     nu_n = self.nu_0 + n
-    sigsqr_n = ((self.nu_0*self.sigsqr_0 + np.sum((D-Dbar)**2) + n*self.kappa_0/(self.kappa_0+n)*(self.mu_0-Dbar)**2)/nu_n)
+    sigsqr_n = ((self.nu_0*self.sigsqr_0 + numpy.sum((D-Dbar)**2) + n*self.kappa_0/(self.kappa_0+n)*(self.mu_0-Dbar)**2)/nu_n)
     return mu_n, kappa_n, sigsqr_n, nu_n
 
   def pred(self, x):
@@ -1099,8 +1061,8 @@ class NormInvChi2(Prior):
       n = len(D)
     except:
       n = 1
-    return (gamma(nu_n/2.0)/gamma(self.nu_0/2.0) * np.sqrt(self.kappa_0/kappa_n) * \
-           (self.nu_0*self.sigsqr_0)**(self.nu_0/2.0) / (nu_n*sigsqr_n)**(nu_n/2.0) / np.pi**(n/2.0))
+    return (gamma(nu_n/2.0)/gamma(self.nu_0/2.0) * numpy.sqrt(self.kappa_0/kappa_n) * \
+           (self.nu_0*self.sigsqr_0)**(self.nu_0/2.0) / (nu_n*sigsqr_n)**(nu_n/2.0) / numpy.pi**(n/2.0))
 
   def marginal_var(self, var):
     """Returns TODO.
@@ -1163,7 +1125,7 @@ class NormInvGamma(Prior):
     self.a_0 = float(a_0)
     self.b_0 = float(b_0)
     super(NormInvGamma, self).__init__()
-    model_dtype = np.dtype([('mu', float), ('var', float)])
+    model_dtype = numpy.dtype([('mu', float), ('var', float)])
 
   def sample(self, size=None):
     """Returns TODO.
@@ -1177,15 +1139,15 @@ class NormInvGamma(Prior):
       - return -- A return.
     """
     if size is None:
-      var = 1./np.random.gamma(self.a_0, scale=1./self.b_0)
-      ret = np.zeros(1, dtype=self.model_dtype)
-      ret['mu'] = np.random.normal(self.m_0, np.sqrt(self.V_0*var))
+      var = 1./numpy.random.gamma(self.a_0, scale=1./self.b_0)
+      ret = numpy.zeros(1, dtype=self.model_dtype)
+      ret['mu'] = numpy.random.normal(self.m_0, numpy.sqrt(self.V_0*var))
       ret['var'] = var
       return ret[0]
     else:
-      var = 1./np.random.gamma(self.a_0, scale=1./self.b_0, size=size)
-      ret = np.zeros(size, dtype=self.model_dtype)
-      ret['mu'] = np.random.normal(self.m_0, np.sqrt(self.V_0), size=size)*np.sqrt(var)
+      var = 1./numpy.random.gamma(self.a_0, scale=1./self.b_0, size=size)
+      ret = numpy.zeros(size, dtype=self.model_dtype)
+      ret['mu'] = numpy.random.normal(self.m_0, numpy.sqrt(self.V_0), size=size)*numpy.sqrt(var)
       ret['var'] = var
       return ret
 
@@ -1206,7 +1168,7 @@ class NormInvGamma(Prior):
       x, theta = args
       mu = theta['mu']
       var = theta['var']
-    return np.exp(-0.5*(x-mu)**2/var) / np.sqrt(2*np.pi*var)
+    return numpy.exp(-0.5*(x-mu)**2/var) / numpy.sqrt(2*numpy.pi*var)
 
   def __call__(self, *args):
     """Returns TODO.
@@ -1224,8 +1186,8 @@ class NormInvGamma(Prior):
       var = args[0]['var']
     elif len(args) == 2:
       mu, var = args
-    normal = np.exp(-0.5*(self.m_0-mu)**2/(var*self.V_0))/np.sqrt(2*np.pi*var*self.V_0)
-    ig = self.b_0**self.a_0/gamma(self.a_0)*var**(-(self.a_0+1))*np.exp(-self.b_0/var)
+    normal = numpy.exp(-0.5*(self.m_0-mu)**2/(var*self.V_0))/numpy.sqrt(2*numpy.pi*var*self.V_0)
+    ig = self.b_0**self.a_0/gamma(self.a_0)*var**(-(self.a_0+1))*numpy.exp(-self.b_0/var)
     return normal*ig
 
   def _post_params(self, D):
@@ -1243,12 +1205,12 @@ class NormInvGamma(Prior):
       n = len(D)
     except TypeError:
       n = 1
-    Dbar = np.mean(D)
+    Dbar = numpy.mean(D)
     invV_0 = 1./self.V_0
     V_n = 1./(invV_0 + n)
     m_n = V_n*(invV_0*self.m_0 + n*Dbar)
     a_n = self.a_0 + n/2.0
-    b_n = self.b_0 + 0.5*(np.sum((D-Dbar)**2)+n / (1.0+n*self.V_0)*(self.m_0-Dbar)**2)
+    b_n = self.b_0 + 0.5*(numpy.sum((D-Dbar)**2)+n / (1.0+n*self.V_0)*(self.m_0-Dbar)**2)
     return m_n, V_n, a_n, b_n
 
   def pred(self, x):
@@ -1280,8 +1242,8 @@ class NormInvGamma(Prior):
       n = len(D)
     except:
       n = 1
-    return (np.sqrt(np.abs(V_n/self.V_0)) * (self.b_0**self.a_0)/(b_n**a_n) * \
-            gamma(a_n)/gamma(self.a_0) / (np.pi**(n/2.0)*2.0**(n/2.0)))
+    return (numpy.sqrt(numpy.abs(V_n/self.V_0)) * (self.b_0**self.a_0)/(b_n**a_n) * \
+            gamma(a_n)/gamma(self.a_0) / (numpy.pi**(n/2.0)*2.0**(n/2.0)))
 
   def marginal_var(self, var):
     """Returns TODO.

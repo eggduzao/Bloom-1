@@ -14,7 +14,6 @@ Authors: Eduardo G. Gusmao. Partially based on the Util class from RGT (https://
 
 # Python
 import os
-import gc
 import sys
 import glob
 import codecs
@@ -22,12 +21,11 @@ import optparse
 import traceback
 import subprocess
 import configparser
-import multiprocessing
 
 # Internal
 
 # External
-import numpy as np
+import numpy
 
 ###################################################################################################
 # Configuration File Handling
@@ -69,6 +67,67 @@ class ConfigurationFile:
     self.config = configparser.ConfigParser()
     self.config.read_file(codecs.open(self.bloom_config_file_name, "rU", "utf8"))
 
+class JuicerCommand(ConfigurationFile):
+  """This class represents TODO.
+
+  *Keyword arguments:*
+
+    - argument1 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+
+    - argument2 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+  """
+
+  def __init__(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Configuration file initialization
+    ConfigurationFile.__init__(self)
+    self.juicer_command = self.config.get("Juicer", "command")
+    self.juicer_options = self.config.get("Juicer", "options")
+    self.juicer_jar_location = os.path.join(self.bloom_data_path, self.config.get("Juicer", "jar"))
+
+class CoolerCommand(ConfigurationFile):
+  """This class represents TODO.
+
+  *Keyword arguments:*
+
+    - argument1 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+
+    - argument2 -- Short description. This argument represents a long description. It can be:
+      - Possibility 1: A possibility 1.
+      - Possibility 2: A possibility 2.
+  """
+
+  def __init__(self):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Configuration file initialization
+    ConfigurationFile.__init__(self)
+    self.cooler_command = self.config.get("Cooler", "command")
 
 class ChromosomeSizes(ConfigurationFile):
   """This class represents TODO.
@@ -663,5 +722,5 @@ class AuxiliaryFunctions:
     
       - return -- A return.
     """
-    return numpy_array[abs(numpy_array - np.mean(numpy_array)) < std_multiplier * np.std(numpy_array)]
+    return numpy_array[abs(numpy_array - numpy.mean(numpy_array)) < std_multiplier * numpy.std(numpy_array)]
 

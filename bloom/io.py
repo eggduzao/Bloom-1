@@ -14,24 +14,18 @@ Authors: Eduardo G. Gusmao.
 
 # Python
 import os
-import gc
-import sys
 import random
-import codecs
-import traceback
 import subprocess
-import configparser
-import multiprocessing
 
 # Internal
 from bloom.contact_map import ContactMap
-from bloom.util import ChromosomeSizes, ErrorHandler, AuxiliaryFunctions
+from bloom.util import AuxiliaryFunctions
 from bloom.io_bedgraph import Bedgraph
 from bloom.io_juicer import Juicer
 from bloom.io_cooler import Cooler
 
 # External
-import numpy
+
 
 
 ###################################################################################################
@@ -77,8 +71,8 @@ class IO():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, input_contact_map_file_name, temporary_location, organism, ncpu, input_resolution = None,
-               input_file_type = InputFileType.UNKNOWN, allowed_chromosomes = None, seed = None):
+  def __init__(self, input_contact_map_file_name, temporary_location, organism, ncpu, error_handler, chromosome_sizes, juicer_command, cooler_command,
+               input_resolution = None, input_file_type = InputFileType.UNKNOWN, allowed_chromosomes = None, allowed_region = None, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -102,14 +96,19 @@ class IO():
     self.input_resolution = input_resolution
     self.input_file_type = input_file_type
     self.allowed_chromosomes = allowed_chromosomes
+    self.allowed_region = allowed_region
     self.seed = seed
 
     # Utilitary objects
-    self.error_handler = ErrorHandler()
-    self.chromosome_sizes = ChromosomeSizes(self.organism)
-    self.bedgraph_handler = Bedgraph(self.organism, self.ncpu)
-    self.juicer_handler = Juicer(self.ncpu)
-    self.cooler_handler = Cooler(self.organism, self.ncpu)
+    self.error_handler = error_handler
+    self.chromosome_sizes = chromosome_sizes
+    self.juicer_command = juicer_command
+    self.cooler_command = cooler_command
+
+    # Input handler objects
+    self.bedgraph_handler = Bedgraph(self.organism, self.ncpu, self.chromosome_sizes, self.error_handler)
+    self.juicer_handler = Juicer(self.ncpu, self.juicer_command, self.error_handler)
+    self.cooler_handler = Cooler(self.organism, self.ncpu, self.cooler_command, self.chromosome_sizes, self.error_handler, self.bedgraph_handler)
 
 
   #############################################################################
@@ -140,7 +139,7 @@ class IO():
       self.detect_input_resolutions()
 
     # Create new contact map
-    contact_map = ContactMap(self.organism, self.input_resolution, seed = self.seed)
+    contact_map = ContactMap(self.organism, self.input_resolution, self.error_handler, self.chromosome_sizes, seed = self.seed)
 
     # Load contact map based on file type and resolution
 
@@ -297,6 +296,8 @@ class IO():
         if(chrom not in self.allowed_chromosomes):
           continue
 
+      # TODO - allowed_region
+
       # Regions
       chrom_wo_chr = chrom.split("chr")[-1]
       start = "1"
@@ -354,6 +355,8 @@ class IO():
         if(chrom not in self.allowed_chromosomes):
           continue
 
+      # TODO - allowed_region
+
       # Regions
       start = "1"
       end = '{:,}'.format(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
@@ -410,6 +413,8 @@ class IO():
         if(chrom not in self.allowed_chromosomes):
           continue
 
+      # TODO - allowed_region
+
       # Regions
       start = "1"
       end = '{:,}'.format(self.chromosome_sizes.chromosome_sizes_dictionary[chrom])
@@ -462,6 +467,8 @@ class IO():
       if(self.allowed_chromosomes):
         if(chrom not in self.allowed_chromosomes):
           continue
+
+      # TODO - allowed_region
 
       # Adding chromosome dump job
       self.bedgraph_handler.dump(chrom, self.input_file_name, contact_map)
@@ -521,6 +528,8 @@ class IO():
     
       - return -- A return.
     """
+
+    # TODO - Re-Add start value in case region was given
 
     # Create output location if it does not exist
     output_location = os.path.dirname(output_file_name)
@@ -605,6 +614,35 @@ class IO():
     # Running load job
     # self.bedgraph_handler.run_load(return_type = "success")
 
+  def write_ifs(self, resolution, ifs_list, output_loop_file_name):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # TODO - Re-Add start value in case region was given
+
+    # Open output matrix file
+    output_loop_file = open(output_loop_file_name, "w")
+
+    # Write IFS list into bedgraph
+    for v in ifs_list:
+      chromosome = str(v[0])
+      p11 = str(v[1])
+      p12 = str(v[1] + resolution)
+      p21 = str(v[2])
+      p22 = str(v[2] + resolution)
+      value = str(round(v[3], 6))
+      output_loop_file.write("\t".join([chromosome, p11, p12, chromosome, p21, p22, value]) + "\n")
+
+    # Closing file
+    output_loop_file.close()
 
   def write_loop_list(self, loop_list, output_file_name):
     """Returns TODO.
@@ -617,6 +655,8 @@ class IO():
     
       - return -- A return.
     """
+
+    # TODO - Re-Add start value in case region was given
 
     # Write loop list
     output_file = open(output_file_name, "w")

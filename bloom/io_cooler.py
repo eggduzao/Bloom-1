@@ -15,17 +15,11 @@ Authors: Eduardo G. Gusmao.
 # Python
 import os
 import gc
-import sys
-import codecs
-import traceback
 import subprocess
-import configparser
 import multiprocessing
 
 # Internal
-from bloom.contact_map import ContactMap
-from bloom.util import ConfigurationFile, ChromosomeSizes, ErrorHandler
-from bloom.io_bedgraph import Bedgraph
+
 
 # External
 
@@ -34,7 +28,7 @@ from bloom.io_bedgraph import Bedgraph
 # Cooler Class
 ###################################################################################################
 
-class Cooler(ConfigurationFile):
+class Cooler():
   """This class represents TODO.
 
   *Keyword arguments:*
@@ -48,7 +42,7 @@ class Cooler(ConfigurationFile):
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, organism, ncpu):
+  def __init__(self, organism, ncpu, cooler_command, chromosome_sizes, error_handler, bedgraph_handler):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -60,22 +54,22 @@ class Cooler(ConfigurationFile):
       - return -- A return.
     """
 
-    # Configuration file initialization
-    ConfigurationFile.__init__(self)
-    self.cooler_command = self.config.get("Cooler", "command")
-    self.chromosome_sizes_file_name = os.path.join(self.bloom_data_path, self.config.get("ChromosomeSizes", organism))
+    # Command initialization
+    self.cooler_command = cooler_command.cooler_command
+    self.chromosome_sizes_file_name = chromosome_sizes.chromosome_sizes_file_name
 
     # Auxiliary Parameters
     self.ncpu = ncpu
     self.organism = organism
     self.process_queue = []
-    self.cooler_resolution_list = [str(i*1000) for i in [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]] # Please check: http://dcic.4dnucleome.org/data%20standards/
+    self.cooler_resolution_list = [str(i*1000) for i in [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]]
+    # Please check: http://dcic.4dnucleome.org/data%20standards/
 
     # Error handler
-    self.error_handler = ErrorHandler()
+    self.error_handler = error_handler
 
     # Bedgraph handler
-    self.bed_graph_handler = Bedgraph(self.organism, self.ncpu)
+    self.bed_graph_handler = bedgraph_handler
 
   #############################################################################
   # Read: Single Cooler (.cool) -> Bedgraph (.bg)

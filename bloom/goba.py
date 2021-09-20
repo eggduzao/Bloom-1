@@ -13,26 +13,16 @@ Authors: Eduardo G. Gusmao.
 ###################################################################################################
 
 # Python
-import os
 import gc
-import sys
 import random
-import codecs
-import warnings
-import traceback
-import subprocess
-import configparser
 import multiprocessing
 
 # Internal
-from bloom.contact_map import ContactMap
-from bloom.sica import Sica, SicaDist
-from bloom.util import ErrorHandler, AuxiliaryFunctions
+from bloom.util import AuxiliaryFunctions
 
 # External
-import numpy as np
-import scipy
-import scipy.stats as st
+import numpy
+
 
 ###################################################################################################
 # Goba Class
@@ -52,7 +42,7 @@ class Goba():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, contact_map, sica_instance, vertical_multiplier = [0.5, 0.75], ortogonal_multiplier = [0.1, 0.3], 
+  def __init__(self, contact_map, sica_instance, error_handler, vertical_multiplier = [0.5, 0.75], ortogonal_multiplier = [0.1, 0.3], 
                filling_frequency = 0.5, banding_value_mult_range = [0.4, 0.6], banding_further_range = [0.90, 0.99], banding_frequency = 0.5,
                outing_value_mult_range = [0.3, 0.5], outing_further_range = [0.90, 0.99], outing_frequency = 0.34,
                eppoch_resolution = 100000, eppoch_threshold = 5, seed = None):
@@ -99,7 +89,7 @@ class Goba():
     self.process_queue = []
 
     # Utilitary objects
-    self.error_handler = ErrorHandler()
+    self.error_handler = error_handler
 
 
   #############################################################################
@@ -255,7 +245,7 @@ class Goba():
       # Initialization
       key = tuple(keyv[:-1])
       value = keyv[-1]
-      log_value = np.log(value + 1)
+      log_value = numpy.log(value + 1)
 
       # Bin row and col
       brow = self.contact_map.bp_to_bin(key[0])
@@ -324,7 +314,7 @@ class Goba():
         distance_to_diag = self.contact_map.bin_distance_from_diagonal_manhattan(bin_key)
 
       # Basis value
-      basis_value = value / np.sqrt(distance_to_diag + 1)
+      basis_value = value / numpy.sqrt(distance_to_diag + 1)
         
       # Iterating on rows
       for i in range(brow, bcol + 1):
@@ -470,7 +460,7 @@ class Goba():
         except Exception:
           pass
         try:
-          log_value = np.log(value + 1)
+          log_value = numpy.log(value + 1)
           if(log_value > 0):
             self.contact_map.set(chromosome, key[0], key[1], log_value)
         except Exception:
@@ -485,7 +475,7 @@ class Goba():
       #  except Exception:
       #    pass
       #  try:
-      #    log_value = np.log(value + 1)
+      #    log_value = numpy.log(value + 1)
       #    if(log_value > 0):
       #      self.contact_map.set(chromosome, key[0], key[1], log_value)
       #  except Exception:
@@ -644,7 +634,7 @@ class Goba():
         except Exception:
           pass
         try:
-          log_value = np.log(value + 1)
+          log_value = numpy.log(value + 1)
           if(log_value > 0):
             self.contact_map.set(chromosome, key[0], key[1], log_value)
         except Exception:
@@ -659,7 +649,7 @@ class Goba():
       #  except Exception:
       #    pass
       #  try:
-      #    log_value = np.log(value + 1)
+      #    log_value = numpy.log(value + 1)
       #    if(log_value > 0):
       #      self.contact_map.set(chromosome, key[0], key[1], log_value)
       #  except Exception:
@@ -831,7 +821,7 @@ class Goba():
     c, d = (1.0 - g1*D1 - g2*D2), g2*D1 - g1*D2
 
     # Shear out division
-    out = np.empty_like(D)
+    out = numpy.empty_like(D)
     den = c**2 + d**2
     out[..., 0] = (a*c + b*d)/den
     out[..., 1] = (b*c - a*d)/den
@@ -855,14 +845,14 @@ class Goba():
     Lam = 0.0  
     eta = 0.0
     for i, ph in enumerate(phi):
-      index = np.nonzero(label == i)
+      index = numpy.nonzero(label == i)
       Lam += len(index[0])/ph
-      eta += np.sum(D[index]/ph)
+      eta += numpy.sum(D[index]/ph)
     var = 1./Lam
     mu = eta*var
 
     # Return objects
-    return np.random.normal(loc=mu, scale=np.sqrt(var))
+    return numpy.random.normal(loc=mu, scale=numpy.sqrt(var))
 
   def draw_g_2d_weak_shear(self, D, phi, label):
     """Returns TODO.
@@ -880,14 +870,14 @@ class Goba():
     Lam = 0.0  
     eta = 0.0
     for i, ph in enumerate(phi):
-      index = np.nonzero(label == i)
+      index = numpy.nonzero(label == i)
       Lam += len(index[0])/ph
-      eta += np.sum(D[index]/ph, axis=0)
+      eta += numpy.sum(D[index]/ph, axis=0)
     var = 1./Lam
     mu = eta*var
 
     # Return objects
-    return np.random.multivariate_normal(mean=mu, cov=var*np.eye(2))
+    return numpy.random.multivariate_normal(mean=mu, cov=var*numpy.eye(2))
 
 
 ###################################################################################################
@@ -933,7 +923,7 @@ class Linear1DShear():
     
       - return -- A return.
     """
-    self.g = np.mean(D)
+    self.g = numpy.mean(D)
 
   def __call__(self, D):
     """Returns TODO.
@@ -1017,7 +1007,7 @@ class WeakShear():
     
       - return -- A return.
     """
-    self.g = np.mean(D, axis=0)
+    self.g = numpy.mean(D, axis=0)
 
   def __call__(self, D):
     """Returns TODO.
@@ -1103,7 +1093,7 @@ class Shear():
     
       - return -- A return.
     """
-    self.g = np.mean(D, axis=0)
+    self.g = numpy.mean(D, axis=0)
 
   def __call__(self, D):
     """Returns TODO.
@@ -1142,7 +1132,7 @@ class Shear():
     
       - return -- A return.
     """
-    prop_g = np.random.multivariate_normal(mean=self.g, cov=np.eye(2)*0.003**2)
+    prop_g = numpy.random.multivariate_normal(mean=self.g, cov=numpy.eye(2)*0.003**2)
     current_e_int = unshear(D, self.g)
     prop_e_int = unshear(D, prop_g)
     current_lnlike = 0.0
@@ -1156,8 +1146,8 @@ class Shear():
       self.g = prop_g
       self.Nacceptances += 1
     else:
-      u = np.random.uniform()
-      if u < np.exp(prop_lnlike - current_lnlike):
+      u = numpy.random.uniform()
+      if u < numpy.exp(prop_lnlike - current_lnlike):
         self.g = prop_g
         self.Nacceptances += 1
         self.Nproposals += 1

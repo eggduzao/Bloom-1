@@ -22,7 +22,7 @@ import multiprocessing
 # Internal
 from bloom.__version__ import __version__
 from bloom.io import InputFileType
-from bloom.util import PassThroughOptionParser, ErrorHandler, AuxiliaryFunctions
+from bloom.util import PassThroughOptionParser, AuxiliaryFunctions
 
 # External
 
@@ -44,7 +44,7 @@ class ArgumentParser():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self):
+  def __init__(self, error_handler):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -57,7 +57,7 @@ class ArgumentParser():
     """
     
     # Initializing class objects
-    self.error_handler = ErrorHandler() 
+    self.error_handler = error_handler
     self.usage_message = None
     self.version_message = None
     self.parser = None
@@ -200,6 +200,11 @@ class ArgumentParser():
                      "please check the manual for the necessary files and configuration.")
     self.add_option("o", "organism", "string", "STRING", "hg19", organism_help)
 
+    region_help = ("Optional sub-region in which to apply Bloom. It has to be a comma-separated "
+                   "interval without spaces with meaning START_OF_REGION,END_OF_REGION , for "
+                   "example '1000000,2000000' .")
+    self.add_option("g", "region", "string", "STRING", None, region_help)
+
     resolution_help = ("Current resolution of the input file matrix. In case of multiple resolutions "
                        "(e.g. .hic and .mcool files), please select the lowest possible resolution. "
                        "This option can be left blank and Bloom will detect the minimal resolution "
@@ -233,7 +238,7 @@ class ArgumentParser():
     avoid_distance_help = ("Distance, in bins (given the desired output resolution) in which to "
                            "avoid values of bins from the diagonal. Depending on the experimental "
                            "setup and organism, it is advised to be between 10000 to 150000 bps.")
-    self.add_option("a", "avoid_distance", "int", "INT", 50000, avoid_distance_help)
+    self.add_option("a", "avoid_distance", "int", "INT", 0, avoid_distance_help)
 
     fitting_method_help = ("Method in which SICA distributions will be fit. It can be: 'pvalue' or "
                            "'percentile'. This flag will affect the hidden variable sica_pvalue_threshold. "
@@ -331,22 +336,22 @@ class ArgumentParser():
     self.add_option("d", "dpmm_em_significant_threshold", "int", "INT", 10, dpmm_em_significant_threshold_help)
 
     dpmm_em_signal_threshold_help = None
-    self.add_option("g", "dpmm_em_signal_threshold", "float", "FLOAT", 1.0, dpmm_em_signal_threshold_help)
+    self.add_option("j", "dpmm_em_signal_threshold", "float", "FLOAT", 1.0, dpmm_em_signal_threshold_help)
 
     dpmm_em_avoid_distance_help = None
-    self.add_option("j", "dpmm_em_avoid_distance", "int", "INT", 5, dpmm_em_avoid_distance_help)
+    self.add_option("k", "dpmm_em_avoid_distance", "int", "INT", 5, dpmm_em_avoid_distance_help)
 
     dpmm_ur_square_size_help = None
-    self.add_option("k", "dpmm_ur_square_size", "int", "INT", 1000000, dpmm_ur_square_size_help)
+    self.add_option("l", "dpmm_ur_square_size", "int", "INT", 1000000, dpmm_ur_square_size_help)
 
     dpmm_ur_delete_size_help = None
-    self.add_option("l", "dpmm_ur_delete_size", "int", "INT", 10000000, dpmm_ur_delete_size_help)
+    self.add_option("m", "dpmm_ur_delete_size", "int", "INT", 10000000, dpmm_ur_delete_size_help)
 
     ifs_multiplier_help = None
-    self.add_option("m", "ifs_multiplier", "int", "INT", 1000, ifs_multiplier_help)
+    self.add_option("n", "ifs_multiplier", "int", "INT", 1000, ifs_multiplier_help)
 
     ifs_min_matrix_threshold_help = None
-    self.add_option("n", "ifs_min_matrix_threshold", "int", "INT", 0, ifs_min_matrix_threshold_help)
+    self.add_option("p", "ifs_min_matrix_threshold", "int", "INT", 0, ifs_min_matrix_threshold_help)
 
 
     """
@@ -428,6 +433,16 @@ class ArgumentParser():
     if(not os.path.isdir(output_contacts_directory)):
       pass
       # self.error_handler.throw_error("TODO") # TODO
+    if(os.path.exists(output_matrix_directory)):
+      pass
+      # self.error_handler.throw_error("TODO") # TODO
+    else:
+      self.create_output_directory(output_matrix_directory)
+    if(os.path.exists(output_contacts_directory)):
+      pass
+      # self.error_handler.throw_error("TODO") # TODO
+    else:
+      self.create_output_directory(output_contacts_directory)
 
     # Options
     organism = self.options.organism
@@ -457,7 +472,8 @@ class ArgumentParser():
     if(not AuxiliaryFunctions.string_is_int(cores)):
       pass
       # self.error_handler.throw_error("TODO") # TODO
-    if(not AuxiliaryFunctions.string_is_validpath(temporary_location)):
+    #if(not AuxiliaryFunctions.string_is_validpath(temporary_location)):
+    if(os.path.exists(temporary_location)):
       pass
       # self.error_handler.throw_error("TODO") # TODO
     else:
@@ -513,5 +529,25 @@ class ArgumentParser():
 
     # Returning the name of the temporary directory
     return temporary_directory
+
+  def create_output_directory(self, output_location):
+    """Returns TODO.
+    
+    *Keyword arguments:*
+    
+      - argument -- An argument.
+    
+    *Return:*
+    
+      - return -- A return.
+    """
+
+    # Creating output directory
+    try:
+      output_creation_command = ["mkdir", "-p", output_location]
+      output_creation_process = subprocess.run(output_creation_command , stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+    except Exception:
+      raise
+      # self.error_handler.throw_error("TODO") # TODO
 
 

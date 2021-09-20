@@ -13,23 +13,16 @@ Authors: Eduardo G. Gusmao.
 ###################################################################################################
 
 # Python
-import os
 import gc
-import sys
 import random
-import codecs
-import traceback
-import subprocess
-import configparser
 import multiprocessing
 
 # Internal
-from bloom.sica import SicaDist
-from bloom.contact_map import ContactMap
-from bloom.util import ErrorHandler
+
 
 # External
-import numpy as np
+import numpy
+
 
 ###################################################################################################
 # Dpmm Class
@@ -49,7 +42,7 @@ class Dpmm():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, ncpu, contact_map, sica_instance, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
+  def __init__(self, ncpu, contact_map, sica_instance, error_handler, random_degrade_range = [0.01, 0.02], degrade_multiplier = 0.05,
                half_length_bin_interval = [1, 5], value_range = [10e-4, 10e-3], random_range = [10e-8, 10e-7], iteration_multiplier = 1000,
                em_significant_threshold = 10, em_signal_threshold = 1.0, em_avoid_distance = 5, ur_square_size = 1000000, ur_delete_size = 10000000, seed = None):
     """Returns TODO.
@@ -95,7 +88,7 @@ class Dpmm():
     self.process_queue = []
 
     # Utilitary objects
-    self.error_handler = ErrorHandler()
+    self.error_handler = error_handler
     self.sica_dist_handler = self.sica_instance.dist_handler
 
   #############################################################################
@@ -246,7 +239,7 @@ class Dpmm():
 
           # Speed check
           try:
-            new_value = np.log2(self.contact_map.matrix[chromosome][(row, col)] + 1)
+            new_value = numpy.log2(self.contact_map.matrix[chromosome][(row, col)] + 1)
           except Exception:
             continue
       
@@ -387,8 +380,8 @@ class Dpmm():
 
     # Get highest matrix value
     #highest_value = contact_map.max_value[chromosome]
-    avoid_numpy_array = np.array(self.sica_instance.distribution_dictionary[chromosome][self.sica_dist_handler.Abin])
-    average_avoided_value = np.mean(avoid_numpy_array)
+    avoid_numpy_array = numpy.array(self.sica_instance.distribution_dictionary[chromosome][self.sica_dist_handler.Abin])
+    average_avoided_value = numpy.mean(avoid_numpy_array)
 
     # Iterate on the rows of this chromosome's contact map
     for row in range(0, contact_map.total_1d_bins[chromosome]):
@@ -503,13 +496,13 @@ class Dpmm():
 
       # Expectation
       #if(value > 1):
-      #  newvalue = np.log2(value)
+      #  newvalue = numpy.log2(value)
       #elif(value > 0):
-      #  newvalue = np.exp(value)
+      #  newvalue = numpy.exp(value)
       #else:
       #  newvalue = random.uniform(self.random_degrade_range[0], self.random_degrade_range[1])
       if(value > 0):
-        newvalue = np.log2(value + 1)
+        newvalue = numpy.log2(value + 1)
       else:
         continue
 
@@ -846,7 +839,7 @@ class DPMM():
     self.n = len(self.D)
 
     # Initialize r_i array
-    self.p = self.alpha * self.prior.pred(self.mD)[:, np.newaxis]
+    self.p = self.alpha * self.prior.pred(self.mD)[:, numpy.newaxis]
 
     # Dirichlet parameterization
     if phi is None:
@@ -854,7 +847,7 @@ class DPMM():
     else:
       self.phi = phi
       self.label = label
-      self.nphi = [np.sum(label == i) for i in xrange(label.max())]
+      self.nphi = [numpy.sum(label == i) for i in xrange(label.max())]
 
   def init_phi(self):
     """Returns TODO.
@@ -869,7 +862,7 @@ class DPMM():
     """
 
     # Parameter initialization
-    self.label = np.zeros((self.n), dtype=int)
+    self.label = numpy.zeros((self.n), dtype=int)
     self.phi = []
     self.nphi = []
     for i in xrange(self.n):
@@ -909,7 +902,7 @@ class DPMM():
 
     # Latent vector
     if isinstance(self._D, PseudoMarginalData):
-      self.D = np.mean(self._D.data, axis=1)
+      self.D = numpy.mean(self._D.data, axis=1)
     else:
       self.D = self._D
     self.manip_needs_update = True
@@ -927,7 +920,7 @@ class DPMM():
     """
 
     # Do not do yield explicitely
-    picked = pick_discrete(self.p[i]*np.append([1], self.nphi)) - 1
+    picked = pick_discrete(self.p[i]*numpy.append([1], self.nphi)) - 1
     return picked
 
   def del_c_i(self, i):
@@ -951,7 +944,7 @@ class DPMM():
       del self.phi[label]
       del self.nphi[label]
       self.label[self.label >= label] -= 1
-      self.p = np.delete(self.p, label+1, axis=1)
+      self.p = numpy.delete(self.p, label+1, axis=1)
 
   def update_c_i(self, i):
     """Returns TODO.
@@ -973,7 +966,7 @@ class DPMM():
       self.phi.append(new_phi)
       self.nphi.append(1)
       self.label[i] = len(self.phi)-1
-      self.p = np.append(self.p, np.zeros((self.n, 1), dtype=float), axis=1)
+      self.p = numpy.append(self.p, numpy.zeros((self.n, 1), dtype=float), axis=1)
       self.p[i+1:, -1] = self.prior.like1(self.mD[i+1:], new_phi)
     else:
       self.label[i] = label
@@ -1016,7 +1009,7 @@ class DPMM():
       data = self.mD[index]
       new_phi = self.prior.post(data).sample()
       self.phi[i] = new_phi
-    self.p[:, 1:] = self.prior.like1(self.mD[:, np.newaxis], np.array(self.phi))
+    self.p[:, 1:] = self.prior.like1(self.mD[:, numpy.newaxis], numpy.array(self.phi))
 
   def update_latent_data(self):
     """Returns TODO.
@@ -1034,11 +1027,11 @@ class DPMM():
     if isinstance(self._D, PseudoMarginalData):
       for i, ph in enumerate(self.phi):
 
-        index = np.nonzero(self.label == i)[0]
+        index = numpy.nonzero(self.label == i)[0]
         data = self._D[index]
         
         ps = self.prior.like1(self.manip(data.data), ph) / data.interim_prior
-        ps /= np.sum(ps, axis=1)[:, np.newaxis]
+        ps /= numpy.sum(ps, axis=1)[:, numpy.newaxis]
 
         for j, p in enumerate(ps):
           self.D[index[j]] = data.data[j, pick_discrete(p)]
@@ -1100,8 +1093,8 @@ class GaussND():
     """
 
     # GND Parameters
-    self.mu = np.atleast_1d(mu)
-    self.Sig = np.atleast_2d(Sig)
+    self.mu = numpy.atleast_1d(mu)
+    self.Sig = numpy.atleast_2d(Sig)
     self.d = len(self.mu)
 
   def cond(self, x):
@@ -1117,8 +1110,8 @@ class GaussND():
     """
 
     # Params of cond
-    fixed = np.nonzero([x_ is not None for x_ in x])
-    nonfixed = np.nonzero([x_ is None for x_ in x])
+    fixed = numpy.nonzero([x_ is not None for x_ in x])
+    nonfixed = numpy.nonzero([x_ is None for x_ in x])
     mu1 = self.mu[nonfixed]
     mu2 = self.mu[fixed]
     Sig11 = self.Sig[nonfixed, nonfixed]
@@ -1126,8 +1119,8 @@ class GaussND():
     Sig22 = self.Sig[fixed, fixed]
 
     # Calculation of cond
-    new_mu = mu1 + np.dot(Sig12, np.dot(np.linalg.inv(Sig22), x[fixed[0]] - mu2))
-    new_Sig = Sig11 - np.dot(Sig12, np.dot(np.linalg.inv(Sig22), Sig12.T))
+    new_mu = mu1 + numpy.dot(Sig12, numpy.dot(numpy.linalg.inv(Sig22), x[fixed[0]] - mu2))
+    new_Sig = Sig11 - numpy.dot(Sig12, numpy.dot(numpy.linalg.inv(Sig22), Sig12.T))
 
     # Return object
     return GaussND(new_mu, new_Sig)
@@ -1146,9 +1139,9 @@ class GaussND():
 
     # Sample drawn as a MN
     if self.d == 1:
-      return np.random.normal(self.mu, scale=np.sqrt(self.Sig), size=size)
+      return numpy.random.normal(self.mu, scale=numpy.sqrt(self.Sig), size=size)
     else:
-      return np.random.multivariate_normal(self.mu, self.Sig, size=size)
+      return numpy.random.multivariate_normal(self.mu, self.Sig, size=size)
 
 
 ###################################################################################################
@@ -1216,22 +1209,22 @@ class GMM():
 
     # Draw from a multinomial
     if size is None:
-      nums = np.random.multinomial(1, self.proportions)
+      nums = numpy.random.multinomial(1, self.proportions)
       c = nums.index(1) # which class got picked
       return self.components[c].sample()
     else:
-      n = np.prod(size)
+      n = numpy.prod(size)
       if self.d == 1:
-        out = np.empty((n,), dtype=float)
-        nums = np.random.multinomial(n, self.proportions)
+        out = numpy.empty((n,), dtype=float)
+        nums = numpy.random.multinomial(n, self.proportions)
         i = 0
         for component, num in zip(self.components, nums):
           out[i:i+num] = component.sample(size=num)
           i += num
         out = out.reshape(size)
       else:
-        out = np.empty((n, self.d), dtype=float)
-        nums = np.random.multinomial(n, self.proportions)
+        out = numpy.empty((n, self.d), dtype=float)
+        nums = numpy.random.multinomial(n, self.proportions)
         i = 0
         for component, num in zip(self.components, nums):
           out[i:i+num] = component.sample(size=num)
@@ -1313,7 +1306,7 @@ class Prior():
     
       - return -- A return.
     """
-    return np.prod(self.like1(D, *args, **kwargs))
+    return numpy.prod(self.like1(D, *args, **kwargs))
 
   def lnlikelihood(self, D, *args, **kwargs):
     """Returns TODO.
@@ -1326,7 +1319,7 @@ class Prior():
     
       - return -- A return.
     """
-    return np.log(self.likelihood(D, *args, **kwargs))
+    return numpy.log(self.likelihood(D, *args, **kwargs))
 
   def __call__(self, *args):
     """Returns TODO.
@@ -1410,12 +1403,12 @@ class NormInvWish(Prior):
     
       - return -- A return.
     """
-    self.mu_0 = np.array(mu_0, dtype=float)
+    self.mu_0 = numpy.array(mu_0, dtype=float)
     self.kappa_0 = float(kappa_0)
-    self.Lam_0 = np.array(Lam_0, dtype=float)
+    self.Lam_0 = numpy.array(Lam_0, dtype=float)
     self.nu_0 = int(nu_0)
     self.d = len(mu_0)
-    self.model_dtype = np.dtype([('mu', float, self.d), ('Sig', float, (self.d, self.d))])
+    self.model_dtype = numpy.dtype([('mu', float, self.d), ('Sig', float, (self.d, self.d))])
     super(NormInvWish, self).__init__()
 
   def _S(self, D):
@@ -1429,8 +1422,8 @@ class NormInvWish(Prior):
     
       - return -- A return.
     """
-    Dbar = np.mean(D, axis=0)
-    return np.dot((D-Dbar).T, (D-Dbar))
+    Dbar = numpy.mean(D, axis=0)
+    return numpy.dot((D-Dbar).T, (D-Dbar))
 
   def sample(self, size=None):
     """Returns TODO.
@@ -1445,15 +1438,15 @@ class NormInvWish(Prior):
     """
     Sig = random_invwish(dof=self.nu_0, invS=self.Lam_0, size=size)
     if size is None:
-      ret = np.zeros(1, dtype=self.model_dtype)
+      ret = numpy.zeros(1, dtype=self.model_dtype)
       ret['Sig'] = Sig
-      ret['mu'] = np.random.multivariate_normal(self.mu_0, Sig/self.kappa_0)
+      ret['mu'] = numpy.random.multivariate_normal(self.mu_0, Sig/self.kappa_0)
       return ret[0]
     else:
-      ret = np.zeros(size, dtype=self.model_dtype)
+      ret = numpy.zeros(size, dtype=self.model_dtype)
       ret['Sig'] = Sig
       for r in ret.ravel():
-        r['mu'] = np.random.multivariate_normal(self.mu_0, r['Sig']/self.kappa_0)
+        r['mu'] = numpy.random.multivariate_normal(self.mu_0, r['Sig']/self.kappa_0)
       return ret
 
   def like1(self, *args):
@@ -1476,9 +1469,9 @@ class NormInvWish(Prior):
     assert x.shape[-1] == self.d
     assert mu.shape[-1] == self.d
     assert Sig.shape[-1] == Sig.shape[-2] == self.d
-    norm = np.sqrt((2*np.pi)**self.d * np.linalg.det(Sig))
-    einsum = np.einsum("...i,...ij,...j", x-mu, np.linalg.inv(Sig), x-mu)
-    return np.exp(-0.5*einsum)/norm
+    norm = numpy.sqrt((2*numpy.pi)**self.d * numpy.linalg.det(Sig))
+    einsum = numpy.einsum("...i,...ij,...j", x-mu, numpy.linalg.inv(Sig), x-mu)
+    return numpy.exp(-0.5*einsum)/norm
 
   def __call__(self, *args):
     """Returns TODO.
@@ -1498,12 +1491,12 @@ class NormInvWish(Prior):
       mu, Sig = args
     nu_0, d = self.nu_0, self.d
     Z = (2.0**(nu_0*d/2.0) * gammad(d, nu_0/2.0) * \
-        (2.0*np.pi/self.kappa_0)**(d/2.0) / np.linalg.det(self.Lam_0)**(nu_0/2.0))
-    detSig = np.linalg.det(Sig)
-    invSig = np.linalg.inv(Sig)
-    einsum = np.einsum("...i,...ij,...j", mu-self.mu_0, invSig, mu-self.mu_0)
+        (2.0*numpy.pi/self.kappa_0)**(d/2.0) / numpy.linalg.det(self.Lam_0)**(nu_0/2.0))
+    detSig = numpy.linalg.det(Sig)
+    invSig = numpy.linalg.inv(Sig)
+    einsum = numpy.einsum("...i,...ij,...j", mu-self.mu_0, invSig, mu-self.mu_0)
     return 1./Z * detSig**(-((nu_0+d)/2.0+1.0)) * \
-           np.exp(-0.5*np.trace(np.einsum("...ij,...jk->...ik", self.Lam_0, invSig), axis1=-2, axis2=-1) - self.kappa_0/2.0*einsum)
+           numpy.exp(-0.5*numpy.trace(numpy.einsum("...ij,...jk->...ik", self.Lam_0, invSig), axis1=-2, axis2=-1) - self.kappa_0/2.0*einsum)
 
   def _post_params(self, D):
     """Returns TODO.
@@ -1519,15 +1512,15 @@ class NormInvWish(Prior):
     shape = D.shape
     if len(shape) == 2:
       n = shape[0]
-      Dbar = np.mean(D, axis=0)
+      Dbar = numpy.mean(D, axis=0)
     elif len(shape) == 1:
       n = 1
-      Dbar = np.mean(D)
+      Dbar = numpy.mean(D)
     kappa_n = self.kappa_0 + n
     nu_n = self.nu_0 + n
     mu_n = (self.kappa_0 * self.mu_0 + n * Dbar) / kappa_n
-    x = (Dbar-self.mu_0)[:, np.newaxis]
-    Lam_n = (self.Lam_0 + self._S(D) + self.kappa_0*n/kappa_n*np.dot(x, x.T))
+    x = (Dbar-self.mu_0)[:, numpy.newaxis]
+    Lam_n = (self.Lam_0 + self._S(D) + self.kappa_0*n/kappa_n*numpy.dot(x, x.T))
     return mu_n, kappa_n, Lam_n, nu_n
 
   def pred(self, x):
@@ -1561,9 +1554,9 @@ class NormInvWish(Prior):
       n, d = 1, shape[0]
     assert d == self.d
     mu_n, kappa_n, Lam_n, nu_n = self._post_params(D)
-    detLam0 = np.linalg.det(self.Lam_0)
-    detLamn = np.linalg.det(Lam_n)
+    detLam0 = numpy.linalg.det(self.Lam_0)
+    detLamn = numpy.linalg.det(Lam_n)
     num = gammad(d, nu_n/2.0) * detLam0**(self.nu_0/2.0)
-    den = np.pi**(n*d/2.0) * gammad(d, self.nu_0/2.0) * detLamn**(nu_n/2.0)
+    den = numpy.pi**(n*d/2.0) * gammad(d, self.nu_0/2.0) * detLamn**(nu_n/2.0)
     return num/den * (self.kappa_0/kappa_n)**(d/2.0)
 

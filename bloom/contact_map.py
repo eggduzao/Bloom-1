@@ -14,22 +14,14 @@ Authors: Eduardo G. Gusmao.
 ###################################################################################################
 
 # Python
-import os
-import gc
-import sys
-import codecs
 import random
-import optparse
-import traceback
-import subprocess
-import configparser
-import multiprocessing
 
 # Internal
-from bloom.util import ErrorHandler, ChromosomeSizes, AuxiliaryFunctions
+from bloom.util import AuxiliaryFunctions
 
 # External
-import numpy as np
+import numpy
+
 
 ###################################################################################################
 # ContactMap Class
@@ -54,7 +46,7 @@ class ContactMap():
       - Possibility 2: A possibility 2.
   """
 
-  def __init__(self, organism, resolution, matrix = None, seed = None):
+  def __init__(self, organism, resolution, error_handler, chromosome_sizes, matrix = None, seed = None):
     """Returns TODO.
     
     *Keyword arguments:*
@@ -102,8 +94,8 @@ class ContactMap():
     self.valid_chromosome_list = []
 
     # Utilitary objects
-    self.error_handler = ErrorHandler()
-    self.chromosome_sizes = ChromosomeSizes(self.organism)
+    self.error_handler = error_handler
+    self.chromosome_sizes = chromosome_sizes
 
     # Loading blank matrix
     if(self.matrix == None):
@@ -154,9 +146,9 @@ class ContactMap():
     
       - return -- A return.
     """
-    new_i = int(np.floor(AuxiliaryFunctions.floor_multiple(i, self.resolution) / self.resolution))
+    new_i = int(numpy.floor(AuxiliaryFunctions.floor_multiple(i, self.resolution) / self.resolution))
     if(j):
-      new_j = int(np.floor(AuxiliaryFunctions.floor_multiple(j, self.resolution) / self.resolution))
+      new_j = int(numpy.floor(AuxiliaryFunctions.floor_multiple(j, self.resolution) / self.resolution))
       return new_i, new_j
     else:
       return new_i
@@ -172,9 +164,9 @@ class ContactMap():
     
       - return -- A return.
     """
-    new_i = int(np.floor(i * self.resolution))
+    new_i = int(numpy.floor(i * self.resolution))
     if(j):
-      new_j = int(np.floor(j * self.resolution))
+      new_j = int(numpy.floor(j * self.resolution))
       return new_i, new_j
     else:
       return new_i
@@ -195,7 +187,7 @@ class ContactMap():
     elif(isinstance(bp_obj, tuple)):
       return ( AuxiliaryFunctions.ceil_multiple(bp_obj[0], self.resolution), AuxiliaryFunctions.ceil_multiple(bp_obj[1], self.resolution) )
     elif(isinstance(bp_obj, float)):
-      return int(AuxiliaryFunctions.ceil_multiple(np.ceil(bp_obj), self.resolution))
+      return int(AuxiliaryFunctions.ceil_multiple(numpy.ceil(bp_obj), self.resolution))
     else:
       pass
       # self.error_handler.throw_error("TODO") # TODO
@@ -216,7 +208,7 @@ class ContactMap():
     elif(isinstance(bp_obj, tuple)):
       return ( AuxiliaryFunctions.floor_multiple(bp_obj[0], self.resolution), AuxiliaryFunctions.floor_multiple(bp_obj[1], self.resolution) )
     elif(isinstance(bp_obj, float)):
-      return int(AuxiliaryFunctions.floor_multiple(np.floor(bp_obj), self.resolution))
+      return int(AuxiliaryFunctions.floor_multiple(numpy.floor(bp_obj), self.resolution))
     else:
       pass
       # self.error_handler.throw_error("TODO") # TODO
@@ -310,7 +302,7 @@ class ContactMap():
 
     # Creating empty matrix
     max_bin = self.total_1d_bins[chromosome]
-    full_matrix = np.zeros((max_bin, max_bin))
+    full_matrix = numpy.zeros((max_bin, max_bin))
 
     # Iterating on internal matrix
     for key, value in self.matrix[chromosome].items():
@@ -399,11 +391,11 @@ class ContactMap():
     for chromosome in self.valid_chromosome_list:
 
       # Initialize all dictionaries
-      new_min_value_diagonal[chromosome] = np.inf
-      new_max_value_diagonal[chromosome] = -np.inf
+      new_min_value_diagonal[chromosome] = numpy.inf
+      new_max_value_diagonal[chromosome] = -numpy.inf
       new_total_value_diagonal[chromosome] = 0
-      new_min_value_no_diagonal[chromosome] = np.inf
-      new_max_value_no_diagonal[chromosome] = -np.inf
+      new_min_value_no_diagonal[chromosome] = numpy.inf
+      new_max_value_no_diagonal[chromosome] = -numpy.inf
       new_total_value_no_diagonal[chromosome] = 0
       new_total_bins[chromosome] = 0
       new_total_nonzero_bins[chromosome] = 0
@@ -536,11 +528,11 @@ class ContactMap():
     for chromosome in self.valid_chromosome_list:
 
       # Initialize all dictionaries
-      new_min_value_diagonal[chromosome] = np.inf
-      new_max_value_diagonal[chromosome] = -np.inf
+      new_min_value_diagonal[chromosome] = numpy.inf
+      new_max_value_diagonal[chromosome] = -numpy.inf
       new_total_value_diagonal[chromosome] = 0
-      new_min_value_no_diagonal[chromosome] = np.inf
-      new_max_value_no_diagonal[chromosome] = -np.inf
+      new_min_value_no_diagonal[chromosome] = numpy.inf
+      new_max_value_no_diagonal[chromosome] = -numpy.inf
       new_total_value_no_diagonal[chromosome] = 0
 
       # Iterating on matrix
@@ -896,7 +888,7 @@ class ContactMap():
     
       - return -- A return.
     """
-    return int(np.ceil((max(bin_point) - min(bin_point)) / 2))
+    return int(numpy.ceil((max(bin_point) - min(bin_point)) / 2))
 
   #############################################################################
   # Sparsity & Statistical Operations
