@@ -566,7 +566,10 @@ class Sica(): # TODO - Correct all places where A, T, C, O and S appear.
           pass
 
       # Naming
-      best_distribution = best_distribution.name
+      try:
+        best_distribution = best_distribution.name
+      except Exception:
+        mode_of_fit = "percentile"
 
     # Best value at percentile
     if(mode_of_fit == "percentile"):
