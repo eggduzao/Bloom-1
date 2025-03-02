@@ -150,17 +150,16 @@ Stainalyzer --severity 0.5 $input_location $output_location $root_name
                     ("-" * 50) + "\n\n"
                 )  # Add 50 dashes and 2 blank lines at the end
 
-
 if __name__ == "__main__":
 
     # Parameters
     geo_id = "GSE285812"
-    num_workers = 4
+    num_workers = 3
     operation = sys.argv[1]
 
     # Dataset
-    # base_path = "/storage2/egusmao/projects/Bloom/data/"
-    base_path = "/Users/egg/Projects/Bloom/data/"
+    base_path = "/storage2/egusmao/projects/Bloom/data/"
+    # base_path = "/Users/egg/Projects/Bloom/data/"
     download_path = os.path.join(base_path, "raw")
 
     # Input handling

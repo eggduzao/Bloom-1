@@ -34,8 +34,14 @@ from bs4 import BeautifulSoup
 # Constants
 ###################################################################################################
 
-GEO_BASE_URL = "https://ftp.ncbi.nlm.nih.gov/geo/"
-SRA_BASE_URL = "https://ftp.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/"
+# import GEOparse.GEOparse as geo_parser
+
+# def get_GEO_file_http(geo):
+#     """Force GEOparse to use HTTPS instead of FTP."""
+#     return f"https://ftp.ncbi.nlm.nih.gov/geo/series/{geo[:-3]}nnn/{geo}/soft/{geo}_family.soft.gz"
+
+# # Monkey-patch the function
+# geo_parser.get_GEO_file = get_GEO_file_http
 
 ###################################################################################################
 # Classes
