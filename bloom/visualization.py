@@ -17,9 +17,12 @@ vp.polar_plot({'Metric1': 1, 'Metric2': 4, 'Metric3': 3})
 ###############################################################################
 
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+import scipy.stats as stats
+from scipy.special import expit, softmax
 import seaborn as sns
+from collections import OrderedDict
 
 ###############################################################################
 # Constants
@@ -32,6 +35,80 @@ np.random.seed(SEED)
 ###############################################################################
 # Classes
 ###############################################################################
+
+class MetricTables:
+    """
+    Metric                                          A. Range    B. Best?    C. Per Image / Tile / Cell?                         D. Best Plot Type
+    1. Dice Similarity Coefficient (DSC)            [0, 1]      Increase    Per structure (cell/nucleus/tissue region)          Violin (distribution)
+    2. Intersection over Union (IoU, Jaccard Index) [0, 1]      Increase    Per structure (cell/nucleus/tissue region)          Violin (distribution)
+    3. Pixel Accuracy (PxAcc)                       [0, 1]      Increase    Per image/tile (DAB, SegPath, disease prediction)   Violin (distribution) or Bar (mean)
+    4. Hausdorff Distance (HD)                      [0, ∞]      Decrease    Per structure (cell/nucleus/tissue region)          Violin (distribution)
+    5. Adjusted Rand Index (ARI)                    [-1, 1]     Increase    Per structure (cell/nucleus segmentation)           Violin (distribution)
+    ---
+    Metric                                      A. Range        B. Best?    C. Per Image / Tile / Run?          D. Best Plot Type
+    6. Inference Time (Seconds per Image)       [0, ∞]          Decrease    Per image or per batch (run)        Bar (mean + error bars)
+    7. Memory Usage (RAM & VRAM Consumption)    [0, ∞] (GB)     Decrease    Per run (entire process)            Line (vs. batch size) or Bar
+    8. Model Size (MB)                          [0, ∞] (MB)     Decrease    Per model (global, not per image)   Bar (sorted by size)
+    9. Energy Consumption (Watts per Image)     [0, ∞] (W)      Decrease    Per image or per batch (run)        Bar (mean + error bars)
+    -----------
+    SegPath:            Total: 292,398                  Train: 266,724                      Test: 25,674   
+    SNOW:               Total: 20,000 tiles (512×512)   Total: 1,448,522 annotated nuclei
+    NeurIPS Challenge:  Total: 1,659 Images
+    TissueNet:          Total: 7,022 Images             Train: 2,580 512x512        Validation: 3,118 256x256   Test: 1,324 256x256
+    DynamicNuclearNet Segmentation: Total: 7,084        Annotations: 913,119
+    BCData:             Total: 1,338 Images
+    PanNuke:            Total: 7,901 Images             Total: 189,744 annotated nuclei
+    DAB Neila:          Total = 4,977                   Total PE: 2,004 / Total IMIP: 2,973 
+    """
+
+    def __init__(self):
+
+        # Methods
+        self.wyw_methods = ["GhostNet", "Cellpose2", "nnU_Net", "KIT_GE", "Omnipose", "Mesmer", "QuPath", "CelloType"]
+        self.bio_methods ["SNOW", "CellProfler4", "HistomicsTK", "ImageJ", "ilastik", "EpidermaQuant", "DAB_quant"]
+        self.nipschal_methods = ["osilab", "sribdmed", "cells", "saltfish", "redcat_autox", "train4ever", "overoverfitting", 
+                                 "vipa", "naf", "bupt_mcprl", "cphitsz", "wonderworker", "cvmli", "m1n9x", "fzu312", "sgroup",
+                                 "smf", "sanmed_ai", "hilab", "guanlab", "daschlab", "mbzuai_cellseg", "quiil", "plf", 
+                                 "siatcct", "nonozz", "littlefatfish", "boe_aiot_cto"]
+        self.comp_methods = ["SSTBM", "UNet", "Att_UNet", "SAP_UNet", "LUNet", "PsdLabeling", "NucCell_GAN", "DeepLabV3P", 
+                             "HoVer_Net", "Swin", "Swin_V2", "ViT_MoE", "Random_Forest", "SVM", "Watershed", "Otsu"]
+        self.all_methods = self.wyw_methods + self.bio_methods + self.nipschal_methods + self.comp_methods
+        self.selected_methods = []
+
+        # Datasets
+        self.datasets = {"SegPath": 25_674, "SNOW": 20_000, "NeurIPS": 1_659, "TissueNet": 7_022, "DynamicNuclearNet": 7_084,
+                         "BCData": 1_338, "PanNuke": 7_901, "DAB": 4_977}
+
+        # Metrics
+        self.dice = OrderedDict()
+        self.iou = OrderedDict()
+        self.pxAcc = OrderedDict()
+        self.hd = OrderedDict()
+        self.ari = OrderedDict()
+        self.time = OrderedDict()
+        self.mem = OrderedDict()
+        self.modsize = OrderedDict()
+        self.energy = OrderedDict()
+
+    def create_segpath_table(self):
+        """
+        59 methods x 9 metrics x 25,674 images
+        """
+
+    def create_snow_table(self):
+
+    def create_neurips_table(self):
+
+    def create_tissuenet_table(self):
+
+    def create_nuclearnet_table(self):
+
+    def create_bcdata_table(self):
+
+    def create_pannuke_table(self):
+
+    def create_dab_table(self):
+
 
 class VizPlots:
     """
