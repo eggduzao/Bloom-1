@@ -35,22 +35,22 @@ Livros
 │             ├── Biotech_Consortium_India_Bioentrepreneurship_Development.pdf
 │             ├── DW_Mount_BioinformaticsSequenceandGenomeAnalysis.pdf
 │             ├── Deep_Learning_with_Python.pdf
-│             ├── Janeway's Immunobiology, 8th Edition - Kenneth M. Murphy.pdf
+│             ├── Janeway\'s Immunobiology, 8th Edition - Kenneth M. Murphy.pdf
 │             ├── Koche_Fundamentos_de_Metodologia_Científica.pdf
 │             ├── Low_Tammi_Bioinformatics_A_Practical_Handbook_of_Next_Generation_Sequencing_and_Its_Applications.pdf
 │             ├── Marconi_Fundamentos_de_metodologia_científica.pdf
 │             ├── Pevsner2011.pdf
 │             ├── Practical Guide to ChIP-seq Data Analysis.pdf
 │             ├── RNAseq data analysis a practical approach Eija Korpenlainen.pdf
-│             ├── [Vince_Buffalo]_Bioinformatics_Data_Skills_Reprod(b-ok.org).pdf
+│             ├── \[Vince_Buffalo\]_Bioinformatics_Data_Skills_Reprod.pdf
 │             ├── bioinformatics-the-machine-learning-approach-second-edition-pierre-baldi-soren-brunak-1.pdf
 │             ├── durbin_book.pdf
 │             ├── pevsner.pdf
 │             ├── ramezani_arxiv.pdf
 │             └── roy2016.pdf
 ├── livros_biologia
-│             ├── Kandel2021.pdf ("Principles of Neural Science" - 1693 págs.)
-│             ├── Lodish2021.pdf ("Molecular Cell Biology [9a edição]" - 4610 págs.)
+│             ├── Kandel2021.pdf (\"Principles of Neural Science\" - 1693 págs.)
+│             ├── Lodish2021.pdf (\"Molecular Cell Biology [9a edição]\" - 4610 págs.)
 │             └── Murphy2012_Janeways_Immunobiology_8ed.pdf
 ├── livros_matematica
 │             ├── 1_Precalculus_Stewart.pdf
