@@ -3,13 +3,16 @@ import sys
 from pathlib import Path
 
 # Define the base path of your project
-project_root = Path().resolve().parent  # Moves one level up from /notebooks/
+current_path = Path().resolve()
+project_root = current_path.parent.parent # Moves 2 levels up from Bloom/bloom/data/ to Bloom
+
+print(project_root)
 
 # Add project root to sys.path
 sys.path.append(str(project_root))
 
 # Now you can import the module\n",
-from data.geo_sra_downloader import GEODataDownloader
+from bloom.data.geo_sra_downloader import GEODataDownloader
 
 class RunPBS:
 
@@ -69,16 +72,13 @@ conda activate ml
 
 # Current Job Parameter
 basepath=\"{self.geo_id}\"
-input_location=\"{self.geo_id}\"
-output_location=\"{self.geo_id}\"
-root_name=\"{self.geo_id}\"
 
 # Create output path and move to input location
 mkdir -p \"$output_location\"
 cd $basepath
 
 # Uncompress Control
-Stainalyzer --severity 0.5 $input_location $output_location $root_name
+# Code goes here.
 
 """
                 )

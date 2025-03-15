@@ -28,7 +28,9 @@ from typing import Optional, Dict, List
 # External
 import GEOparse
 import pandas as pd
+from Bio import Entrez
 from bs4 import BeautifulSoup
+
 
 ###################################################################################################
 # Constants
@@ -69,7 +71,7 @@ class GEODataDownloader:
         GEO Series object for metadata extraction.
     """
 
-    def __init__(self, geo_id: str, output_dir: str = "data/raw"):
+    def __init__(self, geo_id: str, output_dir: str = "data/raw", email: str = None, api_key: str = None):
         """
         Initialize the downloader.
 
@@ -79,6 +81,10 @@ class GEODataDownloader:
             The GEO or SRA accession ID (e.g., "GSE12345", "SRP09876").
         output_dir : str, optional
             Directory where downloaded files will be stored, by default "data/raw".
+        email : str, optional
+            Email address for Entrez authentication.
+        api_key : str, optional
+            NCBI API key for higher rate limits.
         """
         self.geo_id = geo_id
         self.output_dir = Path(output_dir)
@@ -87,6 +93,15 @@ class GEODataDownloader:
         # Temporary directory for storing metadata and intermediate files
         self._temp_file_name = self.output_dir / f"{self.geo_id}_temp"
         self._temp_file_name.mkdir(parents=True, exist_ok=True)
+
+        # Set credentials for NCBI Entrez API
+        if email:
+            Entrez.email = email
+        else:
+            raise ValueError("You must provide a valid email address for Entrez access.")
+
+        if api_key:
+            Entrez.api_key = api_key  # optional, but recommended for heavy usage
 
         self._gse = None  # Will hold the GEO Series object
 
