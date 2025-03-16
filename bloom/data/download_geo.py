@@ -10,7 +10,7 @@ project_root = current_path.parent.parent # Moves 2 levels up from Bloom/bloom/d
 # Add project root to sys.path
 sys.path.append(str(project_root))
 
-# Now I can import the module",
+# Now I can import the module"
 from bloom.data.geo_sra_downloader import GEODataDownloader
 
 class RunPBS:
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     geo_id = "GSE285812"
     api_key = "c5087c87794c22daeb8f52d13fc5a363d108"
     user_email = "eduardogade@gmail.com"
-    num_workers = 3
+    num_workers = 10
     operation = sys.argv[1]
 
     # Dataset

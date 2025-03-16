@@ -1,0 +1,51 @@
+
+=== Node: head ===
+Read 1 spots for SRR000001
+Written 1 spots for SRR000001
+CPU cores: 40
+Total Memory: 125.55 GB
+Internet connection available: YES
+fastq-dump functional: YES
+Active CPU-consuming processes: 0
+
+
+=== Node: node1 ===
+Read 1 spots for SRR000001
+Written 1 spots for SRR000001
+CPU cores: 96
+Total Memory: 188.54 GB
+Internet connection available: YES
+fastq-dump functional: YES
+Active CPU-consuming processes: 0
+
+
+=== Node: node2 ===
+Read 1 spots for SRR000001
+Written 1 spots for SRR000001
+CPU cores: 96
+Total Memory: 188.54 GB
+Internet connection available: YES
+fastq-dump functional: YES
+Active CPU-consuming processes: 0
+
+
+=== Node: node3 ===
+Read 1 spots for SRR000001
+Written 1 spots for SRR000001
+CPU cores: 96
+Total Memory: 1511.54 GB
+Internet connection available: YES
+fastq-dump functional: YES
+Active CPU-consuming processes: 0
+
+
+=== Node: node4 ===
+Read 1 spots for SRR000001
+Written 1 spots for SRR000001
+CPU cores: 176
+Total Memory: 6047.52 GB
+Internet connection available: YES
+fastq-dump functional: YES
+Active CPU-consuming processes: 0
+
+
