@@ -148,7 +148,7 @@ class GEODataDownloader:
         if hasattr(self, "_temp_file_name"):
             if self._temp_file_name.exists():
                 print(f"Cleaning up temporary files at {self._temp_file_name}...")
-                shutil.rmtree(self._temp_file_name)  # Delete temporary directory
+                # shutil.rmtree(self._temp_file_name)  # Delete temporary directory
 
     def create_metadata_table(self) -> None:
         """

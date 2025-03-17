@@ -23,6 +23,7 @@ def run_on_remote_node(node: str, script_path: str, operation: str):
     conda_path = "/sw/miniconda3/etc/profile.d/conda.sh"
     bashrc_path = "/home/egusmao/.bashrc"
     conda_env = "ml"
+    data_directory = "/storage2/egusmao/projects/Bloom/data/raw"
 
     command = (
         f"nohup bash -c 'source {conda_path} && "
@@ -30,7 +31,7 @@ def run_on_remote_node(node: str, script_path: str, operation: str):
         f"cd {script_directory} && "
         f"conda activate {conda_env} && "
         f"python {script_path} {operation}' "
-        f"> {script_directory}/{node}_download.txt 2>&1 &"
+        f"> {data_directory}/{node}_download.txt 2>&1 &"
     )
 
     ssh_command = ["ssh", node, command]
@@ -42,7 +43,7 @@ def run_on_remote_node(node: str, script_path: str, operation: str):
 if __name__ == "__main__":
 
     compute_node = "node1"
-    operation = "make"
+    operation = "run" # "make"
     script = "/storage2/egusmao/projects/Bloom/bloom/data/download_geo.py"
 
     run_on_remote_node(compute_node, script, operation)
