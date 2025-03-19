@@ -3,7 +3,7 @@ import sys
 import subprocess
 from pathlib import Path
 
-def run_on_remote_node(node: str, script_path: str, operation: str):
+def run_with_nohup(script_path: str, operation: str):
     """
     Runs the specified Python script on a remote node via SSH.
     
@@ -20,31 +20,27 @@ def run_on_remote_node(node: str, script_path: str, operation: str):
     script_directory = script_path.parent
 
     # Existing cluster paths
-    conda_path = "/sw/miniconda3/etc/profile.d/conda.sh"
+    micromamba_path = "$(micromamba shell hook --shell bash)"
     bashrc_path = "/home/egusmao/.bashrc"
-    conda_env = "ml"
-    data_directory = "/storage2/egusmao/projects/Bloom/data/raw"
+    conda_env = "bio"
 
     command = (
-        f"nohup bash -c 'source {conda_path} && "
+        f"nohup bash -c 'eval {micromamba_path} && "
         f"source {bashrc_path} && "
         f"cd {script_directory} && "
         f"conda activate {conda_env} && "
         f"python {script_path} {operation}' "
-        f"> {data_directory}/{node}_download.txt 2>&1 &"
+        f"> {operation}.log 2>&1 &"
     )
 
-    ssh_command = ["ssh", node, command]
-
-    print(f"Running remotely on node {node}: {command}")
-    subprocess.run(ssh_command)
+    print(f"Running: {command}")
+    subprocess.run(command)
 
 # Example of usage:
 if __name__ == "__main__":
 
-    compute_node = "node1"
-    operation = "run" # "make"
     script = "/storage2/egusmao/projects/Bloom/bloom/data/download_geo.py"
+    operation = "metadata" # metadata download make run merge delete delete_all_sra_files
 
-    run_on_remote_node(compute_node, script, operation)
+    run_with_nohup(compute_node, script, operation)
 
