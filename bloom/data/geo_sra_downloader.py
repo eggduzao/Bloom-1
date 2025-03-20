@@ -75,7 +75,8 @@ class GEODataDownloader:
                  geo_id: str,
                  output_dir: str = "data/raw",
                  email: str = None,
-                 api_key: str = None):
+                 api_key: str = None,
+                 ncbi_dir: str = None):
         """
         Initialize the downloader.
 
@@ -97,12 +98,19 @@ class GEODataDownloader:
         """
 
         self.geo_id = geo_id
+
+        # Output directory processing
         self.output_dir = Path(output_dir) / f"{self.geo_id}"
         self.output_dir.mkdir(parents=True, exist_ok=True)  # Ensure output directory exists
 
         # Temporary directory for storing metadata and intermediate files
         self._temp_file_name = self.output_dir / f"{self.geo_id}_temp"
         self._temp_file_name.mkdir(parents=True, exist_ok=True)
+
+        # NCBI directory processing
+        if ncbi_dir is not None:
+            self.ncbi_dir = Path(ncbi_dir) / f"sra"
+            self.ncbi_dir.mkdir(parents=True, exist_ok=True)
 
         # Set credentials for NCBI Entrez API
         if email:
@@ -159,11 +167,10 @@ class GEODataDownloader:
           when the instance is garbage collected.
         - The actual downloaded data remains untouched in 'self.output_dir'.
         """
-        print(f"Please clean up temporary files at {self._temp_file_name}.")
-        #if hasattr(self, "_temp_file_name"):
-        #    if self._temp_file_name.exists():
-        #        print(f"Cleaning up temporary files at {self._temp_file_name}...")
-        #        shutil.rmtree(self._temp_file_name)  # Delete temporary directory
+        if hasattr(self, "_temp_file_name"):
+            if self._temp_file_name.exists():
+                print(f"Cleaning up temporary files at {self._temp_file_name}")
+                shutil.rmtree(self._temp_file_name)  # Delete temporary directory
 
     def create_metadata_table(self) -> None:
         """
@@ -281,20 +288,28 @@ class GEODataDownloader:
                     continue
 
                 # Checking whether sra files already exist
-                fastq_file = final_output_dir / f"{srr_id}.sra"
-                fastq_file_1 = final_output_dir / f"{srr_id}.sralite"
-                if fastq_file.exists() or fastq_file_1.exists() or fastq_file_2.exists():
+                sra_file = self.ncbi_dir / f"{srr_id}.sra"
+                sra_file_lite = self.ncbi_dir / f"{srr_id}.sralite"
+                if sra_file.exists() or sra_file_lite.exists():
                     print(f"{srr_id} already exists, skipping conversion.")
                     continue
 
                 # Step 3: Create log file
                 log_file = self.output_dir / f"prefetch_{srr_id}.log"
 
+                # Step 3: SRA is AWS-only
+                if self._is_sra_aws_only(srr_id):
+                    print(f"SRA = {srr_id} is AWS-only. Downloading via HTTPS instead.")
+                    # Call function to download via AWS S3 link
+
                 # Step 3: Append ssr_id and log_file to list
-                srr_id_list.append((srr_id, log_file))
+                else:
+                    print(f"SRA = {srr_id} is available via NCBI. Using prefetch.")
+                    srr_id_list.append((srr_id, log_file))
 
         # Step 4: Run '_download_with_prefetch' function
         for sra_id, log_file in srr_id_list:
+
             self._download_with_prefetch(sra_id,
                                          max_size_gb="100G",
                                          log_level="6",
@@ -411,7 +426,7 @@ class GEODataDownloader:
 
         # Fetch SRRs from metadata
         final_output_dir = self.output_dir
-        final_output_dir = Path(output_dir).resolve()
+        final_output_dir = Path(final_output_dir).resolve()
         srr_id_list = []
         for _, row in metadata_df.iterrows():
             srr_list = str(row["SRR_IDs"]).split(",")
@@ -506,6 +521,42 @@ class GEODataDownloader:
                 continue  # Skip failed downloads
 
         print(f"\nAll processed data downloaded to: {processed_output_dir}")
+
+    def _is_sra_aws_only(self, srr_id: str) -> bool:
+        """
+        Check if an SRA file is stored only on AWS by querying the NCBI API.
+
+        Parameters
+        ----------
+        srr_id : str
+            The SRR ID to check.
+
+        Returns
+        -------
+        bool
+            True if the file is only on AWS, False otherwise.
+        """
+
+        # NCBI API URL
+        url = f"https://trace.ncbi.nlm.nih.gov/Traces/sra-db-be/api/sra/{srr_id}"
+
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()  # Raise error if bad response
+
+            data = response.json()
+
+            # Check if the "external_repositories" field mentions AWS
+            if "external_repositories" in data:
+                for repo in data["external_repositories"]:
+                    if repo["provider"] == "AWS":
+                        return True  # SRA is AWS-only
+
+            return False  # SRA is available via NCBI
+
+        except requests.RequestException as e:
+            print(f"Error checking AWS status for {srr_id}: {e}")
+            return False  # Assume it's available normally if API fails
 
     def _fetch_gse_data(self) -> GEOparse.GSE:
         """
@@ -862,10 +913,13 @@ class GEODataDownloader:
         }
 
         # Convert dictionary into a cleaned list of CLI arguments
-        optional_parameters = [
-            f"{key} {value}" if isinstance(value, str) and value else key
-            for key, value in prefetch_params.items() if value
-        ]
+        optional_parameters = []
+        for key, value in prefetch_params.items():
+            if isinstance(value, str) and value:
+                optional_parameters.append(key)
+                optional_parameters.append(value)
+            elif value:
+                optional_parameters.append(key)
 
         # Full command
         cmd = [
@@ -878,19 +932,29 @@ class GEODataDownloader:
         cmd = [arg for arg in cmd if arg]
         full_log_file = self.output_dir / log_file if log_file else None
 
-        # Running prefetch
-        print(f"Running command: {' '.join(cmd)}")
         try:
-            # Run fastq-dump and capture errors if any
+            # Run prefetch: capture output in log file
             if full_log_file:
                 with open(full_log_file, "w") as f:  # Open file for writing
-                    process = subprocess.run(cmd, check=True, stdout=f, stderr=f, text=True)
+                    subprocess.run(cmd, check=True, stdout=f, stderr=f, text=True)
+            # Run prefetch without a log file
             else:
-                process = subprocess.run(cmd, check=True, stdout=f, stderr=f, text=True)                
-            print(f"Successfully downloaded {sra_id}" + "-"*30)
+                subprocess.run(cmd, check=True, text=True)
+
+            print(f"Successfully downloaded {sra_id}" + "-" * 30)
+
         except subprocess.CalledProcessError as e:
-            print(f"Error downloading {sra_id} with message: {e.stderr.decode()}")
-            raise
+
+            # Log the error but do not raise it
+            print(f"Error downloading {sra_id}: Check log file: {full_log_file}")
+            if full_log_file:
+                error_message = f"Error downloading {sra_id}: {e}"
+                with open(full_log_file, "a") as f:
+                    f.write(error_message)
+            else:
+                print(error_message)
+
+            return  # Move to the next SRR without stopping execution
 
     def _process_sra_to_fastq(self,
                               sra_file: str,
@@ -1025,10 +1089,13 @@ class GEODataDownloader:
         }
 
         # Convert dictionary into a cleaned list of CLI arguments
-        optional_parameters = [
-            f"{key} {value}" if isinstance(value, str) and value else key
-            for key, value in fastq_dump_params.items() if value
-        ]
+        optional_parameters = []
+        for key, value in fastq_dump_params:
+            if isinstance(value, str) and value:
+                optional_parameters.append(key)
+                optional_parameters.append(value)
+            elif value:
+                optional_parameters.append(key)
 
         # Full command
         cmd = [
@@ -1048,13 +1115,15 @@ class GEODataDownloader:
             # Run fastq-dump and capture errors if any
             if full_log_file:
                 with open(full_log_file, "w") as f:  # Open file for writing
-                    process = subprocess.run(cmd, check=True, stdout=f, stderr=f, text=True)
+                    subprocess.run(cmd, check=True, stdout=f, stderr=f, text=True)
             else:
-                process = subprocess.run(cmd, check=True, stdout=f, stderr=f, text=True) 
-            print(f"Successfully converted {sra_file.name}" + "-"*30)
-        except subprocess.CalledProcessError as e:
-            print(f"Error converting {sra_file.name} with message: {e.stderr.decode()}")
-            raise
+                subprocess.run(cmd, check=True, text=True)
+
+            print(f"Successfully downloaded {sra_id}" + "-" * 30)
+
+        except subprocess.CalledProcessError:
+            print(f"Error downloading {sra_id}. Check log file: {full_log_file}")
+            raise  # Re-raise standard error without modification
 
     def __repr__(self) -> str:
         """

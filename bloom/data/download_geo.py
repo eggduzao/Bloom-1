@@ -18,7 +18,6 @@ class RunPBS:
     def __init__(self, geo_id, ncbi_path, download_path, email=None, api_key=None):
 
         self.geo_id = geo_id
-        self.num_workers = num_workers
         self.ncbi_path = Path(ncbi_path).resolve()
         self.download_path = Path(download_path).resolve()
         self.email = email
@@ -26,8 +25,11 @@ class RunPBS:
         self.geo_downloader = GEODataDownloader(self.geo_id,
                                                 self.download_path,
                                                 self.email,
-                                                self.api_key)
-        self.sra_list = self.geo_downloader.get_sra_id()
+                                                self.api_key,
+                                                self.ncbi_path)
+        metadata_file = self.geo_downloader.output_dir / f"{self.geo_downloader.geo_id}_metadata.tsv"
+        if metadata_file.exists():
+            self.sra_list = self.geo_downloader.get_sra_id()
         
     def create_metadata(self):
 
@@ -43,7 +45,7 @@ class RunPBS:
         for i, sra_id in enumerate(self.sra_list):
 
             # Parameters
-            sra_file_name = self.ncbi_path / f"{sra_id}.sralite"
+            sra_file_name = self._chech_sra_file_name()
             output_location = self.geo_downloader.output_dir
 
             # Unique PBS file name
@@ -73,22 +75,45 @@ class RunPBS:
 # cd $PBS_O_WORKDIR
 
 # Environments
-eval "$(micromamba shell hook --shell bash)"
+eval \"$(micromamba shell hook --shell bash)\"
 micromamba activate bio
 
 # Current Job Parameter
 basepath=\"{output_location}\"
 cd $basepath
 
-# Uncompress Control
-geo_downloader = GEODataDownloader({self.geo_id}, {self.download_path}, {self.email}, {self.api_key})
-geo_downloader._process_sra_to_fastq({sra_file_name},
-                                     log_level = \"5\",
-                                     gzip_files = True,
-                                     split_files = False,
-                                     split_3: bool = True,
-                                     output_directory={output_location})
+# Python HEREDOC (EOF Block)
 
+python <<EOF
+import sys
+from pathlib import Path
+
+# Define the base path of your project
+current_path = Path().resolve()
+project_root = current_path.parent.parent # Moves 2 levels up from Bloom/bloom/data/ to Bloom
+
+# Add the current PBS job working directory to sys.path
+sys.path.insert(0, str(project_root.resolve()))
+
+from bloom.data.geo_sra_downloader import GEODataDownloader
+
+geo_downloader = GEODataDownloader(
+    "{self.geo_id}",
+    "{self.download_path}",
+    "{self.email}",
+    "{self.api_key}",
+    "{self.ncbi_path}"
+)
+
+geo_downloader._process_sra_to_fastq(
+    "{sra_file_name}",
+    log_level="5",
+    gzip_files=True,
+    split_files=False,
+    split_3=True,
+    output_directory="{output_location}"
+)
+EOF
 """
                 )
 
@@ -111,9 +136,6 @@ geo_downloader._process_sra_to_fastq({sra_file_name},
         err_file_list = []
         # Create PBS scripts
         for i, sra_id in enumerate(self.sra_list):
-
-            # Parameters
-            sra_file_name = self.ncbi_path / f"{sra_id}.sralite"
 
             # Unique out and err PBS file name
             out_filename = f"{self.geo_id}_{sra_id}_{i}.out"
@@ -159,8 +181,17 @@ geo_downloader._process_sra_to_fastq({sra_file_name},
         for i, sra_id in enumerate(self.sra_list):
 
             # Parameters
-            sra_file_name = self.ncbi_path / f"{sra_id}.sralite"
+            sra_file_name = self._chech_sra_file_name()
             sra_file_name.unlink(missing_ok=True)
+
+    def _chech_sra_file_name(self):
+        # Check which SRA file exists
+        sra_file = self.ncbi_dir / f"{srr_id}.sra"
+        sra_file_lite = self.ncbi_dir / f"{srr_id}.sralite"
+        if sra_file.exists():
+            return sra_file
+        if sra_file_lite.exists():
+            return sra_file_lite
 
     def _merge(self, file_list, output_file):
         # Merge files
@@ -173,9 +204,8 @@ geo_downloader._process_sra_to_fastq({sra_file_name},
                     ("-" * 50) + "\n\n"
                 )  # Add 50 dashes and 2 blank lines at the end
 
+# Entry Point
 if __name__ == "__main__":
-
-    # python -c "import os; os.cpu_count()"
 
     # Parameters
     geo_id = "GSE285812"
@@ -184,7 +214,7 @@ if __name__ == "__main__":
     operation = sys.argv[1]
 
     # Dataset
-    ncbi_path = "/storage2/egusmao/ncbi_sra/sra"
+    ncbi_path = "/storage2/egusmao/ncbi_sra/"
     download_path = "/storage2/egusmao/projects/Bloom/data/raw/"
     # download_path = "/Users/egg/Projects/Bloom/data/raw/"
 
