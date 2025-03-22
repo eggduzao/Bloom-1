@@ -14,6 +14,7 @@ Authors: Eduardo G. Gusmao.
 # Python
 import os
 import time
+import glob
 import shutil
 import requests
 import functools
@@ -30,7 +31,10 @@ import GEOparse
 import pandas as pd
 from Bio import Entrez
 from bs4 import BeautifulSoup
-
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
 
 ###################################################################################################
 # Constants
@@ -298,9 +302,8 @@ class GEODataDownloader:
                 log_file = self.output_dir / f"prefetch_{srr_id}.log"
 
                 # Step 3: SRA is AWS-only
-                if self._is_sra_aws_only(srr_id):
-                    print(f"SRA = {srr_id} is AWS-only. Downloading via HTTPS instead.")
-                    # Call function to download via AWS S3 link
+                if self._get_sra_aws_links(srr_id):
+                    continue
 
                 # Step 3: Append ssr_id and log_file to list
                 else:
@@ -521,42 +524,6 @@ class GEODataDownloader:
                 continue  # Skip failed downloads
 
         print(f"\nAll processed data downloaded to: {processed_output_dir}")
-
-    def _is_sra_aws_only(self, srr_id: str) -> bool:
-        """
-        Check if an SRA file is stored only on AWS by querying the NCBI API.
-
-        Parameters
-        ----------
-        srr_id : str
-            The SRR ID to check.
-
-        Returns
-        -------
-        bool
-            True if the file is only on AWS, False otherwise.
-        """
-
-        # NCBI API URL
-        url = f"https://trace.ncbi.nlm.nih.gov/Traces/sra-db-be/api/sra/{srr_id}"
-
-        try:
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()  # Raise error if bad response
-
-            data = response.json()
-
-            # Check if the "external_repositories" field mentions AWS
-            if "external_repositories" in data:
-                for repo in data["external_repositories"]:
-                    if repo["provider"] == "AWS":
-                        return True  # SRA is AWS-only
-
-            return False  # SRA is available via NCBI
-
-        except requests.RequestException as e:
-            print(f"Error checking AWS status for {srr_id}: {e}")
-            return False  # Assume it's available normally if API fails
 
     def _fetch_gse_data(self) -> GEOparse.GSE:
         """
@@ -800,9 +767,9 @@ class GEODataDownloader:
                                 type: str = "", # Default
                                 transport: str = "", # Default
                                 min_size_kb: str = "", # Default
-                                max_size_gb: str = "100G",
+                                max_size_gb: str = "250G",
                                 resume: str = "", # Default
-                                verify: str = "", # Default
+                                verify: str = "yes", # Default
                                 output_file: str = "", # Default (RECOMMENDED)
                                 output_directory: str = "", # Default (RECOMMENDED)
                                 log_level: str = "6",
@@ -941,6 +908,8 @@ class GEODataDownloader:
             else:
                 subprocess.run(cmd, check=True, text=True)
 
+            # Check download
+            self._verify_download(full_log_file, srr_list=[sra_id], file_mode="a")
             print(f"Successfully downloaded {sra_id}" + "-" * 30)
 
         except subprocess.CalledProcessError as e:
@@ -954,7 +923,195 @@ class GEODataDownloader:
             else:
                 print(error_message)
 
+            # Try the last resource to download with AWS links
+            self._get_sra_aws_links(sra_id)
             return  # Move to the next SRR without stopping execution
+
+    def _get_sra_aws_links(self, srr_id: str) -> bool:
+        """
+        Verifies if the SRR is a prefetch version or AWS link version.
+
+        1. Extract AWS download links from NCBI SRA Run Browser using Selenium.
+        2. Creates and executes a manual AWS download script for an SRA ID if 
+           the files are only available in AWS. Returns True.
+        3. Returns False if files available only through prefetch.
+
+        Parameters
+        ----------
+        srr_id : str
+            The SRA ID to verify/download (e.g., "SRR31810743").
+
+        Returns
+        -------
+        bool
+            True if it is an AWS-only SRR or False if prefetch can be performed.
+        """
+
+        # Define the URL
+        url = (
+            f"https://trace.ncbi.nlm.nih.gov/Traces/index.html?"
+            f"view=run_browser&acc={srr_id}&display=data-access"
+        )
+
+        # Set up Selenium WebDriver (headless mode)
+        options = webdriver.ChromeOptions()
+        options.add_argument("--headless")  # Run in headless mode (no browser window)
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+
+        try:
+            # Load the page
+            driver.get(url)
+            time.sleep(5)  # Wait for JavaScript to load the content
+
+            # Get the updated page source with JavaScript-rendered content
+            soup = BeautifulSoup(driver.page_source, "html.parser")
+
+            # Extract all AWS download links
+            aws_links = [
+                a["href"]
+                for a in soup.find_all("a", href=True)
+                if "https://sra-pub-src" in a["href"]
+            ]
+
+            print(f"SRA = {srr_id} is AWS-only. Downloading via HTTPS instead.")
+
+            # Define the bash script file path
+            bash_file_name = self.output_dir / f"prefetch_{srr_id}.sh"
+            bash_file_name_log = self.output_dir / f"prefetch_{srr_id}.log"
+
+            # If the script already exists, assume the download was scheduled before
+            bash_file_exists = False
+            if bash_file_name.exists() or bash_file_name_log.exists():
+                print(f"Bash script {bash_file_name} already exists. Skipping creation.")
+                print((f"If posterior execution fails, remove ",
+                       f"{bash_file_name} and {bash_file_name_log} scripts."))
+                bash_file_exists = True
+
+            if not bash_file_exists:
+
+                # Write the bash script
+                with open(bash_file_name, "w") as bash_file:
+                    bash_file.write("#!/bin/bash\n\n")
+                    bash_file.write("# Define URLs and output file names\n")
+                    bash_file.write("urls=(\n")
+                    for aws_link in aws_links:
+                        bash_file.write(f'    "{aws_link}"\n')
+                    bash_file.write(")\n\n")
+                    bash_file.write("output_files=(\n")
+                    for aws_link in aws_links:
+                        aws_link_name = os.path.basename(url)
+                        aws_link_name = file_name.removesuffix(".1")
+                        output_file = self.output_dir / f"{srr_id}_{aws_link_name}"
+                        bash_file.write(f'    "{output_file}"\n')
+                    bash_file.write(")\n\n")
+                    bash_file.write("# Loop through URLs and download each file\n")
+                    bash_file.write('for i in "${!urls[@]}"; do\n')
+                    bash_file.write('    echo "Downloading: ${urls[i]} -> ${output_files[i]}"\n')
+                    bash_file.write('    wget -O "${output_files[i]}" "${urls[i]}"\n')
+                    bash_file.write('    gzip -t "${output_files[i]}"\n')
+                    bash_file.write("done\n")
+
+                # Make the script executable
+                bash_file_name.chmod(0o755)
+
+            # Run the script with nohup in the background
+            nohup_command = f"nohup bash {bash_file_name} > {bash_file_name_log} 2>&1 &"
+            subprocess.run(nohup_command, shell=True, check=False)
+
+            print(f"Started AWS download for {srr_id}. Logs: {bash_file_name_log}")
+
+            return True # prefetch does not exist
+
+        except Exception as e:
+            print(f"Error fetching AWS links: {e}")
+            return False # prefetch exists
+
+        finally:
+            driver.quit()  # Close the browser session
+
+    def _verify_download(self, log_file_name: str, srr_list: list=None, file_mode: str="w") -> None:
+        """
+        Validate downloaded raw sequencing data files using vdb-validate and gzip.
+
+        This method performs validation of files downloaded via `prefetch` (typically `.sralite` or `.sra`)
+        and files downloaded manually (typically `.fastq.gz`), writing all log output to the specified
+        log file.
+
+        Parameters
+        ----------
+        log_file_name : str
+            Path to the log file where all validation logs will be written.
+        srr_list : list of str, optional
+            A list of SRR accession identifiers. If provided, only files related to these SRRs
+            will be validated. If None, all files in the relevant directories will be validated.
+
+        Notes
+        -----
+        - Prefetched files are expected to reside in `self.ncbi_dir` with extensions `.sralite` or `.sra`.
+        - Non-prefetch files (e.g., `.fastq.gz`) are expected to reside in `self.output_dir`.
+        - `vdb-validate` is used for SRA/SRALITE validation.
+        - `gzip -t` is used to test gzip integrity for FASTQ files.
+        """
+
+        # Get all relevant files
+        sra_files = glob.glob(os.path.join(self.ncbi_dir, '*.sralite')) + \
+                    glob.glob(os.path.join(self.ncbi_dir, '*.sra'))
+
+        fastq_files = glob.glob(os.path.join(self.output_dir, '*.fastq.gz'))
+
+        # If SRR list is given, filter only the corresponding SRA/SRALITE files
+        if srr_list:
+            srr_set = set(srr_list)
+            sra_files = [f for f in sra_files if os.path.splitext(os.path.basename(f))[0] in srr_set]
+            fastq_files = [] # In this case, fastq_files is not performed
+
+        # Open the log file for writing output of all validations
+        with open(log_file_name, file_mode) as log_file:
+
+            # First validate SRA/SRALITE files using vdb-validate
+            log_file.write("Validating SRA/SRALITE files with vdb-validate:\n")
+            for sra_path in sra_files:
+                if os.path.exists(sra_path):
+                    log_file.write(f"\nRunning vdb-validate on: {sra_path}\n")
+                    try:
+                        result = subprocess.run(
+                            ['vdb-validate', sra_path],
+                            capture_output=True,
+                            text=True
+                        )
+                        log_file.write(result.stdout)
+                        if result.stderr:
+                            log_file.write("\n[stderr]\n" + result.stderr)
+                    except Exception as e:
+                        log_file.write(f"Error running vdb-validate on {sra_path}: {e}\n")
+                else:
+                    log_file.write(f"File not found: {sra_path}\n")
+
+            # Then validate fastq.gz files using gzip -t
+            log_file.write("\n\nValidating .fastq.gz files with gzip -t:\n")
+            for fastq_path in fastq_files:
+                if os.path.exists(fastq_path):
+                    log_file.write(f"\nRunning gzip -t on: {fastq_path}\n")
+                    try:
+                        result = subprocess.run(
+                            ['gzip', '-t', fastq_path],
+                            capture_output=True,
+                            text=True
+                        )
+                        if result.returncode == 0:
+                            log_file.write("OK\n")
+                        else:
+                            log_file.write("FAILED\n")
+                            if result.stderr:
+                                log_file.write(result.stderr)
+                    except Exception as e:
+                        log_file.write(f"Error running gzip -t on {fastq_path}: {e}\n")
+                else:
+                    log_file.write(f"File not found: {fastq_path}\n")
 
     def _process_sra_to_fastq(self,
                               sra_file: str,

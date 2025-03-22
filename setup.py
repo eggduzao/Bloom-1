@@ -1,12 +1,11 @@
 
-# Stainalyzer Package
-
+# Bloom Package
 import os
 import re
-from setuptools import setup, find_packages  # setuptools is the standard tool for packaging Python projects.
+from setuptools import setup, find_packages
 
 def read_version():
-    version_file = os.path.join(os.path.dirname(__file__), 'Stainalyzer', '__init__.py')
+    version_file = os.path.join(os.path.dirname(__file__), 'Bloom', '__init__.py')
     with open(version_file, 'r') as f:
         version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", f.read(), re.M)
         if version_match:
@@ -16,7 +15,7 @@ def read_version():
 # setup() is the function that handles all the package metadata and configuration.
 setup(
     # Name of your package. This should be unique and is how it will be identified on PyPI.
-    name='Stainalyzer',  
+    name='Bloom',  
 
     # Version of your package. Follows semantic versioning (e.g., MAJOR.MINOR.PATCH).
     version=read_version(),  
@@ -37,7 +36,7 @@ setup(
     author_email='eduardo.gusmao@tum-sls.de',  
 
     # URL for the project, e.g., GitHub repository.
-    url='https://github.com/eggduzao/Stainalyzer',  
+    url='https://github.com/eggduzao/Bloom',  
 
     # List of keywords to help people find your package when searching PyPI.
     keywords='DAB, immunohistopathology, self-supervised learning, image analysis, deep learning',  
@@ -106,7 +105,7 @@ setup(
 
 	# Fine-grained control of what to include in addition
 	package_data={
-	    'Stainalyzer': [
+	    'Bloom': [
 	        'data/colornames.txt',          # Example datasets in CSV format
 	        'data/DAB_Training',			# Sample training images
 	        'data/DAB_Training_Output',     # Sample training images
@@ -130,7 +129,6 @@ setup(
 
 	    # Topics
 	    'Topic :: Scientific/Engineering :: Bio-Informatics',
-	    'Topic :: Scientific/Engineering :: Image Recognition',
 	    'Topic :: Scientific/Engineering :: Artificial Intelligence',
 	    'Topic :: Scientific/Engineering :: Artificial Intelligence :: Deep Learning',
 	    'Topic :: Scientific/Engineering :: Mathematics',
@@ -167,12 +165,12 @@ setup(
     # Entry points define executable scripts that can be run from the command line.
     entry_points={
         'console_scripts': [
-            'Stainalyzer=Stainalyzer.main:main'  # Creates a command 'Stainalyzer' to run 'main()'' in 'Stainalyzer/Stainalyzer/main.py'
+            'Bloom=Bloom.main:main'  # Creates a command 'Bloom' to run 'main()'' in 'Bloom/Bloom/main.py'
         ]
     },
 
     # Project-related URLs.
     project_urls={
-        'Source': 'https://github.com/yourusername/microscopy'
+        'Source': 'https://github.com/eggduzao/Bloom'
     },
 )
