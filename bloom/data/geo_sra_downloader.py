@@ -33,7 +33,6 @@ from Bio import Entrez
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 
 ###################################################################################################
@@ -48,6 +47,10 @@ from selenium.webdriver.common.by import By
 
 # # Monkey-patch the function
 # geo_parser.get_GEO_file = get_GEO_file_http
+
+# Path to your manually installed Chromium + Chromedriver
+CHROME_BIN = "/home/egusmao/.opt/chromium/chrome-linux64/chrome"
+CHROMEDRIVER_BIN = "/home/egusmao/.opt/chromium_driver/chromedriver-linux64/chromedriver"
 
 ###################################################################################################
 # Classes
@@ -312,9 +315,8 @@ class GEODataDownloader:
 
         # Step 4: Run '_download_with_prefetch' function
         for sra_id, log_file in srr_id_list:
-
             self._download_with_prefetch(sra_id,
-                                         max_size_gb="100G",
+                                         max_size_gb="500G",
                                          log_level="6",
                                          log_file=log_file)
 
@@ -927,7 +929,7 @@ class GEODataDownloader:
             self._get_sra_aws_links(sra_id)
             return  # Move to the next SRR without stopping execution
 
-    def _get_sra_aws_links(self, srr_id: str) -> bool:
+    def _get_sra_aws_links(self, srr_id: str, local_mode: bool=False) -> bool:
         """
         Verifies if the SRR is a prefetch version or AWS link version.
 
@@ -947,20 +949,29 @@ class GEODataDownloader:
             True if it is an AWS-only SRR or False if prefetch can be performed.
         """
 
+        if local_mode:
+            from webdriver_manager.chrome import ChromeDriverManager
+
         # Define the URL
         url = (
             f"https://trace.ncbi.nlm.nih.gov/Traces/index.html?"
             f"view=run_browser&acc={srr_id}&display=data-access"
         )
 
-        # Set up Selenium WebDriver (headless mode)
+        # Selenium options
         options = webdriver.ChromeOptions()
-        options.add_argument("--headless")  # Run in headless mode (no browser window)
+        options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
 
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
+        # Set up Selenium WebDriver (headless mode)
+        if local_mode:
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=options)
+        else:
+            options.binary_location = CHROME_BIN
+            service = Service(CHROMEDRIVER_BIN)
+            driver = webdriver.Chrome(service=service, options=options)
 
         try:
             # Load the page
@@ -976,6 +987,9 @@ class GEODataDownloader:
                 for a in soup.find_all("a", href=True)
                 if "https://sra-pub-src" in a["href"]
             ]
+
+            if not aws_links:
+                return False
 
             print(f"SRA = {srr_id} is AWS-only. Downloading via HTTPS instead.")
 
@@ -1003,8 +1017,7 @@ class GEODataDownloader:
                     bash_file.write(")\n\n")
                     bash_file.write("output_files=(\n")
                     for aws_link in aws_links:
-                        aws_link_name = os.path.basename(url)
-                        aws_link_name = file_name.removesuffix(".1")
+                        aws_link_name = os.path.basename(aws_link).removesuffix(".1")
                         output_file = self.output_dir / f"{srr_id}_{aws_link_name}"
                         bash_file.write(f'    "{output_file}"\n')
                     bash_file.write(")\n\n")
@@ -1012,17 +1025,23 @@ class GEODataDownloader:
                     bash_file.write('for i in "${!urls[@]}"; do\n')
                     bash_file.write('    echo "Downloading: ${urls[i]} -> ${output_files[i]}"\n')
                     bash_file.write('    wget -O "${output_files[i]}" "${urls[i]}"\n')
-                    bash_file.write('    gzip -t "${output_files[i]}"\n')
+                    bash_file.write('    echo "Verifying GZIP Files..."\n')
+                    bash_file.write('    if gzip -t "${output_files[i]}" 2>/dev/null; then\n')
+                    bash_file.write('        echo "File: ${output_files[i]} is OK"\n')
+                    bash_file.write('    else\n')
+                    bash_file.write('        echo "File: ${output_files[i]} is CORRUPTED"\n')
+                    bash_file.write('    fi\n')
                     bash_file.write("done\n")
 
                 # Make the script executable
                 bash_file_name.chmod(0o755)
 
             # Run the script with nohup in the background
-            nohup_command = f"nohup bash {bash_file_name} > {bash_file_name_log} 2>&1 &"
-            subprocess.run(nohup_command, shell=True, check=False)
+            if not bash_file_name.exists() and not bash_file_name_log.exists():
+                nohup_command = f"nohup bash {bash_file_name} > {bash_file_name_log} 2>&1 &"
+                subprocess.run(nohup_command, shell=True, check=False)
 
-            print(f"Started AWS download for {srr_id}. Logs: {bash_file_name_log}")
+                print(f"Started AWS download for {srr_id}. Logs: {bash_file_name_log}")
 
             return True # prefetch does not exist
 
