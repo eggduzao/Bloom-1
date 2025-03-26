@@ -15,11 +15,12 @@ from bloom.data.geo_sra_downloader import GEODataDownloader
 
 class RunPBS:
     
-    def __init__(self, geo_id, ncbi_path, download_path, email=None, api_key=None):
+    def __init__(self, geo_id, ncbi_path, download_path, temp_path, email=None, api_key=None):
 
         self.geo_id = geo_id
         self.ncbi_path = Path(ncbi_path).resolve()
         self.download_path = Path(download_path).resolve()
+        self.temp_path = Path(temp_path).resolve()
         self.email = email
         self.api_key = api_key
         self.geo_downloader = GEODataDownloader(self.geo_id,
@@ -27,9 +28,7 @@ class RunPBS:
                                                 self.email,
                                                 self.api_key,
                                                 self.ncbi_path)
-        metadata_file = self.geo_downloader.output_dir / f"{self.geo_downloader.geo_id}_metadata.tsv"
-        if metadata_file.exists():
-            self.sra_list = self.geo_downloader.get_sra_id()
+        self.sra_list = self.geo_downloader.get_prefetch_sra_id_list()
         
     def create_metadata(self):
 
@@ -51,6 +50,9 @@ class RunPBS:
             # Unique PBS file name
             pbs_filename = f"{self.geo_id}_{sra_id}_{i}.pbs"
 
+            # Unique temp path
+            temp_location = str(self.temp_path / f"fasterqdump_{self.geo_id}_{sra_id}")
+
             # Create PBS script
             with open(pbs_filename, "w") as pbs_file:
                 pbs_file.write(
@@ -68,8 +70,8 @@ class RunPBS:
 #PBS -V
 #PBS -W umask=002
 
-#PBS -l nodes=1:ppn=4
-#PBS -l mem=32gb
+#PBS -l nodes=1:ppn=8
+#PBS -l mem=48gb
 #PBS -l walltime=12:00:00
 
 # cd $PBS_O_WORKDIR
@@ -98,21 +100,27 @@ sys.path.insert(0, str(project_root.resolve()))
 from bloom.data.geo_sra_downloader import GEODataDownloader
 
 geo_downloader = GEODataDownloader(
-    "{self.geo_id}",
-    "{self.download_path}",
-    "{self.email}",
-    "{self.api_key}",
-    "{self.ncbi_path}"
-)
+    \"{self.geo_id}\",
+    \"{self.download_path}\",
+    \"{self.email}\",
+    \"{self.api_key}\",
+    \"{self.ncbi_path}\")
 
-geo_downloader._process_sra_to_fastq(
-    "{sra_file_name}",
-    log_level="5",
-    gzip_files=True,
-    split_files=False,
-    split_3=True,
-    output_directory="{output_location}"
-)
+geo_downloader._process_sra_to_fastq(\"{sra_file_name}\",
+                                     threads=\"8\",
+                                     bufsize=\"8MB\",
+                                     curcache=\"512MB\",
+                                     mem=\"48GB\",
+                                     disk_limit=\"500GB\",
+                                     disk_limit_tmp=\"256GB\",
+                                     include_technical=True,
+                                     split_files=True,
+                                     split_3=True,
+                                     log_level=\"6\",
+                                     verbose=True,
+                                     temp_directory=\"{temp_location}\",
+                                     output_directory=\"{output_location}\")
+
 EOF
 """
                 )
@@ -217,9 +225,10 @@ if __name__ == "__main__":
     ncbi_path = "/storage2/egusmao/ncbi_sra/"
     download_path = "/storage2/egusmao/projects/Bloom/data/raw/"
     # download_path = "/Users/egg/Projects/Bloom/data/raw/"
+    temp_path = "/storage2/egusmao/tmp/"
 
     # Input handling
-    run_pbs = RunPBS(geo_id, ncbi_path, download_path, user_email, api_key)
+    run_pbs = RunPBS(geo_id, ncbi_path, download_path, temp_path, user_email, api_key)
 
     # Operation
     if operation == "metadata":

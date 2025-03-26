@@ -15,6 +15,7 @@ Authors: Eduardo G. Gusmao.
 import os
 import time
 import glob
+import gzip
 import shutil
 import requests
 import functools
@@ -378,11 +379,23 @@ class GEODataDownloader:
                     continue
 
                 # Checking whether fastq files already exist
-                fastq_file = final_output_dir / f"{srr_id}.fastq.gz"
-                fastq_file_1 = final_output_dir / f"{srr_id}_1.fastq.gz"
-                fastq_file_2 = final_output_dir / f"{srr_id}_2.fastq.gz"
-                if fastq_file.exists() or fastq_file_1.exists() or fastq_file_2.exists():
-                    print(f"{srr_id}.fastq.gz already exists, skipping conversion.")
+                fastq_file_list = [
+                    final_output_dir / f"{srr_id}.fastq.gz",
+                    final_output_dir / f"{srr_id}_1.fastq.gz",
+                    final_output_dir / f"{srr_id}_2.fastq.gz",
+                    final_output_dir / f"{srr_id}_R1.fastq.gz",
+                    final_output_dir / f"{srr_id}_R2.fastq.gz",
+                    final_output_dir / f"{srr_id}_R3.fastq.gz",
+                    final_output_dir / f"{srr_id}_I2.fastq.gz",
+                    final_output_dir / f"{srr_id}_I5.fastq.gz",
+                ]
+                cont_flag = False
+                for fastq_file_name in fastq_file_list:
+                    if fastq_file.exists():
+                        print(f"{fastq_file_name} already exists, skipping.")
+                        cont_flag = True
+                        continue
+                if cont_flag:
                     continue
 
                 # Step 3: Append ssr_id to list
@@ -407,27 +420,26 @@ class GEODataDownloader:
         with multiprocessing.Pool(processes=num_workers) as pool:
             pool.map(convert_partial, srr_id_list)
 
-    def get_sra_id(self) -> List:
+    def get_prefetch_sra_id_list(self) -> List:
         """
         Get a list with all the SRA IDs.
 
         Raises
         ------
-        FileNotFoundError
-            If the metadata file does not exist.
-        ValueError
-            If the metadata file is missing the 'SRR_IDs' column.
+        Placeholder
         """
 
         # Initialize metadata and check wether the file exists
         metadata_file = self.output_dir / f"{self.geo_id}_metadata.tsv"
         if not metadata_file.exists():
-            raise FileNotFoundError(f"Metadata table not found: {metadata_file}")
+            print(f"Metadata table not found: {metadata_file}")
+            return None
 
         # Fetch metadata from file
         metadata_df = pd.read_csv(metadata_file, sep="\t")
         if "SRR_IDs" not in metadata_df.columns:
-            raise ValueError("Metadata table is missing 'SRR_IDs' column!")
+            print("Metadata table is missing 'SRR_IDs' column!")
+            return None
 
         # Fetch SRRs from metadata
         final_output_dir = self.output_dir
@@ -446,15 +458,30 @@ class GEODataDownloader:
                     continue
 
                 # Checking whether fastq files already exist
-                fastq_file = final_output_dir / f"{srr_id}.fastq.gz"
-                fastq_file_1 = final_output_dir / f"{srr_id}_1.fastq.gz"
-                fastq_file_2 = final_output_dir / f"{srr_id}_2.fastq.gz"
-                if fastq_file.exists() or fastq_file_1.exists() or fastq_file_2.exists():
-                    print(f"{srr_id}.fastq.gz already exists, skipping.")
+                fastq_file_list = [
+                    final_output_dir / f"{srr_id}.fastq.gz",
+                    final_output_dir / f"{srr_id}_1.fastq.gz",
+                    final_output_dir / f"{srr_id}_2.fastq.gz",
+                    final_output_dir / f"{srr_id}_R1.fastq.gz",
+                    final_output_dir / f"{srr_id}_R2.fastq.gz",
+                    final_output_dir / f"{srr_id}_R3.fastq.gz",
+                    final_output_dir / f"{srr_id}_I2.fastq.gz",
+                    final_output_dir / f"{srr_id}_I5.fastq.gz",
+                ]
+                cont_flag = False
+                for fastq_file_name in fastq_file_list:
+                    if fastq_file.exists():
+                        print(f"{fastq_file_name} already exists, skipping.")
+                        cont_flag = True
+                        continue
+                if cont_flag:
                     continue
 
-                # Step 3: Append ssr_id to list
-                srr_id_list.append(srr_id)
+                # Check if prefetch file exists
+                prefetch_file = self.ncbi_dir / f"{srr_id}.sra"
+                prefetch_file_lite = self.ncbi_dir / f"{srr_id}.sralite"
+                if prefetch_file.exists() or prefetch_file_lite.exists():
+                    srr_id_list.append(srr_id)
 
         return srr_id_list
 
@@ -1133,19 +1160,42 @@ class GEODataDownloader:
                     log_file.write(f"File not found: {fastq_path}\n")
 
     def _process_sra_to_fastq(self,
-                              sra_file: str,
-                              min_read_len: str = "", # Default
-                              read_filter: str = "", # Default
-                              log_level: str = "5",
-                              qual_filter: bool = False, # Default
-                              skip_technical: bool = False, # Default
-                              gzip_files: bool = True,
-                              split_files: bool = False, # Default
-                              split_3: bool = True,
-                              spot_group: bool = False, # Default
-                              keep_empty_files: bool = False, # Default
-                              fasta: bool = False, # Default
-                              output_directory: str = "output_directory") -> None:
+                              sra_file : str,
+                              output_format : str = "",
+                              threads : str = "4",
+                              bufsize : str = "8MB",
+                              curcache : str = "128MB",
+                              mem : str = "24GB",
+                              disk_limit : str = "250GB",
+                              disk_limit_tmp : str = "128GB",
+                              min_read_len : str = "",
+                              only_aligned : bool = False,
+                              only_unaligned : bool = False,
+                              skip_technical : bool = False,
+                              include_technical : bool = True,
+                              split_files : bool = True,
+                              split_3 : bool = True,
+                              concatenate_reads : bool = False,
+                              split_spot : bool = False,
+                              table : str = "",
+                              bases : bool = False,
+                              internal_ref : bool = False,
+                              external_ref : bool = False,
+                              ref_name : bool = False,
+                              ref_report : bool = False,
+                              use_name : bool = False,
+                              log_level : str = "5",
+                              verbose : bool = True,
+                              progress : bool = False,
+                              details : bool = False,
+                              quiet : bool = False,
+                              fasta : bool = False,
+                              fasta_unsorted : bool = False,
+                              fasta_ref_tbl : bool = False,
+                              fasta_concat_all : bool = False,
+                              temp_directory : str = self._temp_file_name,
+                              output_file : str = "",
+                              output_directory : str = self.output_dir) -> None:
         """
         Process SRA file to retrieve the corresponding fastq file(s).
 
@@ -1153,67 +1203,123 @@ class GEODataDownloader:
         raw sequencing data from **NCBI SRA** converting it into FASTQ format.
 
         Usage:
-          fastq-dump [options] <path> [<path>...]
-          fastq-dump [options] <accession>
+          fasterq-dump <path> [options]
+          fasterq-dump <accession> [options]
 
-          -M|--minReadLen <len>            Filter by sequence length >= <len> 
-          -R|--read-filter <[filter]>      Split into files by READ_FILTER value 
-                                           optionally filter by value: 
-                                           pass|reject|criteria|redacted 
-          --qual-filter-1                  Filter used in current 1000 Genomes data 
-          --skip-technical                 Dump only biological reads 
-          -O|--outdir <path>               Output directory, default is working 
-                                           directory '.' ) 
-          --gzip                           Compress to gzip.
-          --split-files                    Write reads into separate files. Read 
-                                           number will be suffixed to the file name.  
-                                           NOTE! The `--split-3` option is recommended. 
-                                           In cases where not all spots have the same 
-                                           number of reads, this option will produce 
-                                           files that WILL CAUSE ERRORS in most programs 
-                                           which process split pair fastq files. 
-          --split-3                        3-way splitting for mate-pairs. For each 
-                                           spot, if there are two biological reads 
-                                           satisfying filter conditions, the first is 
-                                           placed in the `*_1.fastq` file, and the 
-                                           second is placed in the `*_2.fastq` file. If 
-                                           there is only one biological read 
-                                           satisfying the filter conditions, it is 
-                                           placed in the `*.fastq` file.All other 
-                                           reads in the spot are ignored. 
-          -G|--spot-group                  Split into files by SPOT_GROUP (member name)
-          -K|--keep-empty-files            Do not delete empty files 
-          --fasta <[line width]>           FASTA only, no qualities, optional line 
-                                           wrap width (set to zero for no wrapping) 
-          -L|--log-level <level>           Logging level as number or enum string One 
-                                           of (fatal|sys|int|err|warn|info) or (0-5) 
+        Options:
+          -F|--format                      format (special, fastq, default=fastq).
+          -e|--threads                     how many thread dflt=6.
+          -b|--bufsize                     size of file-buffer dflt=1MB.
+          -c|--curcache                    size of cursor-cache dflt=10MB.
+          -m|--mem                         memory limit for sorting dflt=100MB.
+          --disk-limit                     explicitly set disk-limit.
+          --disk-limit-tmp                 explicitly set disk-limit for temp files.
+          -M|--min-read-len                filter by sequence-len.
+          -a|--only-aligned                process only aligned reads.
+          -U|--only-unaligned              process only unaligned reads.
+          --skip-technical                 skip technical reads.
+          --include-technical              include technical reads.
+          -S|--split-files                 write reads into different files.
+          -3|--split-3                     writes single reads in special file.
+          --concatenate-reads              writes whole spots into one file.
+          -s|--split-spot                  split spots into reads.
+          --table                          which seq-table to use in case of pacbio.
+          -B|--bases                       filter by bases.
+          --internal-ref                   extract only internal REFERENCEs.
+          --external-ref                   extract only external REFERENCEs.
+          --ref-name                       extract only these REFERENCEs.
+          --ref-report                     enumerate references.
+          --use-name                       print name instead of seq-id.
+          -L|--log-level <level>           Logging level as number or enum string. One 
+                                           of (fatal|sys|int|err|warn|info|debug) or 
+                                           (0-6) Current/default is warn.
+          -v|--verbose                     Increase the verbosity of the program 
+                                           status messages. Use multiple times for more
+                                           verbosity. Negates quiet. 
+          -p|--progress                    show progress.
+          -x|--details                     print details.
+          -q|--quiet                       Turn off all status messages for the 
+                                           program. Negated by verbose.
+          --fasta                          produce FASTA output.
+          --fasta-unsorted                 produce FASTA output, unsorted.
+          --fasta-ref-tbl                  produce FASTA output from REFERENCE tbl.
+          --fasta-concat-all               concatenate all rows and produce FASTA.
+          -t|--temp                        where to put temp. files dflt=curr dir.
+          -o|--outfile                     output-file.
+          -O|--outdir                      output-dir.
 
         Parameters
         ----------
         sra_file : str
             Path to the SRA file to convert.
+        output_format : Placeholder
+            Placeholder
+        threads : Placeholder
+            Placeholder
+        bufsize : Placeholder
+            Placeholder
+        curcache : Placeholder
+            Placeholder
+        mem : Placeholder
+            Placeholder
+        disk_limit : Placeholder
+            Placeholder
+        disk_limit_tmp : Placeholder
+            Placeholder
         min_read_len : str, optional
             Minimum read length (default: "").
-        read_filter : str, optional
-            Read filtering option (default: "").
-        qual_filter : bool, optional
-            Enable quality filtering (default: False).
+        only_aligned : Placeholder
+            Placeholder
+        only_unaligned : Placeholder
+            Placeholder
         skip_technical : bool, optional
             Skip technical reads (default: False).
-        gzip_files : bool, optional
-            Compress FASTQ output (default: True).
+        include_technical : Placeholder
+            Placeholder
         split_files : bool, optional
             Split output into separate files per read (default: False).
         split_3 : bool, optional
             Split paired-end reads into forward and reverse files (default: True).
-        spot_group : bool, optional
-            Keep spot group information (default: False).
-        keep_empty_files : bool, optional
-            Keep empty FASTQ files (default: False).
-        fasta : bool, optional
-            Output sequences in FASTA format instead of FASTQ (default: False).
+        concatenate_reads : Placeholder
+            Placeholder
+        split_spot : bool, optional
+            Split spot group information (default: False).
+        table : Placeholder
+            Placeholder
+        bases : Placeholder
+            Placeholder
+        internal_ref : Placeholder
+            Placeholder
+        external_ref  : Placeholder
+            Placeholder
+        ref_name : Placeholder
+            Placeholder
+        ref_report  : Placeholder
+            Placeholder
+        use_name : Placeholder
+            Placeholder
         log_level : str, optional
             Logging level (default: "5").
+        verbose : Placeholder
+            Placeholder
+        progress : Placeholder
+            Placeholder
+        details : Placeholder
+            Placeholder
+        quiet : Placeholder
+            Placeholder
+        fasta : bool, optional
+            Output sequences in FASTA format instead of FASTQ (default: False).
+        fasta_unsorted  : Placeholder
+            Placeholder
+        fasta_ref_tbl : Placeholder
+            Placeholder
+        fasta_concat_all : Placeholder
+            Placeholder
+        temp_directory : Placeholder
+            Placeholder
+        output_file : str, optional
+            File name where FASTQ files will be saved (default: [fastrq-dump default]).
         output_directory : str, optional
             Directory where FASTQ files will be saved (default: "output_directory").
 
@@ -1241,32 +1347,60 @@ class GEODataDownloader:
         if not sra_file:
             raise ValueError(f"Invalid SRA file name provided: {sra_file}")
 
-        print(f"Running fastq-dump for {sra_file}..." + "-"*30)
+        print(f"Running fasterq-dump for {sra_file}..." + "-"*30)
 
         # Ensure output directory exists
         if output_directory:
             out_dir = Path(output_directory)
             out_dir.mkdir(parents=True, exist_ok=True)
 
+        # Ensure temp directory exists
+        if temp_directory:
+            tmp_dir = Path(temp_directory)
+            tmp_dir.mkdir(parents=True, exist_ok=True)
+
         # Define command-line parameters using a dictionary
-        fastq_dump_params = {
-            "--minReadLen": min_read_len,
-            "--read-filter": read_filter,
-            "--log-level": log_level,
-            "--qual-filter-1": qual_filter,
+        fasterq_dump_params = {
+            "--format": output_format,
+            "--threads": threads,
+            "--bufsize": bufsize,
+            "--curcache": curcache,
+            "--mem": mem,
+            "--disk-limit": disk_limit,
+            "--disk-limit-tmp": disk_limit_tmp,
+            "--min-read-len": min_read_len,
+            "--only-aligned": only_aligned,
+            "--only-unaligned": only_unaligned,
             "--skip-technical": skip_technical,
-            "--gzip": gzip_files,
+            "--include-technical": include_technical,
             "--split-files": split_files,
             "--split-3": split_3,
-            "--spot-group": spot_group,
-            "--keep-empty-files": keep_empty_files,
+            "--concatenate-reads": concatenate_reads,
+            "--split-spot": split_spot,
+            "--table": table,
+            "--bases": bases,
+            "--internal-ref": internal_ref,
+            "--external-ref": external_ref,
+            "--ref-name": ref_name,
+            "--ref-report": ref_report,
+            "--use-name": use_name,
+            "--log-level": log_level,
+            "--verbose": verbose,
+            "--progress": progress,
+            "--details": details,
+            "--quiet": quiet,
             "--fasta": fasta,
+            "--fasta-unsorted ": fasta_unsorted,
+            "--fasta-ref-tbl": fasta_ref_tbl,
+            "--fasta-concat-all": fasta_concat_all,
+            "--temp": temp_directory,
+            "--outfile": output_file,
             "--outdir": output_directory,
         }
 
         # Convert dictionary into a cleaned list of CLI arguments
         optional_parameters = []
-        for key, value in fastq_dump_params:
+        for key, value in fasterq_dump_params:
             if isinstance(value, str) and value:
                 optional_parameters.append(key)
                 optional_parameters.append(value)
@@ -1275,7 +1409,7 @@ class GEODataDownloader:
 
         # Full command
         cmd = [
-            "fastq-dump",
+            "fasterq-dump",
             *optional_parameters,
             sra_file,
         ]
@@ -1283,9 +1417,9 @@ class GEODataDownloader:
         # Remove empty strings (if any) from command list
         cmd = [arg for arg in cmd if arg]
         srr_id = Path(sra_file).stem
-        full_log_file = output_directory / f"fastqdump_{srr_id}.log" if output_directory else None
+        full_log_file = out_dir / f"fasterqdump_{srr_id}.log" if out_dir else None
 
-        # Running fastq-dump
+        # Running fasterq-dump
         print(f"Running command: {' '.join(cmd)}")
         try:
             # Run fastq-dump and capture errors if any
@@ -1297,9 +1431,49 @@ class GEODataDownloader:
 
             print(f"Successfully downloaded {sra_id}" + "-" * 30)
 
+        # Compress files after successful execution
+        self._compress_fasterq_outputs(output_directory, srr_id)
+
         except subprocess.CalledProcessError:
             print(f"Error downloading {sra_id}. Check log file: {full_log_file}")
-            raise  # Re-raise standard error without modification
+            # Do not raise, continue to next.
+            return
+
+    def _compress_fasterq_outputs(output_dir: str, srr_id: str, dry_run: bool = False):
+        """
+        Compress all FASTQ files generated by fasterq-dump for a given SRR ID.
+
+        This function searches for files matching the SRR ID prefix in the specified output directory
+        and compresses them using gzip, deleting the original uncompressed FASTQ files afterward.
+
+        Parameters
+        ----------
+        output_dir : str
+            Directory where fasterq-dump output files are located.
+        srr_id : str
+            The SRR ID used as prefix to identify related FASTQ files.
+        dry_run : bool, optional
+            If True, only print actions without executing (default is False).
+        """
+
+        output_path = Path(output_dir)
+        fastq_files = sorted(output_path.glob(f"{srr_id}*.fastq"))
+
+        if not fastq_files:
+            print(f"[compress_fasterq_outputs] No FASTQ files found for {srr_id} in {output_dir}")
+            return
+
+        for fastq_file in fastq_files:
+            gz_file = fastq_file.with_suffix(fastq_file.suffix + ".gz")
+            print(f"[compress_fasterq_outputs] Compressing: {fastq_file} → {gz_file}")
+
+            if not dry_run:
+                with open(fastq_file, "rb") as f_in, gzip.open(gz_file, "wb") as f_out:
+                    f_out.writelines(f_in)
+                os.remove(fastq_file)
+                print(f"[compress_fasterq_outputs] Removed original: {fastq_file}")
+            else:
+                print(f"[compress_fasterq_outputs] (Dry run) Would compress and remove: {fastq_file}")
 
     def __repr__(self) -> str:
         """

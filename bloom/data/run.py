@@ -35,7 +35,7 @@ def run_with_nohup(script_path: str, operation: str):
 if __name__ == "__main__":
 
     script = "/storage2/egusmao/projects/Bloom/bloom/data/download_geo.py"
-    operation = "download" # metadata download make run merge delete delete_all_sra_files
+    operation = "make" # metadata download make run merge delete delete_all_sra_files
 
     run_with_nohup(script, operation)
 
