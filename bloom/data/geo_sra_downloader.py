@@ -1431,8 +1431,8 @@ class GEODataDownloader:
 
             print(f"Successfully downloaded {sra_id}" + "-" * 30)
 
-        # Compress files after successful execution
-        self._compress_fasterq_outputs(output_directory, srr_id)
+            # Compress files after successful execution
+            self._compress_fasterq_outputs(output_directory, srr_id)
 
         except subprocess.CalledProcessError:
             print(f"Error downloading {sra_id}. Check log file: {full_log_file}")
