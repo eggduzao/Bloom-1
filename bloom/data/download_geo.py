@@ -40,15 +40,18 @@ class RunPBS:
 
     def create_files(self):
 
+        # Current location
+        current_dir = str(Path(__file__).resolve().parent)
+
         # Create PBS scripts
         for i, sra_id in enumerate(self.sra_list):
 
             # Parameters
-            sra_file_name = self._chech_sra_file_name()
-            output_location = self.geo_downloader.output_dir
+            sra_file_name = self._chech_sra_file_name(sra_id)
+            output_location = Path(self.geo_downloader.output_dir) / sra_id
 
             # Unique PBS file name
-            pbs_filename = f"{self.geo_id}_{sra_id}_{i}.pbs"
+            pbs_filename = f"fasterqdump_{self.geo_id}_{sra_id}_{i}.pbs"
 
             # Unique temp path
             temp_location = str(self.temp_path / f"fasterqdump_{self.geo_id}_{sra_id}")
@@ -58,9 +61,9 @@ class RunPBS:
                 pbs_file.write(
                     f"""#!/bin/bash
 
-#PBS -N fastqdump_{self.geo_id}_{sra_id}_{i}
-#PBS -o fastqdump_{self.geo_id}_{sra_id}_{i}.out
-#PBS -e fastqdump_{self.geo_id}_{sra_id}_{i}.err
+#PBS -N fasterqdump_{self.geo_id}_{sra_id}_{i}
+#PBS -o fasterqdump_{self.geo_id}_{sra_id}_{i}.out
+#PBS -e fasterqdump_{self.geo_id}_{sra_id}_{i}.err
 
 #PBS -q workq
 # workq - Fila default e sem restrições. Utiliza todos os nós.
@@ -81,7 +84,7 @@ eval \"$(micromamba shell hook --shell bash)\"
 micromamba activate bio
 
 # Current Job Parameter
-basepath=\"{output_location}\"
+basepath=\"{current_dir}\"
 cd $basepath
 
 # Python HEREDOC (EOF Block)
@@ -106,13 +109,15 @@ geo_downloader = GEODataDownloader(
     \"{self.api_key}\",
     \"{self.ncbi_path}\")
 
+# Create paths if they do not exist already
+Path(\"{temp_location}\").mkdir(parents=True, exist_ok=True)
+Path(\"{output_location}\").mkdir(parents=True, exist_ok=True)
+
 geo_downloader._process_sra_to_fastq(\"{sra_file_name}\",
                                      threads=\"8\",
                                      bufsize=\"8MB\",
                                      curcache=\"512MB\",
                                      mem=\"48GB\",
-                                     disk_limit=\"500GB\",
-                                     disk_limit_tmp=\"256GB\",
                                      include_technical=True,
                                      split_files=True,
                                      split_3=True,
@@ -131,10 +136,11 @@ EOF
         for i, sra_id in enumerate(self.sra_list):
 
             # Unique PBS file name
-            pbs_filename = f"{self.geo_id}_{sra_id}_{i}.pbs"
+            openpbs_submit = "qsub"
+            pbs_filename = f"fasterqdump_{self.geo_id}_{sra_id}_{i}.pbs"
 
             # Submit job
-            result = subprocess.run(["qsub", pbs_filename], capture_output=True, text=True, check=True)
+            result = subprocess.run([openpbs_submit, pbs_filename], capture_output=True, text=True, check=True)
             print("Job submitted:", result.stdout.strip())
 
     def merge_files(self):
@@ -146,8 +152,8 @@ EOF
         for i, sra_id in enumerate(self.sra_list):
 
             # Unique out and err PBS file name
-            out_filename = f"{self.geo_id}_{sra_id}_{i}.out"
-            err_filename = f"{self.geo_id}_{sra_id}_{i}.err"
+            out_filename = f"fasterqdump_{self.geo_id}_{sra_id}_{i}.out"
+            err_filename = f"fasterqdump_{self.geo_id}_{sra_id}_{i}.err"
 
             # Append to list only if it exists
             if os.path.exists(out_filename):
@@ -168,12 +174,12 @@ EOF
     def delete_files(self):
 
         # Submit PBS scripts
-        for i, param in enumerate(["Place", "holder"]):
+        for i, sra_id in enumerate(self.sra_list):
 
             # Unique PBS, out and err file name
-            pbs_filename = f"{self.geo_id}_{i}.pbs"
-            out_filename = f"{self.geo_id}_{i}.out"
-            err_filename = f"{self.geo_id}_{i}.err"
+            pbs_filename = f"fasterqdump_{self.geo_id}_{sra_id}_{i}.pbs"
+            out_filename = f"fasterqdump_{self.geo_id}_{sra_id}_{i}.out"
+            err_filename = f"fasterqdump_{self.geo_id}_{sra_id}_{i}.err"
 
             # Removing files
             if os.path.exists(pbs_filename):
@@ -189,17 +195,19 @@ EOF
         for i, sra_id in enumerate(self.sra_list):
 
             # Parameters
-            sra_file_name = self._chech_sra_file_name()
+            sra_file_name = self._chech_sra_file_name(sra_id)
             sra_file_name.unlink(missing_ok=True)
 
-    def _chech_sra_file_name(self):
+    def _chech_sra_file_name(self, sra_id):
+
         # Check which SRA file exists
-        sra_file = self.ncbi_dir / f"{srr_id}.sra"
-        sra_file_lite = self.ncbi_dir / f"{srr_id}.sralite"
+        sra_file = self.ncbi_path / "sra" / f"{sra_id}.sra"
+        sra_file_lite = self.ncbi_path / "sra" / f"{sra_id}.sralite"
         if sra_file.exists():
             return sra_file
         if sra_file_lite.exists():
             return sra_file_lite
+        return None
 
     def _merge(self, file_list, output_file):
         # Merge files
