@@ -53,6 +53,11 @@ from selenium.webdriver.common.by import By
 CHROME_BIN = "/home/egusmao/.opt/chromium/chrome-linux64/chrome"
 CHROMEDRIVER_BIN = "/home/egusmao/.opt/chromium_driver/chromedriver-linux64/chromedriver"
 
+# Fixed file name suffix
+TEMP_SUFFIX = "_temp"
+METADATA_SUFFIX = "_metadata.tsv"
+STUDY_SUFFIX = "_study.tsv"
+
 ###################################################################################################
 # Classes
 ###################################################################################################
@@ -105,15 +110,15 @@ class GEODataDownloader:
             Invalid email provided to set NCBI Entrez credentials.
         """
 
+        # GEO ID
         self.geo_id = geo_id
+        self.metadata_table = None # Metadata Table
+        self._gse = None # GEO Series object
+        self._temp_file_name = None # Temporary location to store indermediary files
 
         # Output directory processing
         self.output_dir = Path(output_dir) / f"{self.geo_id}"
         self.output_dir.mkdir(parents=True, exist_ok=True)  # Ensure output directory exists
-
-        # Temporary directory for storing metadata and intermediate files
-        self._temp_file_name = self.output_dir / f"{self.geo_id}_temp"
-        self._temp_file_name.mkdir(parents=True, exist_ok=True)
 
         # NCBI directory processing
         if ncbi_dir is not None:
@@ -121,49 +126,27 @@ class GEODataDownloader:
             self.ncbi_dir.mkdir(parents=True, exist_ok=True)
 
         # Set credentials for NCBI Entrez API
-        if email:
-            self.email = email
-            Entrez.email = self.email
-        else:
-            raise ValueError("You must provide a valid email address for Entrez access.")
+        if email is not None and api_key is not None:
+            Entrez.email = self.email = email
+            Entrez.api_key = self.api_key = api_key
 
-        # Set credentials for NCBI Entrez API            
-        if api_key:
-            self.api_key = api_key
-            Entrez.api_key = self.api_key
-
-        # Will hold the GEO Series object
-        self._gse = None
-
+        # Fetch metadata
+        metadata_table = self.output_dir / f"{self.geo_id}{METADATA_SUFFIX}"
+        # If metadata_table exists, do not create all the metadata structure
+        if metadata_table.exists():
+            self.metadata_table = metadata_table
         # Fetch metadata first, as it is required before downloading any data
-        self.metadata_table = None  # Placeholder for metadata table
-        if self._is_gse():
-            self._gse = self._fetch_gse_data()  # Fetch GEO metadata
+        else:
+            if self._is_gse():
+                # Temporary directory for storing metadata and intermediate files
+                self._temp_file_name = self.output_dir / f"{self.geo_id}{TEMP_SUFFIX}"
+                self._temp_file_name.mkdir(parents=True, exist_ok=True)
 
-    def _is_gse(self) -> bool:
-        """
-        Check if the provided GEO ID corresponds to a GEO Series (GSE).
+                # Fetch GEO metadata
+                self._gse = self._fetch_gse_data()
 
-        Returns
-        -------
-        bool
-            True if the ID is a GSE accession, False otherwise.
-        """
-        return self.geo_id.startswith("GSE")  # Simple check for GEO Series IDs
-
-    def _fetch_gse_data(self) -> GEOparse.GSE:
-        """
-        Fetch GEO Series metadata using GEOparse.
-
-        Returns
-        -------
-        GEOparse.GSE
-            The GEO Series object with metadata.
-        """
-        print(f"Fetching {self.geo_id} from GEO...")
-        gse = GEOparse.get_GEO(geo=self.geo_id, destdir=str(self._temp_file_name))
-        print(f"Fetched {self.geo_id} Successfully!")
-        return gse
+                # Create metadata and study tables
+                self.create_metadata_table()
 
     def __del__(self) -> None:
         """
@@ -175,10 +158,7 @@ class GEODataDownloader:
           when the instance is garbage collected.
         - The actual downloaded data remains untouched in 'self.output_dir'.
         """
-        if hasattr(self, "_temp_file_name"):
-            if self._temp_file_name.exists():
-                print(f"Cleaning up temporary files at {self._temp_file_name}")
-                shutil.rmtree(self._temp_file_name)  # Delete temporary directory
+        self.cleanup()
 
     def create_metadata_table(self) -> None:
         """
@@ -239,12 +219,13 @@ class GEODataDownloader:
         df_study = pd.DataFrame([study_dictionary])
 
         # Step 7: Save the final study table as a TSV file
-        output_path = self.output_dir / f"{self.geo_id}_study.tsv"
-        df_study.to_csv(output_path, sep="\t", index=False)
+        study_out_path = self.output_dir / f"{self.geo_id}{STUDY_SUFFIX}"
+        df_study.to_csv(study_out_path, sep="\t", index=False)
 
         # Step 8: Save the final metadata table as a TSV file
-        output_path = self.output_dir / f"{self.geo_id}_metadata.tsv"
-        df_samples.to_csv(output_path, sep="\t", index=False)
+        metadata_out_path = self.output_dir / f"{self.geo_id}{METADATA_SUFFIX}"
+        df_samples.to_csv(metadata_out_path, sep="\t", index=False)
+        self.metadata_table = Path(metadata_out_path).resolve()
 
     def download_raw_data(self) -> None:
         """
@@ -282,40 +263,40 @@ class GEODataDownloader:
             raise ValueError("Metadata table is missing 'SRR_IDs' column!")
 
         # Step 2: Fetch SRRs from metadata
-        srr_id_list = []
+        sra_id_list = []
         for _, row in metadata_df.iterrows():
             srr_list = str(row["SRR_IDs"]).split(",")
 
             # Iterate on SRR list
-            for srr_id in srr_list:
-                srr_id = srr_id.strip()
+            for sra_id in srr_list:
+                sra_id = sra_id.strip()
 
                 # Check SRR validity
-                if srr_id.lower() in ["no srrs found", "nan", ""]:
+                if sra_id.lower() in ["no srrs found", "nan", ""]:
                     print(f"No SRRs found for {row['GSM_ID']} (Skipping)")
                     continue
 
                 # Checking whether sra files already exist
-                sra_file = self.ncbi_dir / f"{srr_id}.sra"
-                sra_file_lite = self.ncbi_dir / f"{srr_id}.sralite"
+                sra_file = self.ncbi_dir / f"{sra_id}.sra"
+                sra_file_lite = self.ncbi_dir / f"{sra_id}.sralite"
                 if sra_file.exists() or sra_file_lite.exists():
-                    print(f"{srr_id} already exists, skipping conversion.")
+                    print(f"{sra_id} already exists, skipping conversion.")
                     continue
 
                 # Step 3: Create log file
-                log_file = self.output_dir / f"prefetch_{srr_id}.log"
+                log_file = self.output_dir / f"prefetch_{sra_id}.log"
 
                 # Step 3: SRA is AWS-only
-                if self._get_sra_aws_links(srr_id):
+                if self._get_sra_aws_links(sra_id):
                     continue
 
                 # Step 3: Append ssr_id and log_file to list
                 else:
-                    print(f"SRA = {srr_id} is available via NCBI. Using prefetch.")
-                    srr_id_list.append((srr_id, log_file))
+                    print(f"SRA = {sra_id} is available via NCBI. Using prefetch.")
+                    sra_id_list.append((sra_id, log_file))
 
         # Step 4: Run '_download_with_prefetch' function
-        for sra_id, log_file in srr_id_list:
+        for sra_id, log_file in sra_id_list:
             self._download_with_prefetch(sra_id,
                                          max_size_gb="500G",
                                          log_level="6",
@@ -365,29 +346,29 @@ class GEODataDownloader:
         final_output_dir.mkdir(parents=True, exist_ok=True)
 
         # Step 3: Fetch SRRs from metadata
-        srr_id_list = []
+        sra_id_list = []
         for _, row in metadata_df.iterrows():
             srr_list = str(row["SRR_IDs"]).split(",")
 
             # Iterate on SRR list
-            for srr_id in srr_list:
-                srr_id = srr_id.strip()
+            for sra_id in srr_list:
+                sra_id = sra_id.strip()
 
                 # Check SRR validity
-                if srr_id.lower() in ["no srrs found", "nan", ""]:
+                if sra_id.lower() in ["no srrs found", "nan", ""]:
                     print(f"No SRRs found for {row['GSM_ID']} (Skipping)")
                     continue
 
                 # Checking whether fastq files already exist
                 fastq_file_list = [
-                    final_output_dir / f"{srr_id}.fastq.gz",
-                    final_output_dir / f"{srr_id}_1.fastq.gz",
-                    final_output_dir / f"{srr_id}_2.fastq.gz",
-                    final_output_dir / f"{srr_id}_R1.fastq.gz",
-                    final_output_dir / f"{srr_id}_R2.fastq.gz",
-                    final_output_dir / f"{srr_id}_R3.fastq.gz",
-                    final_output_dir / f"{srr_id}_I2.fastq.gz",
-                    final_output_dir / f"{srr_id}_I5.fastq.gz",
+                    final_output_dir / f"{sra_id}.fastq.gz",
+                    final_output_dir / f"{sra_id}_1.fastq.gz",
+                    final_output_dir / f"{sra_id}_2.fastq.gz",
+                    final_output_dir / f"{sra_id}_R1.fastq.gz",
+                    final_output_dir / f"{sra_id}_R2.fastq.gz",
+                    final_output_dir / f"{sra_id}_R3.fastq.gz",
+                    final_output_dir / f"{sra_id}_I2.fastq.gz",
+                    final_output_dir / f"{sra_id}_I5.fastq.gz",
                 ]
                 cont_flag = False
                 for fastq_file_name in fastq_file_list:
@@ -399,7 +380,7 @@ class GEODataDownloader:
                     continue
 
                 # Step 3: Append ssr_id to list
-                srr_id_list.append(srr_id)
+                sra_id_list.append(sra_id)
 
         # Step 4: Setting the number of CPUs
         if num_workers is None:
@@ -418,9 +399,9 @@ class GEODataDownloader:
 
         # Step 5: Apply '_process_sra_to_fastq' using multiprocessing
         with multiprocessing.Pool(processes=num_workers) as pool:
-            pool.map(convert_partial, srr_id_list)
+            pool.map(convert_partial, sra_id_list)
 
-    def get_prefetch_sra_id_list(self) -> List:
+    def get_prefetch_sra_id_list(self, check_fastq_exists=False, check_prefetch_exists=False) -> List:
         """
         Get a list with all the SRA IDs.
 
@@ -444,46 +425,53 @@ class GEODataDownloader:
         # Fetch SRRs from metadata
         final_output_dir = self.output_dir
         final_output_dir = Path(final_output_dir).resolve()
-        srr_id_list = []
+        sra_id_list = []
         for _, row in metadata_df.iterrows():
             srr_list = str(row["SRR_IDs"]).split(",")
 
             # Iterate on SRR list
-            for srr_id in srr_list:
-                srr_id = srr_id.strip()
+            for sra_id in srr_list:
+                sra_id = sra_id.strip()
 
                 # Check SRR validity
-                if srr_id.lower() in ["no srrs found", "nan", ""]:
+                if sra_id.lower() in ["no srrs found", "nan", ""]:
                     print(f"No SRRs found for {row['GSM_ID']} (Skipping)")
                     continue
 
                 # Checking whether fastq files already exist
-                fastq_file_list = [
-                    final_output_dir / f"{srr_id}.fastq.gz",
-                    final_output_dir / f"{srr_id}_1.fastq.gz",
-                    final_output_dir / f"{srr_id}_2.fastq.gz",
-                    final_output_dir / f"{srr_id}_R1.fastq.gz",
-                    final_output_dir / f"{srr_id}_R2.fastq.gz",
-                    final_output_dir / f"{srr_id}_R3.fastq.gz",
-                    final_output_dir / f"{srr_id}_I2.fastq.gz",
-                    final_output_dir / f"{srr_id}_I5.fastq.gz",
-                ]
-                cont_flag = False
-                for fastq_file_name in fastq_file_list:
-                    if fastq_file_name.exists():
-                        print(f"{fastq_file_name} already exists, skipping.")
-                        cont_flag = True
+                if check_fastq_exists:
+                    fastq_file_list = [
+                        final_output_dir / f"{sra_id}.fastq.gz",
+                        final_output_dir / f"{sra_id}_1.fastq.gz",
+                        final_output_dir / f"{sra_id}_2.fastq.gz",
+                        final_output_dir / f"{sra_id}_R1.fastq.gz",
+                        final_output_dir / f"{sra_id}_R2.fastq.gz",
+                        final_output_dir / f"{sra_id}_R3.fastq.gz",
+                        final_output_dir / f"{sra_id}_I2.fastq.gz",
+                        final_output_dir / f"{sra_id}_I5.fastq.gz",
+                    ]
+                    cont_flag = False
+                    for fastq_file_name in fastq_file_list:
+                        if fastq_file_name.exists():
+                            print(f"{fastq_file_name} already exists, skipping.")
+                            cont_flag = True
+                            continue
+                    if cont_flag:
                         continue
-                if cont_flag:
-                    continue
 
                 # Check if prefetch file exists
-                prefetch_file = self.ncbi_dir / f"{srr_id}.sra"
-                prefetch_file_lite = self.ncbi_dir / f"{srr_id}.sralite"
-                if prefetch_file.exists() or prefetch_file_lite.exists():
-                    srr_id_list.append(srr_id)
+                prefetch_exist_flag = True
+                if check_prefetch_exists:
+                    prefetch_exist_flag = False
+                    prefetch_file = self.ncbi_dir / f"{sra_id}.sra"
+                    prefetch_file_lite = self.ncbi_dir / f"{sra_id}.sralite"
+                    if prefetch_file.exists() or prefetch_file_lite.exists():
+                        prefetch_exist_flag = True
 
-        return srr_id_list
+                if prefetch_exist_flag:        
+                    sra_id_list.append(sra_id)
+
+        return sra_id_list
 
     def download_processed_data(self) -> None:
         """
@@ -553,6 +541,17 @@ class GEODataDownloader:
                 continue  # Skip failed downloads
 
         print(f"\nAll processed data downloaded to: {processed_output_dir}")
+
+    def _is_gse(self) -> bool:
+        """
+        Check if the provided GEO ID corresponds to a GEO Series (GSE).
+
+        Returns
+        -------
+        bool
+            True if the ID is a GSE accession, False otherwise.
+        """
+        return self.geo_id.startswith("GSE")  # Simple check for GEO Series IDs
 
     def _fetch_gse_data(self) -> GEOparse.GSE:
         """
@@ -956,7 +955,7 @@ class GEODataDownloader:
             self._get_sra_aws_links(sra_id)
             return  # Move to the next SRR without stopping execution
 
-    def _get_sra_aws_links(self, srr_id: str, local_mode: bool=False) -> bool:
+    def _get_sra_aws_links(self, sra_id: str, local_mode: bool=False) -> bool:
         """
         Verifies if the SRR is a prefetch version or AWS link version.
 
@@ -967,7 +966,7 @@ class GEODataDownloader:
 
         Parameters
         ----------
-        srr_id : str
+        sra_id : str
             The SRA ID to verify/download (e.g., "SRR31810743").
 
         Returns
@@ -982,7 +981,7 @@ class GEODataDownloader:
         # Define the URL
         url = (
             f"https://trace.ncbi.nlm.nih.gov/Traces/index.html?"
-            f"view=run_browser&acc={srr_id}&display=data-access"
+            f"view=run_browser&acc={sra_id}&display=data-access"
         )
 
         # Selenium options
@@ -1018,11 +1017,11 @@ class GEODataDownloader:
             if not aws_links:
                 return False
 
-            print(f"SRA = {srr_id} is AWS-only. Downloading via HTTPS instead.")
+            print(f"SRA = {sra_id} is AWS-only. Downloading via HTTPS instead.")
 
             # Define the bash script file path
-            bash_file_name = self.output_dir / f"prefetch_{srr_id}.sh"
-            bash_file_name_log = self.output_dir / f"prefetch_{srr_id}.log"
+            bash_file_name = self.output_dir / f"prefetch_{sra_id}.sh"
+            bash_file_name_log = self.output_dir / f"prefetch_{sra_id}.log"
 
             # If the script already exists, assume the download was scheduled before
             bash_file_exists = False
@@ -1045,7 +1044,7 @@ class GEODataDownloader:
                     bash_file.write("output_files=(\n")
                     for aws_link in aws_links:
                         aws_link_name = os.path.basename(aws_link).removesuffix(".1")
-                        output_file = self.output_dir / f"{srr_id}_{aws_link_name}"
+                        output_file = self.output_dir / f"{sra_id}_{aws_link_name}"
                         bash_file.write(f'    "{output_file}"\n')
                     bash_file.write(")\n\n")
                     bash_file.write("# Loop through URLs and download each file\n")
@@ -1068,7 +1067,7 @@ class GEODataDownloader:
                 nohup_command = f"nohup bash {bash_file_name} > {bash_file_name_log} 2>&1 &"
                 subprocess.run(nohup_command, shell=True, check=False)
 
-                print(f"Started AWS download for {srr_id}. Logs: {bash_file_name_log}")
+                print(f"Started AWS download for {sra_id}. Logs: {bash_file_name_log}")
 
             return True # prefetch does not exist
 
@@ -1416,8 +1415,8 @@ class GEODataDownloader:
 
         # Remove empty strings (if any) from command list
         cmd = [str(arg) for arg in cmd if arg]
-        srr_id = Path(sra_file).stem
-        full_log_file = output_directory / f"fasterqdump_{srr_id}.log" if output_directory else None
+        sra_id = Path(sra_file).stem
+        full_log_file = output_directory / f"fasterqdump_{sra_id}.log" if output_directory else None
 
         # Running fasterq-dump
         print(f"Running command: {' '.join(cmd)}")
@@ -1432,14 +1431,14 @@ class GEODataDownloader:
             print(f"Successfully downloaded {sra_id}" + "-" * 30)
 
             # Compress files after successful execution
-            self._compress_fasterq_outputs(output_directory, srr_id)
+            self._compress_fasterq_outputs(output_directory, sra_id)
 
         except subprocess.CalledProcessError:
             print(f"Error downloading {sra_id}. Check log file: {full_log_file}")
             # Do not raise, continue to next.
             return
 
-    def _compress_fasterq_outputs(self, output_dir: Path, srr_id: str, dry_run: bool = False):
+    def _compress_fasterq_outputs(self, output_dir: Path, sra_id: str, dry_run: bool = False):
         """
         Compress all FASTQ files generated by fasterq-dump for a given SRR ID.
 
@@ -1450,16 +1449,16 @@ class GEODataDownloader:
         ----------
         output_dir : Path
             Directory containing the FASTQ files to compress.
-        srr_id : str
+        sra_id : str
             The SRR ID used as prefix to identify related FASTQ files.
         dry_run : bool, optional
             If True, only print actions without executing (default is False).
         """
 
-        fastq_files = sorted(output_dir.glob(f"{srr_id}*.fastq"))
+        fastq_files = sorted(output_dir.glob(f"{sra_id}*.fastq"))
 
         if not fastq_files:
-            print(f"[compress_fasterq_outputs] No FASTQ files found for {srr_id} in {output_dir}")
+            print(f"[compress_fasterq_outputs] No FASTQ files found for {sra_id} in {output_dir}")
             return
 
         for fastq_file in fastq_files:
@@ -1513,4 +1512,9 @@ class GEODataDownloader:
         '[GEODataDownloader] GEO ID: GSE285812 | Output Directory: data/raw'
         """
         return f'[GEODataDownloader] GEO ID: {self.geo_id} | Output Directory: {self.output_dir}'
+
+    def cleanup(self):
+        if self._gse is not None and self._temp_file_name and self._temp_file_name.exists():
+            print(f"Cleaning up temporary files at {self._temp_file_name}")
+            shutil.rmtree(self._temp_file_name)
 

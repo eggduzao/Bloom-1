@@ -28,7 +28,8 @@ class RunPBS:
                                                 self.email,
                                                 self.api_key,
                                                 self.ncbi_path)
-        self.sra_list = self.geo_downloader.get_prefetch_sra_id_list()
+        self.sra_list = self.geo_downloader.get_prefetch_sra_id_list(check_fastq_exists=False,
+                                                                     check_prefetch_exists=True)
         
     def create_metadata(self):
 
@@ -74,8 +75,8 @@ class RunPBS:
 #PBS -W umask=002
 
 #PBS -l nodes=1:ppn=8
-#PBS -l mem=48gb
-#PBS -l walltime=12:00:00
+#PBS -l mem=64gb
+#PBS -l walltime=48:00:00
 
 # cd $PBS_O_WORKDIR
 
@@ -117,7 +118,7 @@ geo_downloader._process_sra_to_fastq(\"{sra_file_name}\",
                                      threads=\"8\",
                                      bufsize=\"8MB\",
                                      curcache=\"512MB\",
-                                     mem=\"48GB\",
+                                     mem=\"64GB\",
                                      include_technical=True,
                                      split_files=True,
                                      split_3=True,
