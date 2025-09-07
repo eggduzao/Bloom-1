@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Message
+echo "Cleaning system-specific artifacts..."
+
 # Removendo os arquivos .DS_Store recursivamente.
 find . -name ".DS_Store" -type f -delete
 
@@ -9,17 +12,21 @@ find . -name "._*" -type f -delete
 # Removendo .Trashes and outros que, às vezes, o MAC gera, quando quer.
 find . -name ".Trashes" -type d -exec rm -rf {} +
 
-# Remove Python-generated files
+# Message
+echo "Cleaning Python build artifacts..."
+
+# Remove build directories
+rm -rf build/ dist/ *.egg-info/ .eggs/
+
+# Remove Python cache and compiled files
 find . -type d -name "__pycache__" -exec rm -rf {} +
-find . -type d -name "*.egg-info" -exec rm -rf {} +
-find . -type d \( -name ".pytest_cache" -o -name ".mypy_cache" -o -name ".ipynb_checkpoints" -o -name ".pytest_cache" \) -exec rm -rf {} +
-find . -type f -name "*.py[co]" -delete
+find . -type f -name "*.pyc" -delete
+find . -type f -name "*.pyo" -delete
+find . -type f -name "*~" -delete
 
-# Remove C/C++ compiled files and temporary objects
-find . -type f \( -name "*.o" -o -name "*.out" -o -name "*.gch" \) -delete
+# Remove test and tool caches
+rm -rf .pytest_cache/ .mypy_cache/ .tox/ .coverage .cache/
 
-# (CUIDADO) Removendo todos os arquivos escondidos (i.e. TUDO que começa com ".")
-# find . -name ".*" -type f ! -name ".git*" -delete
+echo "Cleanup complete."
 
-echo "All tidy mam'!"
 
