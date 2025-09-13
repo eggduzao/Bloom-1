@@ -1,0 +1,115 @@
+Bloom/                         					# 🌱 Bloom’s Package Root
+	└── tests/
+		├── conftest.py
+		├── golden/
+		├── perf/
+		├── ui/
+		├── test_annotate/						# 🧷 Annotation with known biological elements
+		│	├── test_ctcf.py					# CTCF motif & ChIP-seq annotation
+		│	├── test_chipseq.py					# ChIP, histone marks, transcription factors
+		│	├── test_enhancers.py				# Enhancer databases (FANTOM, ENCODE)
+		│	├── test_lncrna.py					# lncRNA functional / structural annotations
+		│	├── test_repeats.py					# RepeatMasker/TEs
+		│	└── test_external_db.py				# Interfaces to ENCODE, 4DN, UCSC, etc.
+		├── test_cab/							# 🧠 Chromatin Architecture Biomarker utilities
+		│	├── test_definitions.py				# CAB ontology, format, levels of abstraction
+		│	├── test_extraction.py				# How to extract CABs from structure + function
+		│	├── test_validation.py				# Compare CABs across cell types, conditions
+		│	├── test_visualization.py			# View CABs across genome or timepoints
+		│	└── test_models/					
+		├── test_cli/							# 🖥️ Command-line interface (argparse or click)
+		│	├── test_main.py					# Entrypoint for CLI
+		│	├── test_parse.py					# CLI for parsing files into standard format
+		│	├── test_call_structures.py			# CLI for compartments / TADs / loops
+		│	├── test_annotate.py				# CLI for adding biological context
+		│	├── test_metrics.py					# CLI for quality or CAB scoring
+		│	├── test_model.py					# CLI for training/applying ML models
+		│	└── test_visualize.py				# CLI for plotting and inspection
+		├── test_configs/						# User-driven config
+		│	├── test_base.py					# Users defaults merged by environment/config set
+		│	├── test_data/
+		│	├── test_deep_learning/
+		│	├── test_rules/
+		│	└── test_pipelines/
+		├── test_core/							# CORE
+		│	├── test_base.py					# BaseModule / common forward signatures
+		│	├── test_losses.py					# common loss utilities
+		│	├── test_metrics.py					# RMSE, MAE, NRMSE, categorical acc, etc.
+		│	├── test_schedulers.py
+		│	├── test_logging.py
+		│	├── test_enums.py
+		│	├── test_paths.py
+		│	├── test_config.py
+		│	├── test_exceptions.py
+		│	├── test_registry.py
+		│	└── test_typing.py
+		├── test_gui/							# 🖼️ Optional GUI (Gradio, Streamlit, Dash)
+		│	├── test_app.py						# App entrypoint
+		│	├── test_loaders.py					# GUI-specific data parsing
+		│	├── test_layout.py					# Tabs, sections
+		│	└── test_callbacks.py				# Interactive logic
+		├── test_io/							# 🌐 Parsing & file handling (Hi-C, RNA, WGS, etc.)
+		│	├── test_hic_parser.py				# Juicer-style .hic parser (wrapper or reader)
+		│	├── test_cool_parser.py				# Cooler and .mcool support
+		│	├── test_anyc_parser.py				# scHi-C, Micro-C, DNase Hi-C, etc.
+		│	├── test_bed_parser.py				# BED, BEDPE, narrowPeak, broadPeak
+		│	├── test_gtf_parser.py				# GTF/GFF parser for annotations
+		│	├── test_fasta_parser.py			# Genomes and reference sequences
+		│	├── test_vcf_parser.py				# WGS/WES variant parsing
+		│	├── test_bam_parser.py				# BAM/CRAM parser wrapper
+		│	├── test_crispr_parser.py			# Abstracted sgRNA/CRISPR screen support
+		│	├── test_lncrna_parser.py			# lncRNA structure & interaction parser
+		│	└── test_utils.py					# Helper functions for readers, extensions, caching
+		├── test_metrics/						# 📊 Metrics for quality, similarity, and CABs
+		│	├── test_reproducibility.py			# HiCRep, QuASAR, SCC, etc.
+		│	├── test_entropy.py					# Structural entropy, information content
+		│	├── test_similarity.py				# TAD/loop overlap, compartment correlation
+		│	├── test_dynamic_score.py			# How a structure changes across time/condition
+		│	├── test_cab_finder.py				# CAB discovery engine (Chromatin Arch. Biomarkers)
+		│	└── test_statistical_tests.py		# Bootstrapping, permutation, Fisher’s test
+		├── test_models/						# 🤖 Learning-based models (DL, interpretable ML, VAE, etc.)
+		│	├── test_loop_predictor.py			# Loop prediction from sequence or marks
+		│	├── test_tad_predictor.py			# Predict TADs using epigenomic input
+		│	├── test_dynamics_model.py			# Model chromatin change over time
+		│	├── test_lncrna_model.py			# lncRNA–structure interaction predictors
+		│	├── test_autoencoder.py				# VAE or embedding models for structure
+		│	├── test_interpretable.py			# Attention-based or rule-based models
+		│	└── test_utils.py
+		├── test_structures/					# 🧬 Core representations of chromatin
+		│	├── test_compartments.py			# A/B compartments, saddle plots, PCA
+		│	├── test_tads.py					# TAD detection and boundaries
+		│	├── test_loops.py					# Loop detection, annotation, comparison
+		│	├── test_dynamics.py				# Time-resolved or perturbation-aware dynamics
+		│	├── test_phase_domains.py			# Phase-separation-like domains (e.g., HP1, Polycomb)
+		│	├── test_multi_resolution.py		# Structures across resolutions (e.g., 5kb → 500kb)
+		│	└── test_sc_structure.py			# Single-cell Hi-C support (probabilistic modeling)
+		├── test_utils/							# 🛠️ General utilities
+		│	├── test_decorators.py
+		│	├── test_file_utils.py
+		│	├── test_settings.py				# Global settings loader (YAML/config)
+		│	├── test_io_utils.py				# safe load/save, image I/O
+		│	├── test_seed.py					# RNG seeding helpers
+		│	├── test_ops.py
+		│	├── test_config.py
+		│	├── test_timings.py
+		│	├── test_transforms.py
+		│	├── test_parallel.py
+		│	├── test_profiling.py
+		│	├── test_masks.py					# missingness mask ops
+		│	├── test_metrics_helpers.py
+		│	├── test_schema.py					# JSON Schema validation (fastjsonschema)
+		│	├── test_serialization.py
+		│	└── test_env.py						# Conda/venv/envchecker utils
+		└── test_viz/							# 🎨 Visualization tools
+			├── test_basic.py					# General barplots, pie, scatterplots, topological plots
+			├── test_density.py					# Histograms, boxplots and density function plots
+			├── test_heatmaps.py				# Matrix plotting (static + interactive)
+			├── test_confusion.py				# Confusion matrix visualization
+			├── test_pr_roc_curves.py			# Precision-Recall curves.
+			├── test_arcplot.py					# Loop arcs, TAD domains, etc.
+			├── test_dynamics_plot.py			# Time-series, trajectory-based visualizations
+			├── test_genome_browser.py			# Mini-browser to overlay tracks
+			├── test_tensorboard.py				# Tensorboard plots
+			├── test_grad_cam.py				# Gradient visualization
+			├── test_meta_gene.py				# Meta-Gene Plot.
+			└── test_umap_embedding.py			# UMAP/tSNE of structures or models

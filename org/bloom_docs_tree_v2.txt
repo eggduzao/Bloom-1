@@ -1,0 +1,105 @@
+Bloom/                         					# 🌱 Bloom’s Package Root
+└── docs/								# 📚 Documentation (collapsed)
+    ├── build/
+    ├── Makefile
+    ├── make.bat
+    └── source/
+	    ├── build/
+	    ├── Makefile
+	    ├── make.bat
+	    └── source/
+
+├─ docs/
+│  ├─ conf.py
+│  ├─ make.bat
+│  ├─ Makefile
+│  ├─ requirements.txt             # docs build requirements if isolated
+│  ├─ index.rst
+│  ├─ api/
+│  │  └─ index.rst                 # autodoc index
+│  ├─ guides/
+│  │  ├─ quickstart.md
+│  │  ├─ configuration.md
+│  │  ├─ data_preparation.md
+│  │  ├─ echo_gan_explained.md
+│  │  ├─ mainstream_vae_explained.md
+│  │  └─ refinement_lowrank_resnet.md
+│  ├─ design/
+│  │  ├─ architecture_overview.md  # diagram + narrative mapping to modules
+│  │  └─ pipeline_states.md
+│  └─ papers/
+│     ├─ TryDINN.tex               # your provided formalization
+│     └─ figures/                  # auto-generated figures/plots if needed
+
+
+├─ docs/
+│  ├─ conf.py
+│  ├─ make.bat
+│  ├─ Makefile
+│  ├─ requirements.txt             # docs build requirements if isolated
+│  ├─ index.rst
+│  ├─ api/
+│  │  └─ index.rst                 # autodoc index
+│  ├─ guides/
+│  │  ├─ quickstart.md
+│  │  ├─ configuration.md
+│  │  ├─ data_preparation.md
+│  │  ├─ echo_gan_explained.md
+│  │  ├─ mainstream_vae_explained.md
+│  │  └─ refinement_lowrank_resnet.md
+│  ├─ design/
+│  │  ├─ architecture_overview.md  # diagram + narrative mapping to modules
+│  │  └─ pipeline_states.md
+│  └─ papers/
+│     ├─ TryDINN.tex               # your provided formalization
+│     └─ figures/                  # auto-generated figures/plots if needed
+
+├── docs/                      # 📚 Sphinx documentation root
+│   ├── conf.py
+│   ├── index.rst
+│   └── ...
+│
+
+├─ docs/
+│  ├─ Makefile
+│  ├─ requirements.txt           # mirror of requirements/docs.txt
+│  └─ source/
+│     ├─ conf.py
+│     ├─ index.rst
+│     ├─ api/
+│     │  └─ index.rst
+│     ├─ guides/
+│     │  ├─ quickstart.rst
+│     │  └─ architecture.rst
+│     ├─ howto/
+│     │  ├─ training.rst
+│     │  └─ inference.rst
+│     ├─ reference/
+│     │  ├─ configs.rst
+│     │  └─ cli.rst
+│     ├─ _static/
+│     └─ _templates/
+
+
+
+├─ docs/
+│  ├─ conf.py
+│  ├─ make.bat
+│  ├─ Makefile
+│  ├─ requirements.txt             # docs build requirements if isolated
+│  ├─ index.rst
+│  ├─ api/
+│  │  └─ index.rst                 # autodoc index
+│  ├─ guides/
+│  │  ├─ quickstart.md
+│  │  ├─ configuration.md
+│  │  ├─ data_preparation.md
+│  │  ├─ echo_gan_explained.md
+│  │  ├─ mainstream_vae_explained.md
+│  │  └─ refinement_lowrank_resnet.md
+│  ├─ design/
+│  │  ├─ architecture_overview.md  # diagram + narrative mapping to modules
+│  │  └─ pipeline_states.md
+│  └─ papers/
+│     ├─ TryDINN.tex               # your provided formalization
+│     └─ figures/                  # auto-generated figures/plots if needed
