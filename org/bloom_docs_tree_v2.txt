@@ -1,105 +1,67 @@
-Bloom/                         					# 🌱 Bloom’s Package Root
-└── docs/								# 📚 Documentation (collapsed)
-    ├── build/
-    ├── Makefile
-    ├── make.bat
-    └── source/
-	    ├── build/
-	    ├── Makefile
-	    ├── make.bat
-	    └── source/
-
-├─ docs/
-│  ├─ conf.py
-│  ├─ make.bat
-│  ├─ Makefile
-│  ├─ requirements.txt             # docs build requirements if isolated
-│  ├─ index.rst
-│  ├─ api/
-│  │  └─ index.rst                 # autodoc index
-│  ├─ guides/
-│  │  ├─ quickstart.md
-│  │  ├─ configuration.md
-│  │  ├─ data_preparation.md
-│  │  ├─ echo_gan_explained.md
-│  │  ├─ mainstream_vae_explained.md
-│  │  └─ refinement_lowrank_resnet.md
-│  ├─ design/
-│  │  ├─ architecture_overview.md  # diagram + narrative mapping to modules
-│  │  └─ pipeline_states.md
-│  └─ papers/
-│     ├─ TryDINN.tex               # your provided formalization
-│     └─ figures/                  # auto-generated figures/plots if needed
-
-
-├─ docs/
-│  ├─ conf.py
-│  ├─ make.bat
-│  ├─ Makefile
-│  ├─ requirements.txt             # docs build requirements if isolated
-│  ├─ index.rst
-│  ├─ api/
-│  │  └─ index.rst                 # autodoc index
-│  ├─ guides/
-│  │  ├─ quickstart.md
-│  │  ├─ configuration.md
-│  │  ├─ data_preparation.md
-│  │  ├─ echo_gan_explained.md
-│  │  ├─ mainstream_vae_explained.md
-│  │  └─ refinement_lowrank_resnet.md
-│  ├─ design/
-│  │  ├─ architecture_overview.md  # diagram + narrative mapping to modules
-│  │  └─ pipeline_states.md
-│  └─ papers/
-│     ├─ TryDINN.tex               # your provided formalization
-│     └─ figures/                  # auto-generated figures/plots if needed
-
-├── docs/                      # 📚 Sphinx documentation root
-│   ├── conf.py
-│   ├── index.rst
-│   └── ...
-│
-
-├─ docs/
-│  ├─ Makefile
-│  ├─ requirements.txt           # mirror of requirements/docs.txt
-│  └─ source/
-│     ├─ conf.py
-│     ├─ index.rst
-│     ├─ api/
-│     │  └─ index.rst
-│     ├─ guides/
-│     │  ├─ quickstart.rst
-│     │  └─ architecture.rst
-│     ├─ howto/
-│     │  ├─ training.rst
-│     │  └─ inference.rst
-│     ├─ reference/
-│     │  ├─ configs.rst
-│     │  └─ cli.rst
-│     ├─ _static/
-│     └─ _templates/
-
-
-
-├─ docs/
-│  ├─ conf.py
-│  ├─ make.bat
-│  ├─ Makefile
-│  ├─ requirements.txt             # docs build requirements if isolated
-│  ├─ index.rst
-│  ├─ api/
-│  │  └─ index.rst                 # autodoc index
-│  ├─ guides/
-│  │  ├─ quickstart.md
-│  │  ├─ configuration.md
-│  │  ├─ data_preparation.md
-│  │  ├─ echo_gan_explained.md
-│  │  ├─ mainstream_vae_explained.md
-│  │  └─ refinement_lowrank_resnet.md
-│  ├─ design/
-│  │  ├─ architecture_overview.md  # diagram + narrative mapping to modules
-│  │  └─ pipeline_states.md
-│  └─ papers/
-│     ├─ TryDINN.tex               # your provided formalization
-│     └─ figures/                  # auto-generated figures/plots if needed
+Bloom/													# 🌱 Bloom’s Package Root
+	└── docs/											# 📚 Documentation
+		├── Makefile
+		├── build/										# Will contain all generated HTML (via makefile).
+		├── make.bat
+		└── source/
+			├── conf.py
+			├── index.rst
+			├── rst_creator.py							# Special script that creates the documentation beautifully!
+			├── scripts.rst
+			├── _glam/									# Contain small patches to make the docs more beautiful.
+			│	├── emoji.tsv
+			│	└── emoji_creator.py
+			├── _static/								# Static elements: Images, Small Videos, etc.
+			│	└── gsus_logo.png
+			├── _templates/
+			├── api/									# Will contain the actual documentation with the aid of rst_creator.py and auto-doc.
+			├── development/							# Extension of supplement/contributing.rst -> Full guide to contribute, straight to the point.
+			│	├── overview.rst
+			│	├── philosophy.rst
+			│	├── style_guidelines.rst
+			│	├── docstrings.rst
+			│	├── module_example.rst
+			│	└── literature_search_strategy.rst
+			├── gui/									# GUI-specific section to detail GUI's (Dashboard) abilities.
+			│	├── gui_screenshots/
+			│	├── gui_overview.rst
+			│	├── gui_pipelines.rst
+			│	└── gui_examples.rst
+			├── modules/								# Modules: Overview of each module's goal, definitions and references.
+			│	├── typing.rst							# type aliases (e.g., TensorLike)
+			│	├── registry.rst						# simple name→class/function registry
+			│	├── compat.rst							# version/optional backend guards
+			│	├── typing.rst							# type aliases (e.g., TensorLike) and shared Protocols/NewTypes/Literal sets
+			│	├── registry.rst						# simple name→class/function registry
+			│	├── settings.rst						# pydantic-settings for env/config overrides
+			│	├── annotate.rst						# 🧷 Annotation with known biological elements
+			│	├── cab.rst								# 🧠 Chromatin Architecture Biomarker utilities				
+			│	├── cli.rst								# 🖥️ Command-line interface (argparse or click)
+			│	├── configs.rst
+			│	├── core.rst							# CORE
+			│	├── gui.rst								# 🖼️ Optional GUI (Gradio, Streamlit, Dash)
+			│	├── io.rst								# 🌐 Parsing & file handling (Hi-C, RNA, WGS, etc.)
+			│	├── metrics.rst							# 📊 Metrics for quality, similarity, and CABs
+			│	├── models.rst							# 🤖 Learning-based models (DL, interpretable ML, VAE, etc.)
+			│	├── structures.rst						# 🧬 Core representations of chromatin
+			│	├── utils.rst							# 🛠️ General utilities
+			│	└── viz.rst
+			├── cli/									# CLI-specific section to details CLI's abilities (tutorials will be thrown here as well).
+			│	├── cli_plots/
+			│	├── cli_overview.rst
+			│	├── cli_pipelines.rst
+			│	└── cli_examples.rst
+			├── supplement/								# Menu-bottom sections, but are important to introduce everything deeper.
+			│	├── changelog.rst
+			│	├── contributing.rst
+			│	└── license.rst
+			└── usage/									# Full-Blown Hands-On Tutorials, Guides, Quickstart, Slowstarts, e2e, FAQ, etc.
+				├── installation.rst
+				├── quickstart.rst
+				├── modules_overview.rst
+				├── usage_overview.rst
+				├── data_formats.rst
+				├── batch_pipelines.rst					# how to run manifests from CLI & see outputs in GUI
+				├── comparison_studies.rst
+				├── faq.rst
+				└── references.rst

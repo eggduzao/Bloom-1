@@ -1,38 +1,38 @@
-Bloom/                         					# 🌱 Bloom’s Package Root
-└── examples/                   # 📊 Metrics for quality, similarity, and CABs
-    ├── README.md
-    ├── notebooks/
-	│	 ├── 00_quick_start.ipynb
-	│	 ├── 01_genomic_data_manipulation.ipynb
-	│	 ├── 02_epigenomic_data_manipulation.ipynb
-	│	 ├── 03_regulatory_data_manipulation.ipynb
-	│	 ├── 04_c_data_manipulation.ipynb
-	│	 ├── 05_chromatin_compartments.ipynb
-	│	 ├── 06_genomic_ranges.ipynb
-	│	 ├── 07_chromatin_hyerarchical_tads.ipynb
-	│	 ├── 08_ab_tad_visualization.ipynb
-	│	 ├── 09_gene_metaplot_visualization.ipynb
-	│	 ├── 10_search_variants_tads.ipynb
-	│	 ├── 11_loop_calling_part_1.ipynb
-	│	 ├── 12_loop_calling_part_2.ipynb
-	│	 ├── 13_loop_visualization.ipynb
-	│	 ├── 14_chromatin_visualization.ipynb
-	│	 ├── 15_full_cdata_pipeline.ipynb
-	│	 └── cli_samples/
-	│        ├── run_impute.sh
-	│        └── run_train.sh
-    ├── dev/
-	│	 ├── format.sh                  # black + isort
-	│	 ├── lint.sh                    # flake8 + pylint + mypy
-	│	 └── gen_api_docs.sh            # sphinx-apidoc wrapper
-    ├── scripts/
-	│	 ├── prepare_experiment.py
-	│	 ├── pipelines.py
-	│	 ├── export_artifacts.py
-	│	 ├── quality_control.py
-	│	 ├── visualization.py
-	│	 ├── motif_matching.py
-	│	 ├── profile_runtime.py
-	│	 └── loading_data.py
-    ├── cli_samples/
-    └── gui_samples/
+Bloom/													# 🌱 Bloom’s Package Root
+	└── examples/										# 📊 Metrics for quality, similarity, and CABs
+		├── README.md
+		├── notebooks/
+		│	├── 00_quick_start.ipynb
+		│	├── 01_genomic_data_manipulation.ipynb
+		│	├── 02_epigenomic_data_manipulation.ipynb
+		│	├── 03_regulatory_data_manipulation.ipynb
+		│	├── 04_c_data_manipulation.ipynb
+		│	├── 05_chromatin_compartments.ipynb
+		│	├── 06_genomic_ranges.ipynb
+		│	├── 07_chromatin_hyerarchical_tads.ipynb
+		│	├── 08_ab_tad_visualization.ipynb
+		│	├── 09_gene_metaplot_visualization.ipynb
+		│	├── 10_search_variants_tads.ipynb
+		│	├── 11_loop_calling_part_1.ipynb
+		│	├── 12_loop_calling_part_2.ipynb
+		│	├── 13_loop_visualization.ipynb
+		│	├── 14_chromatin_visualization.ipynb
+		│	├── 15_full_cdata_pipeline.ipynb
+		│	└── cli_samples/
+		│		├── run_impute.sh
+		│		└── run_train.sh
+		├── dev/
+		│	├── format.sh								# black + isort
+		│	├── lint.sh									# flake8 + pylint + mypy
+		│	└── gen_api_docs.sh							# sphinx-apidoc wrapper
+		├── scripts/
+		│	├── prepare_experiment.py
+		│	├── pipelines.py
+		│	├── export_artifacts.py
+		│	├── quality_control.py
+		│	├── visualization.py
+		│	├── motif_matching.py
+		│	├── profile_runtime.py
+		│	└── loading_data.py
+		├── cli_samples/
+		└── gui_samples/

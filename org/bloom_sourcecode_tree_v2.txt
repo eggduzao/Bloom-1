@@ -1,193 +1,193 @@
-Bloom/											# 🌱 Bloom’s Package Source Code (importable as `import bloom`)
-└── src/										# 🌱 PyPI Friendly
-	└── bloom/									# 🌱 PyPI Friendly
-		├── __init__.py							# Initialize Bloom as a namespace
-		├── __main__.py							# Quick Bloom entrypoint "-m"
-		├── __about__.py						# __version__, __author__, etc.
-		├── _version.py							# Official Bloom stable version.
-		├── _typing.py							# type aliases (e.g., TensorLike)
-		├── _registry.py						# simple name→class/function registry
-		├── _compat.py							# version/optional backend guards
-		├── _typing.py							# type aliases (e.g., TensorLike) and shared Protocols/NewTypes/Literal sets
-		├── _registry.py						# simple name→class/function registry
-		├── settings.py							# pydantic-settings for env/config overrides
-		├── annotate/							# 🧷 Annotation with known biological elements
-		│	├── __init__.py
-		│	├── ctcf.py							# CTCF motif & ChIP-seq annotation
-		│	├── chipseq.py						# ChIP, histone marks, transcription factors
-		│	├── enhancers.py					# Enhancer databases (FANTOM, ENCODE)
-		│	├── lncrna.py						# lncRNA functional / structural annotations
-		│	├── repeats.py						# RepeatMasker/TEs
-		│	└── external_db.py					# Interfaces to ENCODE, 4DN, UCSC, etc.
-		├── cab/								# 🧠 Chromatin Architecture Biomarker utilities
-		│	├── __init__.py
-		│	├── definitions.py					# CAB ontology, format, levels of abstraction
-		│	├── extraction.py					# How to extract CABs from structure + function
-		│	├── validation.py					# Compare CABs across cell types, conditions
-		│	├── visualization.py				# View CABs across genome or timepoints
-		│	└── models/					
-		│		├── __init__.py
-		│		├── main.py					
-		│		├── preprocessing/					
-		│		│	└── __init__.py
-		│		├── imputation/					
-		│		│	└── __init__.py
-		│		├── normalization/					
-		│		│	└── __init__.py
-		│		├── nn/					
-		│		│	└── __init__.py
-		│		├── heads/					
-		│		│	└── __init__.py
-		│		├── losses/					
-		│		│	└── __init__.py
-		│		├── metrics/					
-		│		│	└── __init__.py
-		│		├── engine/					
-		│		│	└── __init__.py
-		│		├── inference/					
-		│		│	└── __init__.py
-		│		└── backends/					
-		│			└── __init__.py
-		├── cli/								# 🖥️ Command-line interface (argparse or click)
-		│	├── __init__.py
-		│	├── main.py							# Entrypoint for CLI
-		│	├── parse.py						# CLI for parsing files into standard format
-		│	├── call_structures.py				# CLI for compartments / TADs / loops
-		│	├── annotate.py						# CLI for adding biological context
-		│	├── metrics.py						# CLI for quality or CAB scoring
-		│	├── model.py						# CLI for training/applying ML models
-		│	└── visualize.py					# CLI for plotting and inspection
-		├── configs/							# User-driven config
-		│	├── __init__.py
-		│	├── base.yaml						# Users defaults merged by environment/config set
-		│	├── data/
-		│	│	├── __init__.py
-		│	│	├── sequence_formats.json		# JSON Schema for sequence formats (.sra, .fasta, .fastq, etc.)
-		│	│	├── variant_formats.json		# JSON Schema for variant data (vcf, bcf, gatk formats, etc.)
-		│	│	├── genome_formats.json			# JSON Schema for genomic formats (gff, gtf, etc.)
-		│	│	├── alignment_formats.json		# JSON Schema for alignment output data (sam, bam, cram)
-		│	│	├── ucsc_formats.json			# JSON Schema for UCSC traditional data (bed, bedpe, bigbed, wig, bigwig, etc.)
-		│	│	├── lncrna_formats.json			# JSON Schema for lnc-RNA data (piggy-back on other formats, with special restrictions)
-		│	│	├── crispr_formats.json			# JSON Schema for CRISPR data (.count.txt, .txt, piggyback on others, with special restrictions)
-		│	│	├── hic_formats.json			# JSON Schema for C-like data (.hic, .cool, .mcool, etc.)
-		│	│	├── tabular_formats.json		# JSON Schema for tabular data (tsv, csv, parquet, excel, feather, hdf5, phenotypes, classifications, etc.)
-		│	│	├── preprocessing.yaml			# Normalization/Encoding Settings.
-		│	│	└── postprocessing.yaml			# Associations/Graphs/(future) Imaging Settings.
-		│	├── deep_learning/
-		│	│	├── __init__.py
-		│	│	├── cab_base.yaml
-		│	│	├── cab_schedules.yaml
-		│	│	├── cab_optimizer.yaml
-		│	│	├── train/
-		│	│	├── test/
-		│	│	└── model/
-		│	├── rules/
-		│	│	├── __init__.py
-		│	│	├── optimizer.yaml
-		│	│	├── schedules.yaml
-		│	│	├── genome.yaml
-		│	│	├── wgs_wes.yaml
-		│	│	├── chipseq.yaml
-		│	│	├── rnaseq.yaml
-		│	│	├── atacseq.yaml
-		│	│	├── lncrna.yaml
-		│	│	├── crispr.yaml
-		│	│	├── hic.yaml
-		│	│	├── cab.yaml
-		│	│	└── callbacks.yaml
-		│	└── pipelines/
-		│		├── __init__.py
-		│		├── full_bloom.yaml
-		│		├── hic_processing.yaml
-		│		├── lnc_processing.yaml
-		│		└── crispr_processing.yaml
-		├── core/								# CORE
-		│	├── __init__.py
-		│	├── base.py							# BaseModule / common forward signatures
-		│	├── losses.py						# common loss utilities
-		│	├── metrics.py						# RMSE, MAE, NRMSE, categorical acc, etc.
-		│	├── schedulers.py
-		│	├── logging.py
-		│	├── enums.py
-		│	├── paths.py
-		│	├── config.py
-		│	├── exceptions.py
-		│	├── _registry.py
-		│	└── _typing.py
-		├── gui/								# 🖼️ Optional GUI (Gradio, Streamlit, Dash)
-		│	├── __init__.py
-		│	├── app.py							# App entrypoint
-		│	├── loaders.py						# GUI-specific data parsing
-		│	├── layout.py						# Tabs, sections
-		│	└── callbacks.py					# Interactive logic
-		├── io/									# 🌐 Parsing & file handling (Hi-C, RNA, WGS, etc.)
-		│	├── __init__.py
-		│	├── hic_parser.py					# Juicer-style .hic parser (wrapper or reader)
-		│	├── cool_parser.py					# Cooler and .mcool support
-		│	├── anyc_parser.py					# scHi-C, Micro-C, DNase Hi-C, etc.
-		│	├── bed_parser.py					# BED, BEDPE, narrowPeak, broadPeak
-		│	├── gtf_parser.py					# GTF/GFF parser for annotations
-		│	├── fasta_parser.py					# Genomes and reference sequences
-		│	├── vcf_parser.py					# WGS/WES variant parsing
-		│	├── bam_parser.py					# BAM/CRAM parser wrapper
-		│	├── crispr_parser.py				# Abstracted sgRNA/CRISPR screen support
-		│	├── lncrna_parser.py				# lncRNA structure & interaction parser
-		│	└── utils.py						# Helper functions for readers, extensions, caching
-		├── metrics/							# 📊 Metrics for quality, similarity, and CABs
-		│	├── __init__.py
-		│	├── reproducibility.py				# HiCRep, QuASAR, SCC, etc.
-		│	├── entropy.py						# Structural entropy, information content
-		│	├── similarity.py					# TAD/loop overlap, compartment correlation
-		│	├── dynamic_score.py				# How a structure changes across time/condition
-		│	├── cab_finder.py					# CAB discovery engine (Chromatin Arch. Biomarkers)
-		│	└── statistical_tests.py			# Bootstrapping, permutation, Fisher’s test
-		├── models/								# 🤖 Learning-based models (DL, interpretable ML, VAE, etc.)
-		│	├── __init__.py
-		│	├── loop_predictor.py				# Loop prediction from sequence or marks
-		│	├── tad_predictor.py				# Predict TADs using epigenomic input
-		│	├── dynamics_model.py				# Model chromatin change over time
-		│	├── lncrna_model.py					# lncRNA–structure interaction predictors
-		│	├── autoencoder.py					# VAE or embedding models for structure
-		│	├── interpretable.py				# Attention-based or rule-based models
-		│	└── utils.py
-		├── structures/							# 🧬 Core representations of chromatin
-		│	├── __init__.py
-		│	├── compartments.py					# A/B compartments, saddle plots, PCA
-		│	├── tads.py							# TAD detection and boundaries
-		│	├── loops.py						# Loop detection, annotation, comparison
-		│	├── dynamics.py						# Time-resolved or perturbation-aware dynamics
-		│	├── phase_domains.py				# Phase-separation-like domains (e.g., HP1, Polycomb)
-		│	├── multi_resolution.py				# Structures across resolutions (e.g., 5kb → 500kb)
-		│	└── sc_structure.py					# Single-cell Hi-C support (probabilistic modeling)
-		├── utils/								# 🛠️ General utilities
-		│	├── __init__.py
-		│	├── decorators.py
-		│	├── file_utils.py
-		│	├── settings.py						# Global settings loader (YAML/config)
-		│	├── io_utils.py						# safe load/save, image I/O
-		│	├── seed.py							# RNG seeding helpers
-		│	├── ops.py
-		│	├── config.py
-		│	├── timings.py
-		│	├── transforms.py
-		│	├── parallel.py
-		│	├── profiling.py
-		│	├── masks.py						# missingness mask ops
-		│	├── metrics_helpers.py
-		│	├── schema.py						# JSON Schema validation (fastjsonschema)
-		│	├── serialization.py
-		│	└── env.py							# Conda/venv/envchecker utils
-		└── viz/								# 🎨 Visualization tools
-			├── __init__.py
-			├── basic.py						# General barplots, pie, scatterplots, topological plots
-			├── density.py						# Histograms, boxplots and density function plots
-			├── heatmaps.py						# Matrix plotting (static + interactive)
-			├── confusion.py					# Confusion matrix visualization
-			├── pr_roc_curves.py				# Precision-Recall curves.
-			├── arcplot.py						# Loop arcs, TAD domains, etc.
-			├── dynamics_plot.py				# Time-series, trajectory-based visualizations
-			├── genome_browser.py				# Mini-browser to overlay tracks
-			├── tensorboard.py					# Tensorboard plots
-			├── grad_cam.py						# Gradient visualization
-			├── meta_gene.py					# Meta-Gene Plot.
-			└── umap_embedding.py				# UMAP/tSNE of structures or models
+Bloom/												# 🌱 Bloom’s Package Source Code (importable as `import bloom`)
+	└── src/										# 🌱 PyPI Friendly
+		└── bloom/									# 🌱 PyPI Friendly
+			├── __init__.py							# Initialize Bloom as a namespace
+			├── __main__.py							# Quick Bloom entrypoint "-m"
+			├── __about__.py						# __version__, __author__, etc.
+			├── _version.py							# Official Bloom stable version.
+			├── _typing.py							# type aliases (e.g., TensorLike)
+			├── _registry.py						# simple name→class/function registry
+			├── _compat.py							# version/optional backend guards
+			├── _typing.py							# type aliases (e.g., TensorLike) and shared Protocols/NewTypes/Literal sets
+			├── _registry.py						# simple name→class/function registry
+			├── settings.py							# pydantic-settings for env/config overrides
+			├── annotate/							# 🧷 Annotation with known biological elements
+			│	├── __init__.py
+			│	├── ctcf.py							# CTCF motif & ChIP-seq annotation
+			│	├── chipseq.py						# ChIP, histone marks, transcription factors
+			│	├── enhancers.py					# Enhancer databases (FANTOM, ENCODE)
+			│	├── lncrna.py						# lncRNA functional / structural annotations
+			│	├── repeats.py						# RepeatMasker/TEs
+			│	└── external_db.py					# Interfaces to ENCODE, 4DN, UCSC, etc.
+			├── cab/								# 🧠 Chromatin Architecture Biomarker utilities
+			│	├── __init__.py
+			│	├── definitions.py					# CAB ontology, format, levels of abstraction
+			│	├── extraction.py					# How to extract CABs from structure + function
+			│	├── validation.py					# Compare CABs across cell types, conditions
+			│	├── visualization.py				# View CABs across genome or timepoints
+			│	└── models/					
+			│		├── __init__.py
+			│		├── main.py					
+			│		├── preprocessing/					
+			│		│	└── __init__.py
+			│		├── imputation/					
+			│		│	└── __init__.py
+			│		├── normalization/					
+			│		│	└── __init__.py
+			│		├── nn/					
+			│		│	└── __init__.py
+			│		├── heads/					
+			│		│	└── __init__.py
+			│		├── losses/					
+			│		│	└── __init__.py
+			│		├── metrics/					
+			│		│	└── __init__.py
+			│		├── engine/					
+			│		│	└── __init__.py
+			│		├── inference/					
+			│		│	└── __init__.py
+			│		└── backends/					
+			│			└── __init__.py
+			├── cli/								# 🖥️ Command-line interface (argparse or click)
+			│	├── __init__.py
+			│	├── main.py							# Entrypoint for CLI
+			│	├── parse.py						# CLI for parsing files into standard format
+			│	├── call_structures.py				# CLI for compartments / TADs / loops
+			│	├── annotate.py						# CLI for adding biological context
+			│	├── metrics.py						# CLI for quality or CAB scoring
+			│	├── model.py						# CLI for training/applying ML models
+			│	└── visualize.py					# CLI for plotting and inspection
+			├── configs/							# User-driven config
+			│	├── __init__.py
+			│	├── base.yaml						# Users defaults merged by environment/config set
+			│	├── data/
+			│	│	├── __init__.py
+			│	│	├── sequence_formats.json		# JSON Schema for sequence formats (.sra, .fasta, .fastq, etc.)
+			│	│	├── variant_formats.json		# JSON Schema for variant data (vcf, bcf, gatk formats, etc.)
+			│	│	├── genome_formats.json			# JSON Schema for genomic formats (gff, gtf, etc.)
+			│	│	├── alignment_formats.json		# JSON Schema for alignment output data (sam, bam, cram)
+			│	│	├── ucsc_formats.json			# JSON Schema for UCSC traditional data (bed, bedpe, bigbed, wig, bigwig, etc.)
+			│	│	├── lncrna_formats.json			# JSON Schema for lnc-RNA data (piggy-back on other formats, with special restrictions)
+			│	│	├── crispr_formats.json			# JSON Schema for CRISPR data (.count.txt, .txt, piggyback on others, with special restrictions)
+			│	│	├── hic_formats.json			# JSON Schema for C-like data (.hic, .cool, .mcool, etc.)
+			│	│	├── tabular_formats.json		# JSON Schema for tabular data (tsv, csv, parquet, excel, feather, hdf5, phenotypes, classifications, etc.)
+			│	│	├── preprocessing.yaml			# Normalization/Encoding Settings.
+			│	│	└── postprocessing.yaml			# Associations/Graphs/(future) Imaging Settings.
+			│	├── deep_learning/
+			│	│	├── __init__.py
+			│	│	├── cab_base.yaml
+			│	│	├── cab_schedules.yaml
+			│	│	├── cab_optimizer.yaml
+			│	│	├── train/
+			│	│	├── test/
+			│	│	└── model/
+			│	├── rules/
+			│	│	├── __init__.py
+			│	│	├── optimizer.yaml
+			│	│	├── schedules.yaml
+			│	│	├── genome.yaml
+			│	│	├── wgs_wes.yaml
+			│	│	├── chipseq.yaml
+			│	│	├── rnaseq.yaml
+			│	│	├── atacseq.yaml
+			│	│	├── lncrna.yaml
+			│	│	├── crispr.yaml
+			│	│	├── hic.yaml
+			│	│	├── cab.yaml
+			│	│	└── callbacks.yaml
+			│	└── pipelines/
+			│		├── __init__.py
+			│		├── full_bloom.yaml
+			│		├── hic_processing.yaml
+			│		├── lnc_processing.yaml
+			│		└── crispr_processing.yaml
+			├── core/								# CORE
+			│	├── __init__.py
+			│	├── base.py							# BaseModule / common forward signatures
+			│	├── losses.py						# common loss utilities
+			│	├── metrics.py						# RMSE, MAE, NRMSE, categorical acc, etc.
+			│	├── schedulers.py
+			│	├── logging.py
+			│	├── enums.py
+			│	├── paths.py
+			│	├── config.py
+			│	├── exceptions.py
+			│	├── _registry.py
+			│	└── _typing.py
+			├── gui/								# 🖼️ Optional GUI (Gradio, Streamlit, Dash)
+			│	├── __init__.py
+			│	├── app.py							# App entrypoint
+			│	├── loaders.py						# GUI-specific data parsing
+			│	├── layout.py						# Tabs, sections
+			│	└── callbacks.py					# Interactive logic
+			├── io/									# 🌐 Parsing & file handling (Hi-C, RNA, WGS, etc.)
+			│	├── __init__.py
+			│	├── hic_parser.py					# Juicer-style .hic parser (wrapper or reader)
+			│	├── cool_parser.py					# Cooler and .mcool support
+			│	├── anyc_parser.py					# scHi-C, Micro-C, DNase Hi-C, etc.
+			│	├── bed_parser.py					# BED, BEDPE, narrowPeak, broadPeak
+			│	├── gtf_parser.py					# GTF/GFF parser for annotations
+			│	├── fasta_parser.py					# Genomes and reference sequences
+			│	├── vcf_parser.py					# WGS/WES variant parsing
+			│	├── bam_parser.py					# BAM/CRAM parser wrapper
+			│	├── crispr_parser.py				# Abstracted sgRNA/CRISPR screen support
+			│	├── lncrna_parser.py				# lncRNA structure & interaction parser
+			│	└── utils.py						# Helper functions for readers, extensions, caching
+			├── metrics/							# 📊 Metrics for quality, similarity, and CABs
+			│	├── __init__.py
+			│	├── reproducibility.py				# HiCRep, QuASAR, SCC, etc.
+			│	├── entropy.py						# Structural entropy, information content
+			│	├── similarity.py					# TAD/loop overlap, compartment correlation
+			│	├── dynamic_score.py				# How a structure changes across time/condition
+			│	├── cab_finder.py					# CAB discovery engine (Chromatin Arch. Biomarkers)
+			│	└── statistical_tests.py			# Bootstrapping, permutation, Fisher’s test
+			├── models/								# 🤖 Learning-based models (DL, interpretable ML, VAE, etc.)
+			│	├── __init__.py
+			│	├── loop_predictor.py				# Loop prediction from sequence or marks
+			│	├── tad_predictor.py				# Predict TADs using epigenomic input
+			│	├── dynamics_model.py				# Model chromatin change over time
+			│	├── lncrna_model.py					# lncRNA–structure interaction predictors
+			│	├── autoencoder.py					# VAE or embedding models for structure
+			│	├── interpretable.py				# Attention-based or rule-based models
+			│	└── utils.py
+			├── structures/							# 🧬 Core representations of chromatin
+			│	├── __init__.py
+			│	├── compartments.py					# A/B compartments, saddle plots, PCA
+			│	├── tads.py							# TAD detection and boundaries
+			│	├── loops.py						# Loop detection, annotation, comparison
+			│	├── dynamics.py						# Time-resolved or perturbation-aware dynamics
+			│	├── phase_domains.py				# Phase-separation-like domains (e.g., HP1, Polycomb)
+			│	├── multi_resolution.py				# Structures across resolutions (e.g., 5kb → 500kb)
+			│	└── sc_structure.py					# Single-cell Hi-C support (probabilistic modeling)
+			├── utils/								# 🛠️ General utilities
+			│	├── __init__.py
+			│	├── decorators.py
+			│	├── file_utils.py
+			│	├── settings.py						# Global settings loader (YAML/config)
+			│	├── io_utils.py						# safe load/save, image I/O
+			│	├── seed.py							# RNG seeding helpers
+			│	├── ops.py
+			│	├── config.py
+			│	├── timings.py
+			│	├── transforms.py
+			│	├── parallel.py
+			│	├── profiling.py
+			│	├── masks.py						# missingness mask ops
+			│	├── metrics_helpers.py
+			│	├── schema.py						# JSON Schema validation (fastjsonschema)
+			│	├── serialization.py
+			│	└── env.py							# Conda/venv/envchecker utils
+			└── viz/								# 🎨 Visualization tools
+				├── __init__.py
+				├── basic.py						# General barplots, pie, scatterplots, topological plots
+				├── density.py						# Histograms, boxplots and density function plots
+				├── heatmaps.py						# Matrix plotting (static + interactive)
+				├── confusion.py					# Confusion matrix visualization
+				├── pr_roc_curves.py				# Precision-Recall curves.
+				├── arcplot.py						# Loop arcs, TAD domains, etc.
+				├── dynamics_plot.py				# Time-series, trajectory-based visualizations
+				├── genome_browser.py				# Mini-browser to overlay tracks
+				├── tensorboard.py					# Tensorboard plots
+				├── grad_cam.py						# Gradient visualization
+				├── meta_gene.py					# Meta-Gene Plot.
+				└── umap_embedding.py				# UMAP/tSNE of structures or models

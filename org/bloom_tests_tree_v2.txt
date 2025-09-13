@@ -1,4 +1,4 @@
-Bloom/                         					# 🌱 Bloom’s Package Root
+Bloom/											# 🌱 Bloom’s Package Root
 	└── tests/
 		├── conftest.py
 		├── golden/

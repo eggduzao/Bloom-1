@@ -1,0 +1,319 @@
+# PHASE 1 — Initial Core Modules, Strong Backbones and Config/Rules
+==================================================================
+
+Day 01 — Repository bootstrap, configs, and CI skeleton
+=======================================================
+> [ ] <Bloom : Root/Tooling> Initialize repo scaffolding: pyproject.toml, ruff.toml, .mypy.ini, tox.ini, noxfile.py, .editorconfig, .gitignore, pre-commit hooks [04:00].
+> [ ] <Bloom : CI/CD> Add GitHub Actions workflows: lint-test.yaml (ruff+mypy+pytest) and docs.yaml (Sphinx build smoke) [03:00].
+> [ ] <Bloom : Makefile/Nox> Makefile targets (lint, test, type, docs, build, clean); nox sessions mirror tox envs [02:00].
+
+Day 02 — Versioning, metadata, and licensing
+============================================
+> [ ] <Bloom : Core> Create __about__.py, _version.py, VERSION; wire setuptools_scm or fallback bump script [02:30].
+> [ ] <Bloom : Governance> Add LICENSE, CODE_OF_CONDUCT.md, SECURITY.md, CONTRIBUTING.md, CITATION.cff [02:00].
+> [ ] <Bloom : Docs> Seed README.md, ROADMAP.md with high-level architecture and phase goals [02:00].
+
+Day 03 — Settings system & registry backbone
+============================================
+> [ ] <Bloom : settings.py> Implement pydantic-settings loader with env/file precedence and schema validation [03:00].
+> [ ] <Bloom : _registry.py> Minimal name→class/function registry with entrypoint hooks and duplicate guards [02:30].
+> [ ] <Bloom : tests_core> Unit tests: settings precedence, registry register/unregister, error cases [02:00].
+
+Day 04 — Paths, logging, exceptions
+===================================
+> [ ] <Bloom : core.paths> ProjectDir, DataDir, CacheDir resolvers; XDG-compatible; env overrides [02:30].
+> [ ] <Bloom : core.logging> Structured logging (logging.config dict), JSON optional, colorized console [02:30].
+> [ ] <Bloom : core.exceptions> Hierarchy (BloomError → ConfigError/IOError/ValidationError) [01:30].
+> [ ] <Bloom : tests_core> Tests for paths/logging/exceptions [02:00].
+
+Day 05 — Base types, enums, and typing utilities
+================================================
+> [ ] <Bloom : _typing, core.enums> Common NewTypes/Protocols (PathLike, TensorLike, GenomicRange), enums (Strand, Genome, Assay) [03:00].
+> [ ] <Bloom : utils.schema> JSON Schema validator (fastjsonschema), error pretty-printer [02:00].
+> [ ] <Bloom : tests_utils> Tests for schema validation and enums [02:00].
+
+Day 06 — Configs directory & rulesets (v0)
+==========================================
+> [ ] <Bloom : configs/base.yaml> Establish global defaults; implement deep-merge with user overrides [02:30].
+> [ ] <Bloom : configs/data/*.json> Draft JSON Schemas for sequence, alignment, genome, UCSC, hic, variants, tabular [03:30].
+> [ ] <Bloom : tests_configs> Validate schemas with golden sample manifests [02:00].
+
+Day 07 — CLI scaffold (argparse) and entrypoints
+================================================
+> [ ] <Bloom : cli.main> CLI root with subcommands: parse, call, annotate, metrics, model, viz [03:00].
+> [ ] <Bloom : cli.parse> Wire minimal parser that echoes detected filetypes & validates against schemas [02:30].
+> [ ] <Bloom : packaging> Console_scripts entrypoint: bloom [01:00].
+> [ ] <Bloom : tests_cli> Smoke tests for CLI help and parse minimal files [01:30].
+
+Day 08 — I/O utilities and safe load/save
+=========================================
+> [ ] <Bloom : utils.io_utils> Buffered readers/writers, atomic_write, tmpdir context managers [03:00].
+> [ ] <Bloom : utils.file_utils> Glob patterns, magic-based type sniffing, decompression, remote (HTTP/S3) stub [03:00].
+> [ ] <Bloom : tests_utils> File roundtrip & error-path tests [02:00].
+
+Day 09 — Core metrics & timers
+==============================
+> [ ] <Bloom : core.metrics> Basic metrics helpers (timing, memory snapshots) for pipeline steps [02:00].
+> [ ] <Bloom : utils.timings/profiling> Wallclock decorators, cProfile hooks, progress meter [03:00].
+> [ ] <Bloom : tests_utils> Timing/profiling tests with thresholds [02:00].
+
+Day 10 — Documentation baseline (Sphinx v1) & style
+===================================================
+> [ ] <Bloom : docs> Enable Sphinx build, autoapi/autodoc, napoleon, intersphinx; add rst_creator.py script wiring [03:00].
+> [ ] <Bloom : docs/modules> Seed core.rst, io.rst, cli.rst, configs.rst outlines [02:00].
+> [ ] <Bloom : CI> Docs build in CI with artifact upload [01:30].
+
+
+# PHASE 2 — Loaders, Handlers, Modifiers, Writers for Core Filetypes
+====================================================================
+
+Day 11 — FASTA/Genomes & basic sequences
+========================================
+> [ ] <Bloom : io.fasta_parser> FASTA reader (pyfaidx/biopython optional), index handling, sequence windows [03:30].
+> [ ] <Bloom : tests_io> FASTA unit tests incl. circular chroms & masked bases [02:00].
+> [ ] <Bloom : configs/data/genome_formats.json> Expand schema to include aliases/builds [01:30].
+
+Day 12 — FASTQ and SRA stubs
+============================
+> [ ] <Bloom : io.utils> FASTQ streaming with gzip/bgzip; quality stats [03:00].
+> [ ] <Bloom : io.anyc_parser> SRA/ENA URL recognizers and local caching stubs (no download yet) [02:30].
+> [ ] <Bloom : tests_io> FASTQ parsing tests (single/paired) [01:30].
+
+Day 13 — Alignments (SAM/BAM/CRAM) lightweight reader
+=====================================================
+> [ ] <Bloom : io.bam_parser> Wrap pysam: header/flag/region iter; mapping stats API [03:30].
+> [ ] <Bloom : tests_io> BAM tests: paired-end, secondary/supplementary handling [02:00].
+
+Day 14 — UCSC formats I: BED/BEDPE/WIG/BigWig (read)
+====================================================
+> [ ] <Bloom : io.bed_parser> BED/BEDPE parser with schemas & region operations [03:00].
+> [ ] <Bloom : io.utils> BigWig reader thin wrapper (pyBigWig) [02:00].
+> [ ] <Bloom : tests_io> BED/BigWig read tests [02:00].
+
+Day 15 — GTF/GFF parsing
+========================
+> [ ] <Bloom : io.gtf_parser> Feature iterator, gene models, exon/CDS aggregation [03:00].
+> [ ] <Bloom : tests_io> GTF/GFF tests and edge cases (attributes parsing) [02:00].
+
+Day 16 — Variants (VCF/BCF) read & subset
+=========================================
+> [ ] <Bloom : io.vcf_parser> cyvcf2/pysam-based variants iterator; INFO/FORMAT as dict-like [03:00].
+> [ ] <Bloom : tests_io> VCF/BCF tests incl. multiallelic, phased genotypes [02:00].
+
+Day 17 — CRISPR screens parsers
+===============================
+> [ ] <Bloom : io.crispr_parser> Parse common sgRNA count tables; guide annotations; minimal QC [03:00].
+> [ ] <Bloom : tests_io> CRISPR parser tests (mismatched headers, NA handling) [02:00].
+
+Day 18 — lncRNA structures & interaction files
+==============================================
+> [ ] <Bloom : io.lncrna_parser> Load simple interaction tables; map to gene models; sanity checks [03:00].
+> [ ] <Bloom : tests_io> lncRNA parser tests [02:00].
+
+Day 19 — Hi-C containers: .cool/.mcool read (baseline)
+======================================================
+> [ ] <Bloom : io.cool_parser> cooler-based open, fetch matrix by bins/regions; metadata surfaces [03:30].
+> [ ] <Bloom : tests_io> Cooler read tests and region slicing [02:00].
+
+Day 20 — Hi-C containers: .hic read (baseline)
+==============================================
+> [ ] <Bloom : io.hic_parser> strawpy/juicebox wrapper; resolutions, normalization vectors, region matrix [03:30].
+> [ ] <Bloom : tests_io> .hic read tests with small fixtures [02:00].
+
+
+# PHASE 3 — Basic Sequence & Alignment Pipelines (CLI-ready)
+============================================================
+
+Day 21 — Downloader utilities (GEO/SRA/ENA)
+===========================================
+> [ ] <Bloom : utils.env/io_utils> Implement resilient download/caching, checksum, resume; source resolvers (GEO/SRA/ENA/GitHub) [04:00].
+> [ ] <Bloom : cli.parse> `bloom parse fetch` subcommand: fetch FASTQ/SRA to data/raw/ with manifest [02:00].
+
+Day 22 — Read QC (FastQC-like summary)
+======================================
+> [ ] <Bloom : pipelines> Read QC step: per-read length/qual histos, overrepresented kmers (sketch) [03:00].
+> [ ] <Bloom : viz.basic/density> Quick plots for QC reports [02:00].
+> [ ] <Bloom : cli.parse> `bloom parse qc` produces HTML/MD summary [02:00].
+
+Day 23 — Adapter/quality trimming
+=================================
+> [ ] <Bloom : pipelines> Integrate cutadapt/fastp wrapper with standardized params via configs/rules [03:00].
+> [ ] <Bloom : cli.parse> `bloom parse trim` with dry-run and manifest updates [02:00].
+> [ ] <Bloom : tests_cli> Golden manifest diff test [01:30].
+
+Day 24 — Alignment (BWA/Bowtie2/Minimap2) — Part 1 of 2
+=======================================================
+> [ ] <Bloom : pipelines> Aligners wrapper interface; index mgmt; paired-end logic [03:30].
+> [ ] <Bloom : cli.parse> `bloom parse align --engine=bwa|bowtie2|minimap2` [02:30].
+
+Day 25 — Alignment (BWA/Bowtie2/Minimap2) — Part 2 of 2
+=======================================================
+> [ ] <Bloom : pipelines> Post-align: sort, mark-dup, index; mapping metrics [03:00].
+> [ ] <Bloom : tests_io> BAM invariants tests (flags, duplicates) [02:00].
+
+Day 26 — Basic variant calling pipeline (toy baseline)
+======================================================
+> [ ] <Bloom : pipelines> Minimal samtools/bcftools pipeline for SNP/indel (for QA only) [03:00].
+> [ ] <Bloom : cli.parse> `bloom parse call-variants` (experimental) [02:00].
+
+Day 27 — Annotation fetchers (UCSC/ENSEMBL/ENCODE/4DN)
+======================================================
+> [ ] <Bloom : annotate.external_db> Thin clients: cached downloads for gene models, blacklist, chrom sizes [03:30].
+> [ ] <Bloom : tests_annotate> Fetcher tests using tiny remotes/mocks [02:00].
+
+Day 28 — Gene meta-plot API (foundations)
+=========================================
+> [ ] <Bloom : viz.meta_gene> Data model for meta-intervals: [-2.5K, Gene, +2.5K] and rich schema with enhancers/promoter/TSS/UTRs [03:00].
+> [ ] <Bloom : viz.meta_gene> Plotting of multi-signal overlays + variant pins (color-coded) [02:00].
+> [ ] <Bloom : tests_viz> Meta-gene plotting tests (deterministic layouts) [01:30].
+
+Day 29 — Gene meta-plot + Hi-C triangular matrix
+=================================================
+> [ ] <Bloom : viz.heatmaps/arcplot/meta_gene> Add triangular Hi-C inset; region extraction and normalization options [03:30].
+> [ ] <Bloom : cli.visualize> `bloom viz gene-meta` command with YAML config [02:00].
+
+Day 30 — Docs & examples for Phase 3
+====================================
+> [ ] <Bloom : docs/usage> Quickstart for fetch→qc→trim→align→call; meta-gene tutorial [03:00].
+> [ ] <Bloom : examples/cli_samples> Add runnable scripts & tiny fixtures; ensure CI runs examples smoke [02:30].
+
+
+# PHASE 4 — C-Pipelines: 4C, 5C, Hi-C (variants), scHi-C, ChIA-PET, Hi-ChIP
+============================================================================
+
+Day 31 — Hi-C pre-processing manifest and rules
+==============================================
+> [ ] <Bloom : configs/pipelines/hic_processing.yaml> Define end-to-end steps & parameters (aligner, dedup, binning, normalization) [03:00].
+> [ ] <Bloom : configs/rules/hic.yaml> Knobs for each step; schemas for validation [02:00].
+
+Day 32 — Hi-C read mapping & filtering
+=====================================
+> [ ] <Bloom : pipelines> Hi-C specific mapping (chimeric reads, ligation junction), dangling-end filtering [03:30].
+> [ ] <Bloom : tests_structures> Read-pair classification tests on small synthetic data [02:00].
+
+Day 33 — Hi-C contact matrix construction
+=========================================
+> [ ] <Bloom : pipelines> Bin reads to matrices at multiple resolutions; sparse formats [03:00].
+> [ ] <Bloom : io.cool_parser> Write .cool/.mcool with cooler API [02:00].
+> [ ] <Bloom : tests_io> Matrix write-read parity tests [01:30].
+
+Day 34 — .hic writer (wrapper) & normalization vectors
+=====================================================
+> [ ] <Bloom : io.hic_parser> Add writer path via juicer_tools or straw-compatible exporters [03:30].
+> [ ] <Bloom : tests_io> .hic roundtrip smoke tests [02:00].
+
+Day 35 — Compartment calling & saddle plots
+===========================================
+> [ ] <Bloom : structures.compartments> Eigenvector-based A/B, compartment strength, saddle plot utilities [03:30].
+> [ ] <Bloom : viz.heatmaps> Saddle plots & EV tracks [02:00].
+
+Day 36 — TAD detection & loop callers (baseline)
+================================================
+> [ ] <Bloom : structures.tads/loops> Simple insulation score/DI; naive loop caller; outputs as BED/BEDPE [03:30].
+> [ ] <Bloom : tests_structures> Verification on toy matrices; precision/recall vs. fixtures [02:00].
+
+Day 37 — scHi-C (Any-C) ingestion & sparse ops
+==============================================
+> [ ] <Bloom : io.anyc_parser, structures.sc_structure> Load cell-by-contact maps; QC filters; sparse tensor ops [03:30].
+> [ ] <Bloom : viz.umap_embedding> Cell embeddings by contact features [02:00].
+
+Day 38 — ChIA-PET & Hi-ChIP support (readers + linkers)
+========================================================
+> [ ] <Bloom : io.bed_parser/anyc_parser> Ingest PET pairs and enrichment matrices; promoter-enhancer link bedpe [03:30].
+> [ ] <Bloom : tests_io> PET parsing edge cases [01:30].
+
+Day 39 — 4C & 5C minimal pipelines
+==================================
+> [ ] <Bloom : pipelines> 4C viewpoint-centric normalization; 5C fragment map aggregation [03:00].
+> [ ] <Bloom : viz.arcplot> Arc visualization for 4C/ChIA-PET/Hi-ChIP [02:00].
+
+Day 40 — CLI unification and recipe runners
+===========================================
+> [ ] <Bloom : cli.parse/visualize/call_structures> `bloom hic build`, `bloom hic call`, `bloom hic viz` subcommands with preset recipes [03:30].
+> [ ] <Bloom : tests_cli> Verify end-to-end CLI with tiny dataset [02:00].
+
+
+# PHASE 5 — Finishing the C-Pipelines: Robustness & Real-Data CLI
+=================================================================
+
+Day 41 — Robust manifests & validation
+=====================================
+> [ ] <Bloom : configs/pipelines> Harden YAML manifest schemas; cross-field validation; helpful error messages [03:00].
+> [ ] <Bloom : tests_configs> Negative tests: missing fields, invalid values, path issues [02:00].
+
+Day 42 — Parallelization & caching
+==================================
+> [ ] <Bloom : utils.parallel> Thread/Process pools; job maps; Dask stub; resume-from checkpoints [03:30].
+> [ ] <Bloom : pipelines> Cache keys for each step; skip-if-up-to-date logic [02:00].
+
+Day 43 — Performance & memory tuning
+====================================
+> [ ] <Bloom : structures.multi_resolution> Incremental binning, chunked IO; memory-mapped arrays [03:30].
+> [ ] <Bloom : benchmarks> Add tiny perf suite and thresholds in CI (perf/ directory) [02:00].
+
+Day 44 — Reproducibility & QC reports for Hi-C
+==============================================
+> [ ] <Bloom : metrics.reproducibility> HiCRep/SCC/QuASAR baselines [03:00].
+> [ ] <Bloom : viz.heatmaps/basic> Assemble per-sample QC HTML with matrices, coverage, dup rates [02:00].
+
+Day 45 — Annotation overlays (CTCF, histone marks, lncRNA)
+==========================================================
+> [ ] <Bloom : annotate.*> Overlay tracks on loops/TADs/compartments; enrichments [03:00].
+> [ ] <Bloom : cli.annotate> `bloom annotate interactions` to produce annotated BED/BEDPE/TSV [02:00].
+
+Day 46 — End-to-end Juicer-like path — Part 1 of 2
+==================================================
+> [ ] <Bloom : pipelines> FASTQ→trim→align→pairs→bin→norm→.hic/.cool with sensible defaults [04:00].
+> [ ] <Bloom : docs/usage.batch_pipelines> Write “run it in one command” tutorial; manifests examples [02:00].
+
+Day 47 — End-to-end Juicer-like path — Part 2 of 2
+==================================================
+> [ ] <Bloom : cli> `bloom hic juicer` command that drives the orchestrated pipeline; resume, dry-run, diff manifests [03:30].
+> [ ] <Bloom : tests_cli> Golden outputs & directory structure checks [02:00].
+
+Day 48 — Real-data smoke on public tiny datasets
+================================================
+> [ ] <Bloom : examples/notebooks, cli_samples> Scripts to run end-to-end on 4DN tiny fixture; verify outputs [03:00].
+> [ ] <Bloom : CI> Optional nightly workflow to run tiny E2E (time-bounded) [02:00].
+
+Day 49 — Documentation & gallery polish
+=======================================
+> [ ] <Bloom : docs/modules/usage> Expand hic, anyc, chia-pet pages; add screenshots; rst_creator.py batch [03:00].
+> [ ] <Bloom : docs/gui> Wire GUI overview page if enabled; link CLI examples [02:00].
+
+Day 50 — Release candidate hardening & checklists
+=================================================
+> [ ] <Bloom : tests/*> Increase coverage in critical paths; freeze golden files; deterministic seeds [03:00].
+> [ ] <Bloom : packaging> Build wheels/sdist; smoke install in clean env; tag RC in CHANGELOG [02:00].
+> [ ] <Bloom : README/ROADMAP> Update milestones; list next-phase items (DL models, advanced callers) [01:30].
+
+Day 51 — Extras: CRISPR & lncRNA CLI polishing
+==============================================
+> [ ] <Bloom : cli.parse> `bloom crispr qc` and `bloom lncrna link` basic commands [03:00].
+> [ ] <Bloom : docs/usage> Short guides for CRISPR/lncRNA loaders and analyses [02:00].
+
+Day 52 — Extras: Visualization UX & genome browser mini
+=======================================================
+> [ ] <Bloom : viz.genome_browser> Minimal region overlay (tracks + contacts) [03:00].
+> [ ] <Bloom : cli.visualize> `bloom viz region` with YAML track config [02:00].
+
+Day 53 — Extras: Metrics & statistical tests
+============================================
+> [ ] <Bloom : metrics.statistical_tests> Fisher’s, permutation bootstrap helpers [02:30].
+> [ ] <Bloom : tests_metrics> Unit tests for metrics/statistics utilities [02:00].
+
+Day 54 — GUI (optional) smoke path
+==================================
+> [ ] <Bloom : gui.app/layout> Start tabs (Data, Pipelines, Viz); load tiny matrices; non-blocking UX [03:30].
+> [ ] <Bloom : tests_gui> App startup tests; loaders smoke [01:30].
+
+Day 55 — Final polish: errors, messages, DX
+===========================================
+> [ ] <Bloom : core.exceptions/logging> Improve user-facing tracebacks; suggestions; URL to docs [02:30].
+> [ ] <Bloom : cli> Consistent exit codes; verbose/quiet levels; progress bars [02:00].
+> [ ] <Bloom : examples> Curate “good first runs” folder with 3 one-liners [01:30].
+
+Day 56 — Phase wrap-up & milestone demo
+=======================================
+> [ ] <Bloom : Demo> Record a CLI-only walkthrough from FASTQ to .hic/.mcool and gene meta-plot [03:00].
+> [ ] <Bloom : Docs> Publish Phase 1–5 milestone page with artifacts, perf notes, and known limitations [02:00].
